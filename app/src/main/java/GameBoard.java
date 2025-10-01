@@ -17,6 +17,7 @@ public class GameBoard extends JPanel {
     public int STROKE_WIDTH = 3;
 
 
+
     public void convertScale(double scale) {
         this.scale = scale;
         // 격자 개수는 고정, 셀 크기와 기타 요소들만 스케일링
