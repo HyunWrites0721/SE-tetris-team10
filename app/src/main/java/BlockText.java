@@ -1,98 +1,85 @@
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BlockText extends JPanel {
 
     private final GameBoard gameBoard;
+    private final List<JLabel> textLabels;
     private final int ROWS = 20;
     private final int COLS = 10;
 
-    private final String TEXT = "O";
-
-    public boolean[][] boardArray = new boolean[ROWS][COLS];
-
-
     public BlockText(GameBoard gameBoard) {
         this.gameBoard = gameBoard;
-    setOpaque(false);
-    setVisible(true);
-        // 생성 시 모든 칸을 비움 (텍스트 안 보이게)
-        for (int i = 0; i < ROWS; i++) {
-            for (int j = 0; j < COLS; j++) {
-                boardArray[i][j] = false;
-            }
-        }
-        repaint();
+        this.textLabels = new ArrayList<>();
+        
+        setLayout(null); // 절대 위치 설정을 위해
+        setOpaque(false); // 투명 배경
+        
+        createTextLabels();
     }
-    public void setBlockText(int row, int col) {
-        if (isValidPosition(row, col)) {
-            boardArray[row][col] = true;
-            repaint();
-        }
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (!isVisible()) return;
-        int cellSize = gameBoard.CELL_SIZE;
-        // GameBoard의 x, y 오프셋과 동일하게 적용
-        int xOffset = (gameBoard.getWidth() - gameBoard.COLS * cellSize) / 3;
-        int yOffset = gameBoard.MARGIN * cellSize;
-        g.setFont(new Font("Monospaced", Font.BOLD, cellSize - 2));
-        FontMetrics fm = g.getFontMetrics();
+    
+    private void createTextLabels() {
+        // 기존 라벨들 제거
+        removeAll();
+        textLabels.clear();
+        
+        // 20x10 격자에 맞춰 라벨 생성
         for (int row = 0; row < ROWS; row++) {
             for (int col = 0; col < COLS; col++) {
-                if (boardArray[row][col]) {
-                    int x = xOffset + col * cellSize + (cellSize - fm.charWidth(TEXT.charAt(0))) / 2;
-                    int y = yOffset + row * cellSize + (cellSize + fm.getAscent() - fm.getDescent()) / 2;
-                    g.drawString(TEXT, x, y);
+                JLabel label = new JLabel("@");
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                label.setVerticalAlignment(SwingConstants.CENTER);
+                label.setForeground(Color.BLACK);
+                
+                textLabels.add(label);
+                add(label);
+            }
+        }
+        
+        updateLabelPositions();
+    }
+    
+    public void updateLabelPositions() {
+        if (gameBoard == null || textLabels.isEmpty()) return;
+        
+        // GameBoard의 현재 설정값들 가져오기
+        int cellSize = gameBoard.CELL_SIZE;
+        int margin = gameBoard.MARGIN;
+        
+        // GameBoard의 위치 계산 (GameBoard.paintComponent와 동일한 로직)
+        int boardWidth = COLS * cellSize;
+        int x = (gameBoard.getWidth() - boardWidth) / 3;
+        int y = margin * cellSize;
+        
+        // 폰트 크기 계산 (셀 크기의 70%)
+        int fontSize = (int)(cellSize * 0.7);
+        Font font = new Font("Arial", Font.BOLD, fontSize);
+        
+        // 각 라벨의 위치와 크기 업데이트
+        int labelIndex = 0;
+        for (int row = 0; row < ROWS; row++) {
+            for (int col = 0; col < COLS; col++) {
+                if (labelIndex < textLabels.size()) {
+                    JLabel label = textLabels.get(labelIndex);
+                    label.setFont(font);
+                    
+                    // 라벨 위치와 크기 설정
+                    int labelX = x + col * cellSize;
+                    int labelY = y + row * cellSize;
+                    label.setBounds(labelX, labelY, cellSize, cellSize);
+                    
+                    labelIndex++;
                 }
             }
         }
-    }
-
-
-    public void boardInit() {
-        for (int i = 0; i < ROWS; i++) {
-            for (int j = 0; j < COLS; j++) {
-                boardArray[i][j] = false;
-
-            }
-        }
+        
         repaint();
     }
-
-
-
-    public boolean isValidPosition(int row, int col) {
-        return row >= 0 && row < ROWS && col >= 0 && col < COLS;
-    }
-
-
-    public void oneLineClear(int row) {
-
-            for(int col = 0; col < COLS; col++) {
-                if(boardArray[row][col] == false) {
-                    break;
-                }
-                else if (col == COLS - 1 && boardArray[row][col] == true) {
-                    // 해당 행이 모두 false인 경우
-                    // 위의 모든 행을 한 칸씩 아래로 이동
-                    for (int r = row; r > 0; r--) {
-                        System.arraycopy(boardArray[r - 1], 0, boardArray[r], 0, COLS);
-                    }
-                    // 최상단 행은 모두 false로 초기화
-                    for (int c = 0; c < COLS; c++) {
-                        boardArray[0][c] = false;
-                    }
-                    repaint();
-
-                } 
-            }
-
-        }
     
-
-
+    // GameBoard 크기가 변경될 때 호출
+    public void onGameBoardScaleChanged() {
+        updateLabelPositions();
+    }
 }

@@ -4,8 +4,8 @@ import java.awt.event.KeyEvent;
 
 public class GameKeyListener extends KeyAdapter{
 
-    private  FrameBoard frameBoard;
-    private  GameBoard gameBoard;
+    private FrameBoard frameBoard;
+    private GameBoard gameBoard;
 
 
     public GameKeyListener(FrameBoard frameBoard, GameBoard gameBoard) {
@@ -26,17 +26,19 @@ public class GameKeyListener extends KeyAdapter{
             case KeyEvent.VK_1:
                 gameBoard.scale = 0.5;
                 gameBoard.convertScale(gameBoard.scale);
-
+                frameBoard.updateBlockTextPositions();
                 break;
                 
             case KeyEvent.VK_2:
                 gameBoard.scale = 1.0;
                 gameBoard.convertScale(gameBoard.scale);
+                frameBoard.updateBlockTextPositions();
                 break;
                 
             case KeyEvent.VK_3:
                 gameBoard.scale = 1.5;
                 gameBoard.convertScale(gameBoard.scale);
+                frameBoard.updateBlockTextPositions();
                 break;
             default:
                 // 다른 키는 처리하지 않음

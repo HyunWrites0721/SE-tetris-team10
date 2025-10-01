@@ -19,35 +19,37 @@ public class FrameBoard extends JFrame {
 
 
     public FrameBoard() {
-    setTitle("Tetris");
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setResizable(false);
+        setTitle("Tetris");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
 
-    JLayeredPane layeredPane = getLayeredPane();
+        
+        JLayeredPane layeredPane = getLayeredPane();
 
-    // 게임 보드와 일시정지 보드, 블록 텍스트를 레이어드 추가
-    gameBoard = new GameBoard();
-    gameBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-    layeredPane.add(gameBoard, JLayeredPane.DEFAULT_LAYER);
+        // 게임 보드와 일시정지 보드, 블록 텍스트를 레이어드 추가
+        gameBoard = new GameBoard();
+        gameBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        layeredPane.add(gameBoard, JLayeredPane.DEFAULT_LAYER);
 
-    // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
-    blockText = new BlockText(gameBoard);
-    blockText.setBounds(gameBoard.getBounds());
-    layeredPane.add(blockText, JLayeredPane.MODAL_LAYER);
+        // BlockText를 GameBoard 위에 오버레이
+        blockText = new BlockText(gameBoard);
+        blockText.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        layeredPane.add(blockText, JLayeredPane.MODAL_LAYER);
 
-    pauseBoard = new PauseBoard();
-    pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-    pauseBoard.setVisible(isPaused);
-    layeredPane.add(pauseBoard, JLayeredPane.PALETTE_LAYER);
+        pauseBoard = new PauseBoard();
+        pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        pauseBoard.setVisible(isPaused);
+        layeredPane.add(pauseBoard, JLayeredPane.PALETTE_LAYER);
 
-    setSize(FRAME_WIDTH, FRAME_HEIGHT);
-    setLocationRelativeTo(null);
-    setVisible(true);
-
-    // 키 리스너 추가
-    addKeyListener(new GameKeyListener(this, gameBoard));
-    setFocusable(true);
-    requestFocusInWindow();
+        
+        setSize(FRAME_WIDTH, FRAME_HEIGHT);
+        setLocationRelativeTo(null);
+        setVisible(true);
+        
+        // 키 리스너 추가
+        addKeyListener(new GameKeyListener(this, gameBoard));
+        setFocusable(true);
+        requestFocusInWindow();
     }
 
     // pause 상태 변환 함수 및 pause 보드 표시
@@ -56,12 +58,13 @@ public class FrameBoard extends JFrame {
         pauseBoard.setVisible(isPaused);
     }
     
-
-    public void setBlockText(int row, int col) {
-        blockText.setBlockText(row, col);
+    // GameBoard 스케일 변경 시 BlockText 위치 업데이트
+    public void updateBlockTextPositions() {
+        if (blockText != null) {
+            blockText.onGameBoardScaleChanged();
+        }
+        repaint();
     }
+    
 
-    public void oneLineClear(int row) {
-        blockText.oneLineClear(row);
-    }
 }
