@@ -1,3 +1,5 @@
+package settings;
+
 /**
 *   설정 세부 메뉴 선택시 호출되는 기능
 *   메뉴 이름 String menuName을 받고, view, model, controller를 생성함

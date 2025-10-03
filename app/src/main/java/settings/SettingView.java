@@ -1,4 +1,8 @@
+package settings;
 import javax.swing.*;
+
+import start.StartFrame;
+
 import java.awt.*;
 
 public class SettingView extends JPanel{

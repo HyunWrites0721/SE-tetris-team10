@@ -1,4 +1,8 @@
+package settings;
 import javax.swing.*;
+
+import start.StartFrame;
+
 import java.awt.*;
 import java.awt.event.*;
 

@@ -1,3 +1,4 @@
+package start;
 import javax.swing.*;
 
 public class App {
