@@ -1,4 +1,4 @@
-package start;
+import start.StartFrame;
 import javax.swing.*;
 
 public class App {

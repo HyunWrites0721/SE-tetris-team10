@@ -3,6 +3,7 @@ package start;
 import javax.swing.*;
 
 import settings.SettingFrame;
+import game.GameStart;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -68,7 +69,8 @@ public class StartFrame extends JFrame {
                     updateMenuHighlight(menuButtons, selectedIndex);
                 } else if (key == KeyEvent.VK_ENTER) {
                     if (selectedIndex == 0) {
-                        //게임 시작
+                        new GameStart(); //게임 시작
+                        dispose();
                     } 
                     else if (selectedIndex == 1) { 
                         // 설정 메뉴로 이동
