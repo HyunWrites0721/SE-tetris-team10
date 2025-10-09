@@ -12,16 +12,20 @@ public class SettingView extends JPanel{
     JRadioButton Button1, Button2, Button3;
     JButton checkButton;
     JPanel panel;
+    Color panelColor; 
 
     public SettingView(String menuName){
         this.menuName = menuName;  
         setLayout(new GridBagLayout());
         
         panel = new JPanel(new FlowLayout(FlowLayout.CENTER, (int)(30*screenRatio), (int)(30*screenRatio)));
-        panel.setPreferredSize(new Dimension((int)(320*screenRatio), (int)(240*screenRatio)));
+        panel.setPreferredSize(new Dimension((int)(320*screenRatio), (int)(320*screenRatio)));
         JLabel label = new JLabel();
         panel.add(label);
         panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
+        
+        panelColor = new Color(245, 245, 245); // 원하는 색상 값
+        panel.setBackground(panelColor); // 원하는 색상
 
         Button1 = new JRadioButton();
         Button2 = new JRadioButton();
