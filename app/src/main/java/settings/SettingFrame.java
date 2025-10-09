@@ -31,20 +31,32 @@ public class SettingFrame extends JFrame {
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, (int)(36*screenRatio)));
         add(titleLabel, BorderLayout.NORTH);
 
-        // 우측 메뉴 패널
-        JPanel menuPanel = new JPanel();
-        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
+        // 우측 메뉴 패널 (GridBagLayout으로 중앙 정렬)
+        JPanel menuPanel = new JPanel(new GridBagLayout());
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(10, 0, 10, 0); // 버튼 간 간격
+        gbc.anchor = GridBagConstraints.CENTER;
 
         menuButtons = new JButton[menuNames.length];
+        JPanel buttonBox = new JPanel();
+        buttonBox.setLayout(new BoxLayout(buttonBox, BoxLayout.Y_AXIS));
+        buttonBox.setMaximumSize(new Dimension((int)(200*screenRatio), (int)((menuNames.length * 60)*screenRatio)));
+        Dimension btnSize = new Dimension((int)(200*screenRatio), (int)(50*screenRatio));
         for (int i = 0; i < menuNames.length; i++) {
             JButton btn = new JButton(menuNames[i]);
-            btn.setMaximumSize(new Dimension((int)(200*screenRatio), (int)(50*screenRatio)));
+            btn.setMinimumSize(btnSize);
+            btn.setPreferredSize(btnSize);
+            btn.setMaximumSize(btnSize);
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-            menuPanel.add(btn);
-            menuPanel.add(Box.createRigidArea(new Dimension(0, (int)(20*screenRatio))));
+            buttonBox.add(btn);
+            if (i < menuNames.length - 1)
+                buttonBox.add(Box.createVerticalStrut((int)(20*screenRatio)));
             menuButtons[i] = btn;
         }
+        menuPanel.add(buttonBox, gbc);
         add(menuPanel, BorderLayout.EAST);
 
         // 초기 하이라이트
