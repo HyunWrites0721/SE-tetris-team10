@@ -4,7 +4,7 @@ package blocks;
 public class SBlock extends Block {
 	
 	public SBlock() {
-		setColor(4);
+		setColor(setBlindColor_1(),4);
 	}
 	
 	public void setShape() {

@@ -4,7 +4,7 @@ package blocks;
 public class OBlock extends Block {
 	
 	public OBlock() {
-		setColor(3);
+		setColor(setBlindColor_1(),3);
 	}
 	
 	public void setShape() {
