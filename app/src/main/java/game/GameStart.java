@@ -15,11 +15,13 @@ public class GameStart {
             int col = sc.nextInt();
             frame.setBlockText(row, col);  // 입력받은 위치에 "" 표시
             
-            for (int i = 0; i < 20; i++) {
-    
+            for (int i = 2; i < 22; i++) {
+
                 frame.oneLineClear(i);
 
             }
+
+            frame.toggleGameOver();
         }
     }
     

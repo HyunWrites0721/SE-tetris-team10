@@ -11,11 +11,13 @@ public class FrameBoard extends JFrame {
 
     // pause 상태 변수
     private boolean isPaused = false;
+    private boolean isGameOver = false;
 
     // 게임 보드와 일시정지 보드, 블록 텍스트
     private final GameBoard gameBoard;
     private final PauseBoard pauseBoard;
     private final BlockText blockText;
+    private final GameOverBoard gameOverBoard;
 
 
 
@@ -40,6 +42,11 @@ public class FrameBoard extends JFrame {
     pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     pauseBoard.setVisible(isPaused);
     layeredPane.add(pauseBoard, JLayeredPane.PALETTE_LAYER);
+    
+    gameOverBoard = new GameOverBoard();
+    gameOverBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+    gameOverBoard.setVisible(isGameOver);
+    layeredPane.add(gameOverBoard, JLayeredPane.MODAL_LAYER);
 
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
     setLocationRelativeTo(null);
@@ -64,5 +71,18 @@ public class FrameBoard extends JFrame {
 
     public void oneLineClear(int row) {
         blockText.oneLineClear(row);
+    }
+    
+    public void toggleGameOver() {
+        if (blockText.isGameOver()) {
+            isGameOver = true;
+            gameOverBoard.setVisible(isGameOver);
+        }
+    }
+
+    public void gameInit() {
+        isGameOver = false;
+        gameOverBoard.setVisible(isGameOver);
+        blockText.boardInit();
     }
 }
