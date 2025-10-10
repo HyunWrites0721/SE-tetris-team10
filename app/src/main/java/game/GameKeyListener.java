@@ -7,10 +7,11 @@ import java.awt.event.KeyEvent;
 public class GameKeyListener extends KeyAdapter{
 
     private  FrameBoard frameBoard;
-    private  GameBoard gameBoard;
+    private  GameView gameBoard;
+    private GameModel blockText;
 
 
-    public GameKeyListener(FrameBoard frameBoard, GameBoard gameBoard) {
+    public GameKeyListener(FrameBoard frameBoard, GameView gameBoard) {
         this.frameBoard = frameBoard;
         this.gameBoard = gameBoard;
     }
@@ -42,11 +43,11 @@ public class GameKeyListener extends KeyAdapter{
                 break;
             
             case KeyEvent.VK_UP:
-                gameBoard.Rotate90();
+                blockText.Rotate90();
                 break;
                 
             case KeyEvent.VK_SPACE:
-                gameBoard.HardDrop();
+                blockText.HardDrop();
                 break;
                 
             default:

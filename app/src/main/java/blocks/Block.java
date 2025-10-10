@@ -2,12 +2,12 @@ package blocks;
 
 import java.awt.Color;
 import java.lang.Math;
-import game.GameBoard;
+import game.GameView;
 
 public abstract class Block {
     protected int [][] shape;
     private int x, y;
-    public GameBoard gameBoard;
+    public GameView gameBoard;
     private Color color;
     private Color[][] Colorset;
     public boolean setBlindColor = true; // 색맹모드 설정 여부

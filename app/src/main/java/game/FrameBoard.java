@@ -14,10 +14,17 @@ public class FrameBoard extends JFrame {
     private boolean isGameOver = false;
 
     // 게임 보드와 일시정지 보드, 블록 텍스트
-    private final GameBoard gameBoard;
+    private final GameView gameBoard;
     private final PauseBoard pauseBoard;
-    private final BlockText blockText;
+    private final GameModel blockText;
     private final GameOverBoard gameOverBoard;
+
+    public GameView getGameBoard() {
+        return gameBoard;
+    }
+    public GameModel getBlockText() {
+        return blockText;
+    }
 
 
 
@@ -29,12 +36,12 @@ public class FrameBoard extends JFrame {
     JLayeredPane layeredPane = getLayeredPane();
 
     // 게임 보드와 일시정지 보드, 블록 텍스트를 레이어드 추가
-    gameBoard = new GameBoard();
+    gameBoard = new GameView();
     gameBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     layeredPane.add(gameBoard, JLayeredPane.DEFAULT_LAYER);
 
     // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
-    blockText = new BlockText(gameBoard);
+    blockText = new GameModel(gameBoard);
     blockText.setBounds(gameBoard.getBounds());
     layeredPane.add(blockText, JLayeredPane.MODAL_LAYER);
 
