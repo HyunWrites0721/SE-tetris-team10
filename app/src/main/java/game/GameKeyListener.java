@@ -40,6 +40,15 @@ public class GameKeyListener extends KeyAdapter{
                 gameBoard.scale = 1.5;
                 gameBoard.convertScale(gameBoard.scale);
                 break;
+            
+            case KeyEvent.VK_UP:
+                gameBoard.Rotate90();
+                break;
+                
+            case KeyEvent.VK_SPACE:
+                gameBoard.HardDrop();
+                break;
+                
             default:
                 // 다른 키는 처리하지 않음
                 break;

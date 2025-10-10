@@ -4,7 +4,7 @@ package blocks;
 public class ZBlock extends Block {
 	
 	public ZBlock() {
-		setColor(6);
+		setColor(setBlindColor_1(),6);
 	}
 	
 	public void setShape() {

@@ -2,6 +2,8 @@ package game;
 
 import java.awt.*;
 import javax.swing.JPanel;
+import blocks.Block;
+import javax.swing.Timer;
 
 public class GameBoard extends JPanel {
 
@@ -19,6 +21,27 @@ public class GameBoard extends JPanel {
     public int STROKE_WIDTH = 3;
 
 
+    protected Block currentBlock;  // 플레이어가 현재 조작하는 블록
+    private Block nextBlock;
+    public int[][] board ;   // 게임 보드를 나타내는 2차원 배열
+    private GameTimer gameTimer;
+
+    public GameBoard() {   // 게임보드 초기화
+        board = new int[ROWS][COLS];  // 게임보드 크기 설정
+        gameTimer = new GameTimer(this);
+        spawnNewBlock();  // 첫 번째 블록 & 다음 블록 생성
+        gameTimer.start();
+    
+    }
+
+    public Block getCurrentBlock(){  // 현재블록 getter
+        return currentBlock;
+    }
+
+    public int[][] getBoard(){  // 게임보드 getter
+        return board;
+    
+    }
     public void convertScale(double scale) {
         this.scale = scale;
         // 격자 개수는 고정, 셀 크기와 기타 요소들만 스케일링
@@ -37,6 +60,88 @@ public class GameBoard extends JPanel {
         repaint();
     }
     
+    // 하드 드롭
+    public void HardDrop() {
+        if (currentBlock != null) {  // 현재 블록이 있는지 확인
+           /* while (!checkCollision(0,1)){  // y로 한 칸 내려갔을때 충돌이 일어나지 않으면 (while문이라서 충돌이 일어나기 전까지 계속 내려감)
+                currentBlock.setPosition(currentBlock.getX(), currentBlock.getY()+1);  // y좌표 +1 을 해 한 칸 내려 새로운 위치를 설정
+            } */ 
+            currentBlock.hardDrop(board);
+            placePiece();  // 블록을 보드에 고정
+            spawnNewBlock();  // 그리고 다음 블록을 생성
+        //  repaint();
+        }
+    }
+
+    // 블록을 보드에 고정시키는 역할
+    protected void placePiece() {
+        int[][] shape = currentBlock.getShape();
+        int x = currentBlock.getX();
+        int y = currentBlock.getY();
+
+        for (int row = 0 ; row < shape.length ; row++){
+            for (int col = 0 ; col < shape[row].length ; col++){
+                if (shape[row][col] != 0){
+                    board[y + row] [x + col] = 1;
+                }
+            }
+        }
+        // checkLines();  // 줄이 다 찼는지 확인
+    }
+
+    protected void spawnNewBlock(){
+        if (nextBlock == null) {  
+            nextBlock = Block.spawn();  // 이 부근 즈음에 nextBlockFrame이랑 연결시키면 되지 않을까?
+        }  // 다음 블록 없으면 생성
+        currentBlock = nextBlock;  // 생성한 nextBlock을 currentBlock으로 설정
+        nextBlock = Block.spawn(); // 새로운 nextBlock 생성
+    }
+
+    protected boolean canMoveto(int targetRow, int targetCol, int[][] shape){
+        for (int row = 0 ; row < shape.length ; row++){
+            for (int col = 0 ; col < shape[row].length ; col++){
+                if (shape[row][col] == 0) 
+                    continue;    // 블록에서 0인 부분은 검사하지 않아도 됨.
+                if (targetRow + row < 2 || targetRow + row >= ROWS-1)  // 윗 2줄 숨겨진 공간 || 바닥 아래 1줄이상  벗어나는지 확인 
+                    return false;
+                if (targetCol + col < 1 || targetCol + col >= COLS-1) // 좌 1줄 숨겨진 공간 || 우 1줄 숨겨진 공간 벗어나는지 확인
+                    return false;
+                if(board[targetRow + row][targetCol + col] == 1) // 보드에 이미 다른 칸이 채워져 있는지 검사
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    protected boolean canRotate(){
+    // 기본 회전 시도
+    if (canMoveto(currentBlock.getY(), currentBlock.getX(), currentBlock.Rotateshape())) {
+        return true;
+    }
+    
+    // 왼쪽으로 한 칸 이동 후 회전 시도
+    if (canMoveto(currentBlock.getY(), currentBlock.getX() - 1, currentBlock.Rotateshape())) {
+        currentBlock.setPosition(currentBlock.getX() - 1, currentBlock.getY());
+        return true;
+    }
+    
+    // 오른쪽으로 한 칸 이동 후 회전 시도
+    if (canMoveto(currentBlock.getY(), currentBlock.getX() + 1, currentBlock.Rotateshape())) {
+        currentBlock.setPosition(currentBlock.getX() + 1, currentBlock.getY());
+        return true;
+    }
+    
+    return false;
+   
+    }
+
+    public void Rotate90() {
+        // if(isGameOver() == true) return;
+        if(canRotate() == true){
+            currentBlock.getRotatedShape();
+            repaint();
+        }
+    }
 
 
     @Override

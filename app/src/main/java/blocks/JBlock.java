@@ -4,7 +4,7 @@ package blocks;
 public class JBlock extends Block{
 	
 	public JBlock() {
-		setColor(1);
+		setColor(setBlindColor_1(),1);
 	}
 	
 	public void setShape() {
