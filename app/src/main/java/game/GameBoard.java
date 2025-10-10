@@ -4,6 +4,7 @@ import java.awt.*;
 import javax.swing.JPanel;
 import blocks.Block;
 import javax.swing.Timer;
+
 public class GameBoard extends JPanel {
 
     public double scale = 1.0;
@@ -141,6 +142,7 @@ public class GameBoard extends JPanel {
             repaint();
         }
     }
+
 
     @Override
     protected void paintComponent(Graphics g) {

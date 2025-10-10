@@ -1,3 +1,5 @@
+package game;
+
 import java.awt.*;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
