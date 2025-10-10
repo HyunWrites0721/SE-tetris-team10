@@ -9,28 +9,60 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class StartFrame extends JFrame {
+    // JSON 매핑용 내부 클래스 (Gson 정상 동작)
+    static class SettingSaveData {
+        String screenSize;
+        boolean colorBlindMode;
+        String controlType;
+    }
+    
     public static final String titleName = "Tetris";
-    public static double screenRatio = 1.6; //화면 크기 설정
+
+    public static double screenRatio; //화면크기
+    
     private int selectedIndex = 0; // 현재 선택된 메뉴 인덱스
     private JButton[] menuButtons; // 메뉴 버튼 배열
 
+
     public StartFrame() {
+        // 화면 비율 값 초기화
+        screenRatio = 1.2; // 기본값
+        try {
+            java.nio.file.Path path = java.nio.file.Paths.get("app/src/main/java/settings/data/SettingSave.json");
+            String json = java.nio.file.Files.readString(path);
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
+            String size;
+            if (data != null && data.screenSize != null) {
+                size = data.screenSize;
+            } else {
+                size = "medium";
+                System.out.println("[DEBUG] screenSize fallback: data=" + data + ", data.screenSize=" + (data != null ? data.screenSize : "null"));
+            }
+            switch (size) {
+                case "small": screenRatio = 0.8; break;
+                case "large": screenRatio = 2.0; break;
+                case "medium": default: screenRatio = 1.2; break;
+            }
+        } catch (Exception e) {
+            screenRatio = 1.2;
+            System.out.println("screenRatio 예외 발생: " + e.getMessage());
+        }
+        System.out.println("screenRatio: " + screenRatio); // 실제 값 확인
+
         //창
         setTitle(titleName); // 창 제목
         setSize((int)(600*screenRatio), (int)(600*screenRatio));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-
         // 전체 레이아웃: BorderLayout
         setLayout(new BorderLayout());
-
 
         // 1. 중앙 상단: 게임 제목
         JLabel titleLabel = new JLabel("테트리스", SwingConstants.CENTER);
         titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, (int)(36*screenRatio)));
         add(titleLabel, BorderLayout.NORTH);
-
 
         // 2. 우측 메뉴 버튼들
         JPanel menuPanel = new JPanel(null);
