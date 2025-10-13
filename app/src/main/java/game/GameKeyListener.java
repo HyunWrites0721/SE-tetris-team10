@@ -87,9 +87,12 @@ public class GameKeyListener extends KeyAdapter  {
 
             case KeyEvent.VK_DOWN:
                 if (!frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
-                    blockText.getCurrentBlock().moveDown(blockText.getBoard());
-                    gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    gameBoard.repaint();
+                    if (blockText.getCurrentBlock().isMoveDown(blockText.getBoard())) {
+                        // 성공적으로 아래로 이동했을 때만 점수 증가
+                        frameBoard.increaseScore(1);
+                        gameBoard.setFallingBlock(blockText.getCurrentBlock());
+                        gameBoard.repaint();
+                    }
                 }
                 break;
                 

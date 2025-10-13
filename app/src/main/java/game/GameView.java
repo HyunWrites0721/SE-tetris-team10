@@ -26,12 +26,19 @@ public class GameView extends JPanel {
 
     // 현재 화면에 렌더링할 떨어지는 블록
     private Block fallingBlock;
+    private Block nextBlock;  // 다음 블록 저장
     private GameModel gameModel;
     private FrameBoard frameBoard;
 
     // 타이머/모델에서 현재 블록을 전달받아 저장하고 즉시 리페인트
     public void setFallingBlock(Block block) {
         this.fallingBlock = block;
+        repaint();
+    }
+
+    // 다음 블록을 설정하는 메서드
+    public void setNextBlock(Block block) {
+        this.nextBlock = block;
         repaint();
     }
 
@@ -48,6 +55,13 @@ public class GameView extends JPanel {
         NEXT_MARGIN = (int)(2 * scale);
         FONT_SIZE = (int)(48 * scale);
         STROKE_WIDTH = (int)(3 * scale);
+        
+        // 상위 프레임의 크기도 함께 조절
+        if (getParent() != null && getParent().getParent() instanceof FrameBoard) {
+            FrameBoard frameBoard = (FrameBoard) getParent().getParent();
+            frameBoard.updateFrameSize(scale);
+        }
+        
         repaint();
     }
 
@@ -128,6 +142,28 @@ public class GameView extends JPanel {
         g2d.drawRect(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE, nextWidth, nextHeight);
         g2d.drawRect(x + boardWidth, NEXT_MARGIN * CELL_SIZE, nextWidth, NEXT_MARGIN * CELL_SIZE);
 
+        // Next 블록 그리기
+        if (nextBlock != null) {
+            int[][] shape = nextBlock.getShape();
+            Color color = nextBlock.getColor();
+            g2d.setColor(color);
+            
+            // Next 영역의 중앙에 블록 그리기
+            int blockWidth = shape[0].length * CELL_SIZE;
+            int blockHeight = shape.length * CELL_SIZE;
+            int startX = x + boardWidth + (nextWidth - blockWidth) / 2;
+            int startY = y + NEXT_MARGIN * CELL_SIZE + (nextHeight - blockHeight) / 2;
+            
+            for (int row = 0; row < shape.length; row++) {
+                for (int col = 0; col < shape[row].length; col++) {
+                    if (shape[row][col] == 1) {
+                        g2d.fillRect(startX + col * CELL_SIZE, 
+                                   startY + row * CELL_SIZE, 
+                                   CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+        }
 
     
 

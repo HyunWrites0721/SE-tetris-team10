@@ -107,13 +107,6 @@ public abstract class Block {
         return false;
     }
     
-    /*
-    public void spawnNewBlock() {
-    	currentBlock = spawn();
-    	currentBlock.setPosition(BOARD_WIDTH/2 - 2, 0);  
-    	// 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
-    } */
-    
     
     // 충돌 검사 메서드
     public boolean checkCollision(int[][] board) {
@@ -161,6 +154,14 @@ public abstract class Block {
             y++;
            // repaint();
         }
+    }
+
+    public boolean isMoveDown(int[][] board){
+        if(canMoveDown(board)) {
+            y++;
+            return true;  // 성공적으로 이동했을 때
+        }
+        return false;  // 이동하지 못했을 때
     }
     
     

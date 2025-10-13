@@ -7,6 +7,27 @@ public class FrameBoard extends JFrame {
     // 프레임 크기 설정
     private  int FRAME_WIDTH = 900;
     private  int FRAME_HEIGHT = 1200;
+    
+    public void updateFrameSize(double scale) {
+        FRAME_WIDTH = (int)(900 * scale);
+        FRAME_HEIGHT = (int)(1200 * scale);
+        setSize(FRAME_WIDTH, FRAME_HEIGHT);
+        
+        // ScoreBoard 위치 업데이트
+        if (scoreBoard != null) {
+            scoreBoard.convertScale(scale);
+            int cellSize = (int)(30 * scale);
+            int boardWidth = 10 * cellSize;
+            int x = (FRAME_WIDTH - boardWidth) / 3;
+            
+            scoreBoard.setBounds(x + boardWidth,  // Next 패널과 동일한 x 좌표
+                               8 * cellSize,      // Next 패널 아래
+                               6 * cellSize,      // Next 패널과 동일한 너비
+                               4 * cellSize);     // 높이 4칸
+        }
+        
+        setLocationRelativeTo(null); // 화면 중앙에 위치
+    }
 
 
     // pause 상태 변수
@@ -18,7 +39,14 @@ public class FrameBoard extends JFrame {
     private final PauseBoard pauseBoard;
     private final GameModel gameModel;
     private final GameOverBoard gameOverBoard;
+    private final ScoreBoard scoreBoard;
     private GameTimer gameTimer;
+    private int score = 0;  // 점수 변수 추가
+
+    public void increaseScore(int points) {
+        score += points;
+        scoreBoard.setScore(score);
+    }
 
     public GameView getGameBoard() {
         return gameBoard;
@@ -27,6 +55,9 @@ public class FrameBoard extends JFrame {
         return gameModel;
     }
 
+    public GameTimer getGameTimer() {
+        return gameTimer;
+    }
 
 
     public FrameBoard() {
@@ -50,11 +81,9 @@ public class FrameBoard extends JFrame {
     gameBoard.setGameModel(gameModel);
     gameBoard.setFallingBlock(gameModel.getCurrentBlock());
 
-    // 타이머 시작: 1초마다 블록 낙하 및 화면 갱신
+    // 타이머 생성: 1초마다 블록 낙하 및 화면 갱신
     gameTimer = new GameTimer(gameBoard, gameModel, this);
-    // gameTimer.start();
     
-
     pauseBoard = new PauseBoard(this);
     pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     pauseBoard.setVisible(false);
@@ -64,6 +93,18 @@ public class FrameBoard extends JFrame {
     gameOverBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     gameOverBoard.setVisible(isGameOver);
     layeredPane.add(gameOverBoard, JLayeredPane.MODAL_LAYER);
+
+    scoreBoard = new ScoreBoard();
+    // GameView의 좌표 계산 방식을 따라 ScoreBoard 위치 설정
+    int boardWidth = 10 * 30;  // COLS * CELL_SIZE
+    int x = (FRAME_WIDTH - boardWidth) / 3;
+    // Next 패널과 동일한 x 위치, y는 Next 패널 바로 아래
+    scoreBoard.setBounds(x + boardWidth,  // Next 패널과 동일한 x 좌표
+                        8 * 30,  // Next 패널 아래 (NEXT_MARGIN * 2 + NEXT_ROWS = 2 + 4 + 2 = 8)
+                        6 * 30,  // Next 패널과 동일한 너비 (NEXT_COLS * CELL_SIZE)
+                        4 * 30); // 높이 4칸
+    layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
+
 
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
     setLocationRelativeTo(null);
@@ -79,11 +120,11 @@ public class FrameBoard extends JFrame {
     public void paused() {
         pauseBoard.setVisible(isPaused);
         pauseBoard.setOpaque(isPaused);
-        // if (isPaused) {
-        //     if (gameTimer != null) gameTimer.stop();
-        // } else {
-        //     if (gameTimer != null) gameTimer.start();
-        // }
+         if (isPaused) {
+             if (gameTimer != null) gameTimer.stop();
+         } else {
+             if (gameTimer != null) gameTimer.start();
+         }
     }
     
 
@@ -112,7 +153,13 @@ public class FrameBoard extends JFrame {
         if (gameOverBoard != null) gameOverBoard.setVisible(false);
         if (pauseBoard != null) pauseBoard.setVisible(false);
         // 일시정지 해제 및 타이머 재시작
+
+         // 점수 초기화
+        score = 0;
+        scoreBoard.setScore(0);
+        
         isPaused = false;
-        // if (gameTimer != null) gameTimer.start();
+         if (gameTimer != null) gameTimer.start();
     }
+
 }

@@ -10,6 +10,7 @@ public class GameTimer {
     private GameView gameBoard;
     private GameModel blockText;
     private FrameBoard frameBoard;
+    private boolean isRunning = false;
 
     public GameTimer(GameView gameBoard, GameModel blockText, FrameBoard frameBoard){
         this.gameBoard = gameBoard;
@@ -18,8 +19,8 @@ public class GameTimer {
         timer = new Timer(Init_DELAY,new ActionListener() {   // 타이머 이벤트가 1초마다 발생함을 정의
             @Override
             public void actionPerformed(ActionEvent e){
-                // 일시정지 중이면 아무 것도 하지 않음
-                if (frameBoard != null && frameBoard.isPaused) {
+                // 타이머가 정지되었거나 일시정지 중이면 아무 것도 하지 않음
+                if (!isRunning || (frameBoard != null && frameBoard.isPaused)) {
                     return;
                 }
                 if (blockText.getCurrentBlock() != null){  // 현재 블록이 있는지 확인
@@ -44,9 +45,11 @@ public class GameTimer {
         });
     }
     public void start(){
+        isRunning = true;
         timer.start();
     }
     public void stop(){
+        isRunning = false;
         timer.stop();
     }
 }

@@ -54,6 +54,9 @@ public class GameModel extends JPanel {
     this.nextBlock = Block.spawn();
     this.currentBlock = this.nextBlock;
     this.nextBlock = Block.spawn();
+    if (gameBoard != null) {
+        gameBoard.setNextBlock(nextBlock);
+    }
 
     }
 
@@ -152,10 +155,13 @@ public class GameModel extends JPanel {
 
     protected void spawnNewBlock(){
         if (nextBlock == null) {  
-            nextBlock = Block.spawn();  // 이 부근 즈음에 nextBlockFrame이랑 연결시키면 되지 않을까?
-        }  // 다음 블록 없으면 생성
+            nextBlock = Block.spawn();
+        }
         currentBlock = nextBlock;  // 생성한 nextBlock을 currentBlock으로 설정
         nextBlock = Block.spawn(); // 새로운 nextBlock 생성
+        if (gameBoard != null) {
+            gameBoard.setNextBlock(nextBlock); // GameView에 다음 블록 정보 전달
+        }
     }
 
     // 게임 재시작 시 블록 생성 상태 초기화
