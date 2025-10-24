@@ -17,13 +17,14 @@ public class GameModel extends JPanel {
     private final int INNER_LEFT = 1;
     private final int INNER_RIGHT = COLS - 2;
 
-    private final char TEXT = 'O';
 
     private GameTimer gameTimer;
 
     public int[][] board ;   // 게임 보드를 나타내는 2차원 배열
     protected Block currentBlock;  // 플레이어가 현재 조작하는 블록
     private Block nextBlock;
+    // 쌓인 블록의 색상을 보관 (ARGB). 0이면 비어있음
+    private int[][] colorBoard;
 
 
     public int[][] boardArray = new int[ROWS][COLS];
@@ -44,10 +45,20 @@ public class GameModel extends JPanel {
                 }
             }
         }
+        // 색상 보드 초기화
+        colorBoard = new int[ROWS][COLS];
         repaint();
+    // make external board reference point to internal array so other code using `board` works
+    this.board = this.boardArray;
+    // spawn the initial block safely (avoid calling overridable methods from constructor)
+    this.nextBlock = Block.spawn();
+    this.currentBlock = this.nextBlock;
+    this.nextBlock = Block.spawn();
+    if (gameBoard != null) {
+        gameBoard.setNextBlock(nextBlock);
     }
 
-    
+    }
 
     public Block getCurrentBlock(){  // 현재블록 getter
         return currentBlock;
@@ -64,28 +75,31 @@ public class GameModel extends JPanel {
         }
     }
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (!isVisible()) return;
-        int cellSize = gameBoard.CELL_SIZE;
-        // GameBoard의 x, y 오프셋과 동일하게 적용
-        int xOffset = (gameBoard.getWidth() - gameBoard.COLS * cellSize) / 3;
-        int yOffset = gameBoard.MARGIN * cellSize;
-        g.setFont(new Font("Monospaced", Font.BOLD, cellSize - 2));
-        FontMetrics fm = g.getFontMetrics();
-        // 내부 그리기 범위: rows 2..ROWS-2 (2..21), cols 1..COLS-2 (1..10)
-        for (int row = 0; row <= INNER_BOTTOM; row++) {
-            for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
-                if (boardArray[row][col] == 1) {
-                    int x = xOffset + (col - INNER_LEFT) * cellSize + (cellSize - fm.charWidth(TEXT)) / 2;
-                    int y = yOffset + (row - INNER_TOP) * cellSize + (cellSize + fm.getAscent() - fm.getDescent()) / 2;
-                    g.setColor(Color.BLACK); // O를 더 잘 보이게
-                    g.drawString(String.valueOf(TEXT), x, y);
-                }
-            }
-        }
-    }
+    // @Override
+    // protected void paintComponent(Graphics g) {
+
+
+
+    //     super.paintComponent(g);
+    //     if (!isVisible()) return;
+    //     int cellSize = gameBoard.CELL_SIZE;
+    //     // GameBoard의 x, y 오프셋과 동일하게 적용
+    //     int xOffset = (gameBoard.getWidth() - gameBoard.COLS * cellSize) / 3;
+    //     int yOffset = gameBoard.MARGIN * cellSize;
+    //     g.setFont(new Font("Monospaced", Font.BOLD, cellSize - 2));
+    //     FontMetrics fm = g.getFontMetrics();
+    //     // 내부 그리기 범위: rows 2..ROWS-2 (2..21), cols 1..COLS-2 (1..10)
+    //     for (int row = 0; row <= INNER_BOTTOM; row++) {
+    //         for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
+    //             if (boardArray[row][col] == 1) {
+    //                 int x = xOffset + (col - INNER_LEFT) * cellSize + (cellSize - fm.charWidth(TEXT)) / 2;
+    //                 int y = yOffset + (row - INNER_TOP) * cellSize + (cellSize + fm.getAscent() - fm.getDescent()) / 2;
+    //                 g.setColor(Color.BLACK); // O를 더 잘 보이게
+    //                 g.drawString(String.valueOf(TEXT), x, y);
+    //             }
+    //         }
+    //     }
+    // }
 
 
     public void boardInit() {
@@ -122,23 +136,39 @@ public class GameModel extends JPanel {
         int[][] shape = currentBlock.getShape();
         int x = currentBlock.getX();
         int y = currentBlock.getY();
+        Color color = currentBlock.getColor();
+        int rgb = (color != null ? color.getRGB() : new Color(100,100,100).getRGB());
 
         for (int row = 0 ; row < shape.length ; row++){
             for (int col = 0 ; col < shape[row].length ; col++){
                 if (shape[row][col] != 0){
                     board[y + row] [x + col] = 1;
+                    colorBoard[y + row][x + col] = rgb;
                 }
             }
         }
+            // 하드드롭에서도 즉시 라인 클리어 실행 (기존에는 누락되어 줄이 안 지워짐)
+            lineClear();
         // checkLines();  // 줄이 다 찼는지 확인
     }
+ 
 
     protected void spawnNewBlock(){
         if (nextBlock == null) {  
-            nextBlock = Block.spawn();  // 이 부근 즈음에 nextBlockFrame이랑 연결시키면 되지 않을까?
-        }  // 다음 블록 없으면 생성
+            nextBlock = Block.spawn();
+        }
         currentBlock = nextBlock;  // 생성한 nextBlock을 currentBlock으로 설정
         nextBlock = Block.spawn(); // 새로운 nextBlock 생성
+        if (gameBoard != null) {
+            gameBoard.setNextBlock(nextBlock); // GameView에 다음 블록 정보 전달
+        }
+    }
+
+    // 게임 재시작 시 블록 생성 상태 초기화
+    public void resetBlocks() {
+        this.nextBlock = Block.spawn();
+        this.currentBlock = this.nextBlock;
+        this.nextBlock = Block.spawn();
     }
 
     protected boolean canMoveto(int targetRow, int targetCol, int[][] shape){
@@ -198,34 +228,55 @@ public class GameModel extends JPanel {
     }
 
 
-    public void oneLineClear(int row) {
-
-            for(int col = 1; col < COLS-1; col++) {
-                if(boardArray[row][col] == 0) {
+    // Checks all visible rows and clears any full lines (Tetris behavior).
+    // Visible inner rows are from INNER_TOP .. INNER_BOTTOM (inclusive).
+    public void lineClear() {
+        boolean anyCleared = false;
+                // 위에서 아래로 스캔 (보이는 영역): 2..ROWS-2
+                for (int row = INNER_TOP; row <= INNER_BOTTOM; row++) {
+            boolean full = true;
+            for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
+                if (boardArray[row][col] == 0) {
+                    full = false;
                     break;
                 }
-                else if (col == COLS - 2 && boardArray[row][col] == 1) {
-                    // 해당 행이 모두 1인 경우
-                    // 위의 모든 행을 한 칸씩 아래로 이동
-                    for (int r = row; r > 0; r--) {
-                        System.arraycopy(boardArray[r - 1], 0, boardArray[r], 0, COLS);
-                    }
-                    // 최상단 행은 모두 0으로 초기화
-                    for (int c = 0; c < COLS; c++) {
-                        boardArray[0][c] = 0;
-                    }
-                    boardArray[0][0] = 1; // 왼쪽 벽
-                    boardArray[0][COLS - 1] = 1; // 오른쪽 벽
-                    repaint();
-
-                } 
             }
+            if (full) {
+                // 위의 모든 행을 한 칸씩 아래로 이동 (색상 보드 포함)
+                for (int r = row; r > 0; r--) {
+                    System.arraycopy(boardArray[r - 1], 0, boardArray[r], 0, COLS);
+                    System.arraycopy(colorBoard[r - 1], 0, colorBoard[r], 0, COLS);
+                }
+                // 최상단 행 초기화 (좌/우 벽 유지)
+                for (int c = 0; c < COLS; c++) {
+                    boardArray[0][c] = 0;
+                    colorBoard[0][c] = 0;
+                }
+                boardArray[0][0] = 1; // 왼쪽 벽
+                boardArray[0][COLS - 1] = 1; // 오른쪽 벽
 
+                anyCleared = true;
+                // 같은 row 인덱스에 새로운 줄이 내려왔으므로 다시 검사
+                row--;
+            }
         }
+        if (anyCleared) {
+            if (gameBoard != null) {
+                gameBoard.repaintBlock();
+            } else {
+                repaint();
+            }
+        }
+    }
+    
+
+    public int[][] getColorBoard() {
+        return colorBoard;
+    }
 
     public boolean isGameOver() {
         // 상단 감지 영역: row 0..(INNER_TOP-1), col 3..7 에 1이 있으면 게임 오버
-        for (int row = 0; row < INNER_TOP; row++) {
+        for (int row = INNER_TOP; row < INNER_TOP + 2; row++) {
             for (int col = 3; col < 8; col++) {
                 if (boardArray[row][col] == 1) {
                     return true;
@@ -239,5 +290,6 @@ public class GameModel extends JPanel {
     }
     
 
+    
 
 }

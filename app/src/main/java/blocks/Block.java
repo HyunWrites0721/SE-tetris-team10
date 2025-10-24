@@ -14,9 +14,9 @@ public abstract class Block {
     // private Block currentBlock; gameboard로?
     
     // 게임 보드의 크기 상수
-    private static final int BOARD_WIDTH = 12;
-    private static final int BOARD_HEIGHT = 23;
-    
+    private final int BOARD_WIDTH = 12;
+    private final int BOARD_HEIGHT = 23;
+
     public abstract void setShape();
     public int[][] getShape() { return shape; }
 
@@ -28,16 +28,35 @@ public abstract class Block {
     
     public static Block spawn() {            // 랜덤으로 블록 지정
         int random = (int)(Math.random() * 7);
-        Block newBlock = switch(random) {
-            case 0 ->  new IBlock();
-            case 1 ->  new JBlock();
-            case 2 ->  new LBlock();
-            case 3 ->  new OBlock();
-            case 4 ->  new SBlock();
-            case 5 ->  new TBlock();
-            case 6 ->  new ZBlock();
-            default -> new IBlock(); // 기본값으로 IBlock 반환
-        };
+        Block newBlock;
+        switch (random) {
+            case 0:
+                newBlock = new IBlock();
+                break;
+            case 1:
+                newBlock = new JBlock();
+                break;
+            case 2:
+                newBlock = new LBlock();
+                break;
+            case 3:
+                newBlock = new OBlock();
+                break;
+            case 4:
+                newBlock = new SBlock();
+                break;
+            case 5:
+                newBlock = new TBlock();
+                break;
+            case 6:
+                newBlock = new ZBlock();
+                break;
+            default:
+                newBlock = new IBlock(); // 기본값으로 IBlock 반환
+                break;
+        }
+        // 블록 생성 시 기본 모양을 초기화해 둔다 (렌더링/회전에 필요)
+        newBlock.setShape();
       switch(random) {
          case 0:  // IBlock (5×5)
             newBlock.setPosition(3, 0);
@@ -88,13 +107,6 @@ public abstract class Block {
         return false;
     }
     
-    /*
-    public void spawnNewBlock() {
-    	currentBlock = spawn();
-    	currentBlock.setPosition(BOARD_WIDTH/2 - 2, 0);  
-    	// 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
-    } */
-    
     
     // 충돌 검사 메서드
     public boolean checkCollision(int[][] board) {
@@ -142,6 +154,14 @@ public abstract class Block {
             y++;
            // repaint();
         }
+    }
+
+    public boolean isMoveDown(int[][] board){
+        if(canMoveDown(board)) {
+            y++;
+            return true;  // 성공적으로 이동했을 때
+        }
+        return false;  // 이동하지 못했을 때
     }
     
     
