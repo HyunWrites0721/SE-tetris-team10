@@ -12,14 +12,20 @@ public class GameView extends JPanel {
     public double scale = 1.0;
     public int ROWS = 20;
     public int COLS = 10;
-    public int CELL_SIZE = 30;
+    public int BASE_CELL_SIZE = 30;  // 기본 셀 크기
+    public int CELL_SIZE = 30;       // 실제 적용될 셀 크기
     public int MARGIN = 2;
 
-    public int NEXT_ROWS = 4;
-    public int NEXT_COLS = 6;
+    public int NEXT_ROWS = 6;  // NEXT 영역 높이를 6칸으로 통일
+    public int NEXT_COLS = 6;  // NEXT 영역 너비를 6칸으로 통일
     public int NEXT_MARGIN = 2;
+    
+    // 최대 프레임 크기 (600x600 기준)
+    private static final int MAX_FRAME_WIDTH = 600;
+    private static final int MAX_FRAME_HEIGHT = 600;
 
-    public int FONT_SIZE = 48;
+    public int BASE_FONT_SIZE = 24;  // 기본 폰트 크기
+    public int FONT_SIZE = 24;       // 실제 적용될 폰트 크기
     public int STROKE_WIDTH = 3;
 
     private int x,y;
@@ -50,11 +56,26 @@ public class GameView extends JPanel {
 
     public void convertScale(double scale) {
         this.scale = scale;
-        CELL_SIZE = (int)(30 * scale);
-        MARGIN = (int)(2 * scale);
-        NEXT_MARGIN = (int)(2 * scale);
-        FONT_SIZE = (int)(48 * scale);
-        STROKE_WIDTH = (int)(3 * scale);
+        
+        // 화면 크기에 맞는 최적의 셀 크기 계산
+        int maxBoardWidth = (int)(MAX_FRAME_WIDTH * scale * 0.7);  // 전체 화면의 70%를 게임판에 할당
+        int maxBoardHeight = (int)(MAX_FRAME_HEIGHT * scale * 0.95); // 전체 화면의 95%를 높이로 사용
+        
+        // 너비와 높이 중 더 제한적인 요소를 기준으로 셀 크기 계산
+        int cellByWidth = maxBoardWidth / (COLS + NEXT_COLS + 2); // +2는 여백용
+        int cellByHeight = maxBoardHeight / (ROWS + 1); // +1은 여백용
+        
+        // 더 작은 값을 선택하여 셀 크기 결정
+        CELL_SIZE = Math.min(cellByWidth, cellByHeight);
+        
+        // 최소 셀 크기 보장 (너무 작아지지 않도록)
+        CELL_SIZE = Math.max(CELL_SIZE, 15);
+        
+        // 나머지 크기들도 screenRatio에 맞춰 조정
+        MARGIN = Math.max(1, CELL_SIZE / 15);
+        NEXT_MARGIN = MARGIN;
+        FONT_SIZE = (int)(BASE_FONT_SIZE * start.StartFrame.screenRatio);
+        STROKE_WIDTH = Math.max(1, CELL_SIZE / 10);
         
         // 상위 프레임의 크기도 함께 조절
         if (getParent() != null && getParent().getParent() instanceof FrameBoard) {
@@ -71,7 +92,8 @@ public class GameView extends JPanel {
 
         int boardWidth = COLS * CELL_SIZE;
         int boardHeight = ROWS * CELL_SIZE;
-        x = (getWidth() - boardWidth) / 3;
+        // 왼쪽 여백을 4로 나누어 더 많은 공간을 우측에 확보
+        x = (getWidth() - boardWidth) / 4;
         y = MARGIN * CELL_SIZE;
 
         int nextWidth = NEXT_COLS * CELL_SIZE;
