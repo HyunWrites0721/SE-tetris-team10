@@ -1,12 +1,12 @@
 package game;
 
 import java.awt.*;
+import java.awt.event.KeyListener;
+import java.awt.event.KeyEvent;
+import javax.swing.*;
+import javax.swing.border.Border;
 
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-
-public class PauseBoard extends JPanel{
+public class PauseBoard extends JPanel implements KeyListener {
 
     private FrameBoard frameBoard;
     private JLabel pauseLabel;
@@ -15,6 +15,9 @@ public class PauseBoard extends JPanel{
     private javax.swing.JButton restartButton;
     private javax.swing.JButton mainButton;
     private javax.swing.JButton quitButton;
+    
+    private int selectedButtonIndex = 0; // 현재 선택된 버튼 인덱스
+    private javax.swing.JButton[] buttons; // 버튼 배열
     
     public void convertScale(double scale) {
         // Update top panel margin
@@ -46,8 +49,57 @@ public class PauseBoard extends JPanel{
         repaint();
     }
 
+    @Override
+    public void keyTyped(KeyEvent e) {
+        // 키 입력 이벤트 처리
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_UP:
+                selectedButtonIndex = (selectedButtonIndex - 1 + buttons.length) % buttons.length;
+                updateButtonSelection();
+                break;
+            case KeyEvent.VK_DOWN:
+                selectedButtonIndex = (selectedButtonIndex + 1) % buttons.length;
+                updateButtonSelection();
+                break;
+            case KeyEvent.VK_ENTER:
+                buttons[selectedButtonIndex].doClick();
+                break;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        // 키 해제 이벤트 처리
+    }
+
+    private void updateButtonSelection() {
+        Color buttonColor = new Color(245, 245, 245);
+        Color selectedColor = new Color(200, 200, 200);
+        
+        for (int i = 0; i < buttons.length; i++) {
+            javax.swing.JButton button = buttons[i];
+            if (i == selectedButtonIndex) {
+                button.setBackground(selectedColor);
+                button.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+            } else {
+                button.setBackground(buttonColor);
+                button.setBorder(BorderFactory.createEmptyBorder());
+            }
+        }
+    }
+
     public PauseBoard(FrameBoard frameBoard) {
         this.frameBoard = frameBoard;
+        
+        // 키 입력을 받을 수 있도록 포커스 설정
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false); // 탭키 등이 포커스를 뺏지 않도록 설정
+        addKeyListener(this);
+        
         setOpaque(true);
         setLayout(new BorderLayout());
 
@@ -131,12 +183,10 @@ public class PauseBoard extends JPanel{
         mainButton.setOpaque(true);
 
                 mainButton.addActionListener(e -> {
-            // Main Menu 버튼 클릭 시 동작
-
-
-
-
-
+            if (frameBoard != null) {
+                frameBoard.dispose();  // 현재 게임 창 닫기
+                new start.StartFrame();  // 새로운 시작 화면 생성
+            }
         });
 
         quitButton = new javax.swing.JButton("Quit");
@@ -161,6 +211,13 @@ public class PauseBoard extends JPanel{
         buttonPanel.add(restartButton);
         buttonPanel.add(mainButton);
         buttonPanel.add(quitButton);
+        
+        // 버튼 배열 초기화
+        buttons = new javax.swing.JButton[]{resumeButton, restartButton, mainButton, quitButton};
+        
+        // 초기 버튼 선택 상태 설정
+        updateButtonSelection();
+        
         add(buttonPanel, BorderLayout.CENTER);
     }
     

@@ -9,7 +9,7 @@ public class SettingModel {
 
     public SettingModel() {
         try {
-            java.nio.file.Path path = java.nio.file.Paths.get("app/src/main/java/settings/SettingSave.json");
+            java.nio.file.Path path = java.nio.file.Paths.get("app/src/main/java/settings/data/SettingSave.json");
             String json = java.nio.file.Files.readString(path);
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);

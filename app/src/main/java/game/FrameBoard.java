@@ -167,8 +167,13 @@ public class FrameBoard extends JFrame {
         pauseBoard.setOpaque(isPaused);
          if (isPaused) {
              if (gameTimer != null) gameTimer.stop();
+             // 일시정지 화면이 표시될 때 포커스 설정
+             pauseBoard.setFocusable(true);
+             pauseBoard.requestFocusInWindow();
          } else {
              if (gameTimer != null) gameTimer.start();
+             // 게임 재개 시 프레임으로 포커스 반환
+             this.requestFocusInWindow();
          }
     }
     
@@ -185,6 +190,9 @@ public class FrameBoard extends JFrame {
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
         gameTimer.stop();
+        // 게임오버 화면이 표시될 때 포커스 설정
+        gameOverBoard.setFocusable(true);
+        gameOverBoard.requestFocusInWindow();
     }
 
     public void gameInit() {

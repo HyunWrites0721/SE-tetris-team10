@@ -10,7 +10,13 @@ public abstract class Block {
     public GameView gameBoard;
     private Color color;
     private Color[][] Colorset;
-    public boolean setBlindColor = true; // 색맹모드 설정 여부
+    private static settings.SettingModel settingModel;
+    
+    // 색맹모드 설정 여부를 SettingModel에서 읽어옴
+    private boolean getColorBlindModeFromSettings() {
+        settingModel = new settings.SettingModel();  // 항상 새로 로드하여 최신 설정을 반영
+        return settingModel.isColorBlindMode();
+    }
     // private Block currentBlock; gameboard로?
     
     // 게임 보드의 크기 상수
@@ -21,8 +27,7 @@ public abstract class Block {
     public int[][] getShape() { return shape; }
 
     public int setBlindColor_1() {    // 단지 boolean 타입으로 받은 색맹모드 설정 값을 정수로 변환
-        if (setBlindColor == true) return 1;
-        else return 0;
+        return getColorBlindModeFromSettings() ? 1 : 0;
     }
     
     

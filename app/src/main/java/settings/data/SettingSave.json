@@ -1,5 +1,5 @@
 {
-  "colorBlindMode":false,
+  "colorBlindMode":true,
   "controlType":"arrow",
-  "screenSize":"large"
+  "screenSize":"medium"
 }
