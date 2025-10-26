@@ -24,12 +24,22 @@ public class ScoreBoard extends JPanel {
     }
 
     public void convertScale(double scale) {
+        // 기본 셀 크기 계산
         cellSize = (int)(30 * scale);
-        scoreWidth = 6 * cellSize;  // NEXT_COLS와 동일하게
-        scoreHeight = 4 * cellSize;
-        margin = (int)(2 * scale);
-        fontSize = (int)(48 * scale);  // Next 패널과 동일한 크기
-        strokeWidth = (int)(3 * scale);
+        
+        // NEXT 패널과 동일한 너비 사용하되, screenRatio 적용
+        scoreWidth = (int)(6 * cellSize * start.StartFrame.screenRatio);
+        scoreHeight = (int)(4 * cellSize * start.StartFrame.screenRatio);
+        
+        // 여백 크기 조정
+        margin = (int)(2 * scale * start.StartFrame.screenRatio);
+        
+        // 폰트 크기를 패널 크기에 맞게 조정
+        fontSize = (int)(Math.min(scoreHeight/2, scoreWidth/5));
+        
+        // 선 두께도 screenRatio에 맞춰 조정하되 최대값 제한
+        strokeWidth = Math.min(3, Math.max(1, (int)(2 * start.StartFrame.screenRatio)));
+        
         repaint();
     }
 

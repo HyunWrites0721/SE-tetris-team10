@@ -41,7 +41,7 @@ public class StartFrame extends JFrame {
             }
             switch (size) {
                 case "small": screenRatio = 0.8; break;
-                case "large": screenRatio = 2.0; break;
+                case "large": screenRatio = 1.5; break;  // 2.0에서 1.5로 수정
                 case "medium": default: screenRatio = 1.2; break;
             }
         } catch (Exception e) {
