@@ -1,8 +1,14 @@
-import game.GameStart;
+import javax.swing.SwingUtilities;
+
+import start.StartFrame;
 
 public class App {
     public static void main(String[] args) {
-        // 간단 실행: 콘솔에서 좌표 입력 받아 보드에 표시
-        new GameStart();
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                StartFrame startFrame = new StartFrame();
+                startFrame.setVisible(true);
+            }
+        });
     }
 }
