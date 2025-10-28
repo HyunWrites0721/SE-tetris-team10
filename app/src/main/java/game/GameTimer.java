@@ -6,17 +6,24 @@ import java.awt.event.*;
 
 public class GameTimer {
     protected static final int Init_DELAY = 1000;  // 1s (=1000ms)
+    // 속도 레벨별 딜레이 배열 (0~5레벨, 6단계)
+    private static final int[] SPEED_DELAYS = {1000, 800, 650, 500, 350, 200, 100};
     protected Timer timer;
     private GameView gameBoard;
     private GameModel blockText;
     private FrameBoard frameBoard;
     private boolean isRunning = false;
+    private int currentSpeedLevel = 0;  // 현재 속도 레벨
 
     public GameTimer(GameView gameBoard, GameModel blockText, FrameBoard frameBoard){
         System.out.println("NEW GameTimer created!");  // 새 타이머 생성 로그
         this.gameBoard = gameBoard;
         this.blockText = blockText;
         this.frameBoard = frameBoard;
+        
+        // GameModel에 타이머 참조 설정
+        blockText.setGameTimer(this);
+        
         timer = new Timer(Init_DELAY,new ActionListener() {   // 타이머 이벤트가 1초마다 발생함을 정의
             @Override
             public void actionPerformed(ActionEvent e){
@@ -68,5 +75,25 @@ public class GameTimer {
     // 타이머 실행 상태 확인 메서드
     public boolean isRunning() {
         return isRunning && timer.isRunning();
+    }
+    
+    // 속도 업데이트 메서드
+    public void updateSpeed(int speedLevel) {
+        if (speedLevel != currentSpeedLevel && speedLevel >= 0 && speedLevel < SPEED_DELAYS.length) {
+            currentSpeedLevel = speedLevel;
+            int newDelay = SPEED_DELAYS[speedLevel];
+            
+            System.out.println("Speed increased! Level: " + speedLevel + ", Delay: " + newDelay + "ms");
+            
+            // 타이머가 실행 중이면 새로운 속도로 재시작
+            if (isRunning) {
+                timer.stop();
+                timer.setDelay(newDelay);
+                timer.start();
+            } else {
+                // 실행 중이 아니면 딜레이만 변경
+                timer.setDelay(newDelay);
+            }
+        }
     }
 }
