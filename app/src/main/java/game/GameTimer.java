@@ -13,6 +13,7 @@ public class GameTimer {
     private boolean isRunning = false;
 
     public GameTimer(GameView gameBoard, GameModel blockText, FrameBoard frameBoard){
+        System.out.println("NEW GameTimer created!");  // 새 타이머 생성 로그
         this.gameBoard = gameBoard;
         this.blockText = blockText;
         this.frameBoard = frameBoard;
@@ -46,11 +47,26 @@ public class GameTimer {
         });
     }
     public void start(){
+        // 이미 실행 중이면 시작하지 않음 (중복 방지)
+        if (isRunning || timer.isRunning()) {
+            System.out.println("Timer already running - ignored start()");
+            return;
+        }
+        System.out.println("Timer started");
         isRunning = true;
         timer.start();
     }
+    
     public void stop(){
+        System.out.println("Timer stopped");
         isRunning = false;
-        timer.stop();
+        if (timer.isRunning()) {
+            timer.stop();
+        }
+    }
+    
+    // 타이머 실행 상태 확인 메서드
+    public boolean isRunning() {
+        return isRunning && timer.isRunning();
     }
 }

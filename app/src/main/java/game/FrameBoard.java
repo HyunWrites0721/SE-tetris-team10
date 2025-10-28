@@ -140,6 +140,7 @@ public class FrameBoard extends JFrame {
 
     // 타이머 생성: 1초마다 블록 낙하 및 화면 갱신
     gameTimer = new GameTimer(gameBoard, gameModel, this);
+    gameTimer.start();  // 명시적으로 타이머 시작
     
     pauseBoard = new PauseBoard(this);
     pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
@@ -205,7 +206,10 @@ public class FrameBoard extends JFrame {
              pauseBoard.setFocusable(true);
              pauseBoard.requestFocusInWindow();
          } else {
-             if (gameTimer != null) gameTimer.start();
+             // 타이머가 실행 중이 아닐 때만 시작 (중복 방지)
+             if (gameTimer != null && !gameTimer.isRunning()) {
+                 gameTimer.start();
+             }
              // 게임 재개 시 프레임으로 포커스 반환
              this.requestFocusInWindow();
          }
@@ -221,16 +225,28 @@ public class FrameBoard extends JFrame {
     }
     
     public void gameOver() {
-        System.out.println("Final Score: " + score);  // 최종 점수 출력
+        // 이미 게임오버 상태가 아닐 때만 최종 점수 출력
+        if (!isGameOver) {
+            System.out.println("Final Score: " + score);  // 최종 점수 출력
+            isGameOver = true;  // 게임오버 상태로 설정
+        }
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
-        gameTimer.stop();
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
         // 게임오버 화면이 표시될 때 포커스 설정
         gameOverBoard.setFocusable(true);
         gameOverBoard.requestFocusInWindow();
     }
 
     public void gameInit() {
+        // 기존 타이머를 완전히 정지하고 제거
+        if (gameTimer != null) {
+            gameTimer.stop();
+            gameTimer = null;  // 타이머 객체를 null로 설정
+        }
+        
         // 보드/색상 초기화
         gameModel.boardInit();
         // 블록 상태 초기화 및 뷰 동기화
@@ -240,14 +256,17 @@ public class FrameBoard extends JFrame {
         isGameOver = false;
         if (gameOverBoard != null) gameOverBoard.setVisible(false);
         if (pauseBoard != null) pauseBoard.setVisible(false);
-        // 일시정지 해제 및 타이머 재시작
 
-         // 점수 초기화
+        // 점수 초기화
         score = 0;
         scoreBoard.setScore(0);
         
+        // 일시정지 상태 해제
         isPaused = false;
-         if (gameTimer != null) gameTimer.start();
+
+        // 새로운 타이머 생성 및 시작
+        gameTimer = new GameTimer(gameBoard, gameModel, this);
+        gameTimer.start();
     }
 
 }
