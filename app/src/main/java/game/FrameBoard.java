@@ -14,14 +14,27 @@ public class FrameBoard extends JFrame {
         int minWidth = (int)(600 * scale);
         int minHeight = (int)(600 * scale);
         
-        // GameView의 실제 필요 크기 계산
-        if (gameBoard != null) {
+        // ScoreBoard 위치 업데이트
+        if (scoreBoard != null) {
+            scoreBoard.convertScale(scale);
             int cellSize = gameBoard.CELL_SIZE;
-            int totalCols = gameBoard.COLS + gameBoard.NEXT_COLS + 4; // +4는 여백용
-            int totalRows = gameBoard.ROWS + 2; // +2는 여백용
+            int boardWidth = gameBoard.COLS * cellSize;
+            int nextWidth = gameBoard.NEXT_COLS * cellSize;
+            int nextHeight = gameBoard.NEXT_ROWS * cellSize;
+            int margin = gameBoard.MARGIN * cellSize;
             
-            minWidth = Math.min((int)(600 * scale), cellSize * totalCols);
-            minHeight = Math.min((int)(600 * scale), cellSize * totalRows);
+            // GameView에서 실제 사용하는 x 좌표 계산 (GameView.getWidth() 사용)
+            int gameViewX = (gameBoard.getWidth() - boardWidth) / 4;
+            int rightPanelX = gameViewX + boardWidth;
+            
+            // NEXT 패널의 Y 위치 계산
+            int nextY = margin + gameBoard.NEXT_MARGIN * cellSize;
+            
+            // ScoreBoard를 NEXT 패널 바로 아래에 배치 (간격 없이)
+            scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
+                               nextY + nextHeight,         // NEXT 패널 바로 아래
+                               nextWidth,                  // NEXT 패널과 동일한 너비
+                               4 * cellSize);              // 높이 4칸
         }
         
         FRAME_WIDTH = minWidth;
@@ -140,15 +153,36 @@ public class FrameBoard extends JFrame {
 
     scoreBoard = new ScoreBoard();
     // GameView의 좌표 계산 방식을 따라 ScoreBoard 위치 설정 (StartFrame.screenRatio 반영)
-    int cellSizeInit = (int)(30 * StartFrame.screenRatio);
-    int boardWidth = 10 * cellSizeInit;  // COLS * CELL_SIZE
-    int x = (FRAME_WIDTH - boardWidth) / 3;
-    // Next 패널과 동일한 x 위치, y는 Next 패널 바로 아래
-    scoreBoard.setBounds(x + boardWidth,  // Next 패널과 동일한 x 좌표
-                        8 * cellSizeInit,  // Next 패널 아래 (NEXT_MARGIN * 2 + NEXT_ROWS = 2 + 4 + 2 = 8)
-                        6 * cellSizeInit,  // Next 패널과 동일한 너비 (NEXT_COLS * CELL_SIZE)
-                        4 * cellSizeInit); // 높이 4칸
+    int cellSizeInit = (int)(30 * start.StartFrame.screenRatio);
+    
+    // GameView가 생성된 후에 정확한 위치를 계산하기 위해 임시로 기본 위치 설정
+    // 실제 위치는 updateFrameSize에서 정확히 계산됨
+    scoreBoard.setBounds(0, 0, 6 * cellSizeInit, 4 * cellSizeInit);
     layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
+    
+    // GameView 초기화 후 ScoreBoard 위치를 정확히 설정
+    SwingUtilities.invokeLater(() -> {
+        if (gameBoard != null) {
+            int cellSize = gameBoard.CELL_SIZE;
+            int actualBoardWidth = gameBoard.COLS * cellSize;
+            int nextWidth = gameBoard.NEXT_COLS * cellSize;
+            int nextHeight = gameBoard.NEXT_ROWS * cellSize;
+            int margin = gameBoard.MARGIN * cellSize;
+            
+            // GameView에서 실제 사용하는 x 좌표 계산
+            int gameViewX = (gameBoard.getWidth() - actualBoardWidth) / 4;
+            int rightPanelX = gameViewX + actualBoardWidth;
+            
+            // NEXT 패널의 Y 위치 계산
+            int nextY = margin + gameBoard.NEXT_MARGIN * cellSize;
+            
+            // ScoreBoard를 NEXT 패널 바로 아래에 배치 (간격 없이)
+            scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
+                               nextY + nextHeight,         // NEXT 패널 바로 아래
+                               nextWidth,                  // NEXT 패널과 동일한 너비
+                               4 * cellSize);              // 높이 4칸
+        }
+    });
 
 
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
@@ -187,6 +221,7 @@ public class FrameBoard extends JFrame {
     }
     
     public void gameOver() {
+        System.out.println("Final Score: " + score);  // 최종 점수 출력
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
         gameTimer.stop();

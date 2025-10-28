@@ -16,8 +16,6 @@ public class GameModel extends JPanel {
     private final int INNER_BOTTOM = ROWS - 2;
     private final int INNER_LEFT = 1;
     private final int INNER_RIGHT = COLS - 2;
-
-
     private GameTimer gameTimer;
 
     public int[][] board ;   // 게임 보드를 나타내는 2차원 배열
@@ -29,7 +27,9 @@ public class GameModel extends JPanel {
 
     public int[][] boardArray = new int[ROWS][COLS];
 
-
+    private int totalLinesCleared = 0;  // 총 클리어한 라인 수
+    private int currentLevel = 1;       // 현재 레벨
+    private int lastLineClearScore = 0; // 마지막으로 얻은 라인 클리어 점수
 
     public GameModel(GameView gameBoard) {
         this.gameBoard = gameBoard;
@@ -119,20 +119,22 @@ public class GameModel extends JPanel {
     
 
     // 하드 드롭
-    public void HardDrop() {
+    public int HardDrop() {
         if (currentBlock != null) {  // 현재 블록이 있는지 확인
            /* while (!checkCollision(0,1)){  // y로 한 칸 내려갔을때 충돌이 일어나지 않으면 (while문이라서 충돌이 일어나기 전까지 계속 내려감)
                 currentBlock.setPosition(currentBlock.getX(), currentBlock.getY()+1);  // y좌표 +1 을 해 한 칸 내려 새로운 위치를 설정
             } */ 
-            currentBlock.hardDrop(board);
-            placePiece();  // 블록을 보드에 고정
+            int dropDistance = currentBlock.hardDrop(board);
+            placePiece();  // 블록을 보드에 고정하고 라인 클리어 실행
             spawnNewBlock();  // 그리고 다음 블록을 생성
         //  repaint();
+            return dropDistance;  // 드롭 거리 반환
         }
+        return 0;   // 현재 블록이 없으면 0 반환
     }
 
     // 블록을 보드에 고정시키는 역할
-    protected void placePiece() {
+    protected int placePiece() {
         int[][] shape = currentBlock.getShape();
         int x = currentBlock.getX();
         int y = currentBlock.getY();
@@ -147,9 +149,17 @@ public class GameModel extends JPanel {
                 }
             }
         }
-            // 하드드롭에서도 즉시 라인 클리어 실행 (기존에는 누락되어 줄이 안 지워짐)
-            lineClear();
+            // 하드드롭에서도 즉시 라인 클리어 실행
+            int linesCleared = lineClear();
+            lastLineClearScore = 0;  // 기본값으로 초기화
+            if (linesCleared > 0) {
+                // 점수 계산을 레벨업보다 먼저 실행 (현재 레벨로 계산)
+                lastLineClearScore = calculateLineClearScore(linesCleared);
+                totalLinesCleared += linesCleared;
+                levelUp();  // 레벨 업데이트는 점수 계산 후에
+            }
         // checkLines();  // 줄이 다 찼는지 확인
+        return lastLineClearScore;  // 라인 클리어 점수 반환
     }
  
 
@@ -169,6 +179,9 @@ public class GameModel extends JPanel {
         this.nextBlock = Block.spawn();
         this.currentBlock = this.nextBlock;
         this.nextBlock = Block.spawn();
+        this.totalLinesCleared = 0;  // 총 클리어한 라인 수 초기화
+        this.currentLevel = 1;       // 레벨 초기화
+        this.lastLineClearScore = 0; // 라인 클리어 점수 초기화
     }
 
     protected boolean canMoveto(int targetRow, int targetCol, int[][] shape){
@@ -230,8 +243,9 @@ public class GameModel extends JPanel {
 
     // Checks all visible rows and clears any full lines (Tetris behavior).
     // Visible inner rows are from INNER_TOP .. INNER_BOTTOM (inclusive).
-    public void lineClear() {
+    public int lineClear() {
         boolean anyCleared = false;
+        int clearedLine = 0;
                 // 위에서 아래로 스캔 (보이는 영역): 2..ROWS-2
                 for (int row = INNER_TOP; row <= INNER_BOTTOM; row++) {
             boolean full = true;
@@ -257,6 +271,7 @@ public class GameModel extends JPanel {
 
                 anyCleared = true;
                 // 같은 row 인덱스에 새로운 줄이 내려왔으므로 다시 검사
+                clearedLine++;
                 row--;
             }
         }
@@ -267,11 +282,61 @@ public class GameModel extends JPanel {
                 repaint();
             }
         }
+        return clearedLine;
     }
     
+    public int levelUp() {
+        // 총 클리어한 라인 수에 따라 레벨 계산 (0~9: 레벨1, 10~19: 레벨2, ..., 90~99: 레벨10)
+        int newLevel = Math.min((totalLinesCleared / 2) + 1, 10);  // 최대 10레벨
+        
+        if (newLevel != currentLevel) {
+            currentLevel = newLevel;
+             System.out.println("Level Up! New Level: " + currentLevel);
+            
+            // 레벨이 올라갔을 때 추가 로직이 필요하면 여기에 구현
+            // 예: 블록 떨어지는 속도 증가, 점수 보너스 등
+        }
+        
+        return currentLevel;
+    }
 
     public int[][] getColorBoard() {
         return colorBoard;
+    }
+
+    public int getCurrentLevel() {
+        return currentLevel;
+    }
+
+    public int getTotalLinesCleared() {
+        return totalLinesCleared;
+    }
+
+    public int getLastLineClearScore() {
+        return lastLineClearScore;
+    }
+
+    // 라인 클리어에 따른 점수 계산
+    public int calculateLineClearScore(int linesCleared) {
+        int baseScore = 0;
+        switch (linesCleared) {
+            case 1:
+                baseScore = 100;  // 싱글
+                break;
+            case 2:
+                baseScore = 300;  // 더블
+                break;
+            case 3:
+                baseScore = 500;  // 트리플
+                break;
+            case 4:
+                baseScore = 800;  // 테트리스 (4줄)
+                break;
+            default:
+                baseScore = 0;
+                break;
+        }
+        return baseScore * currentLevel;  // 현재 레벨과 곱하기
     }
 
     public boolean isGameOver() {

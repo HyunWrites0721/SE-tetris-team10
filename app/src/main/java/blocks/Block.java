@@ -79,12 +79,13 @@ public abstract class Block {
     //newBlock.setPosition(BOARD_WIDTH/2 - 2, 0); // 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
     
     
-    public void hardDrop(int[][] board) {
+    public int hardDrop(int[][] board) {
         int dropDistance = 0;  // dropDistance는 블록이 아래로 몇칸이나 떨어질 수 있는가를 의미
         while (!checkCollision(board, 0, dropDistance + 1)) {  // 한 칸 내려갔을때 충돌이 생기는 지를 확인. 충돌이 안생기면 false가 리턴될 것이고 not 이니까 while9(true) 즉 무한 루프가 됨.    
             dropDistance++;  // 충돌 안생기면 +1
         }
         y += dropDistance; // 충돌 직전까지 +1이 계속 누적될 것이고. 충돌되면 y 좌표에 더함.
+        return dropDistance; // 몇칸 떨어졌는지 반환
     }
     
      
@@ -225,14 +226,14 @@ public abstract class Block {
     
     protected void initColor(int setBlindColor_1, int colorIndex) {
         Colorset = new Color[2][];
-        Colorset[0] = new Color[] {Color.green, Color.red, Color.blue, Color.orange, Color.yellow, Color.magenta, Color.pink};
+        Colorset[0] = new Color[] {Color.GREEN, Color.RED, Color.BLUE, Color.ORANGE, Color.YELLOW, Color.MAGENTA, Color.CYAN};
         Colorset[1] = new Color[]{ new Color(0,158,115),   // green → bluish green
                                     new Color(213,94,0),    // red → vermilion
                                     new Color(0,114,178),   // blue
                                     new Color(230,159,0),   // orange
                                     new Color(240,228,66),  // yellow
                                     new Color(204,121,167), // magenta
-                                    new Color(204,121,167) };  // pink → same tone
+                                    new Color(86,180,233) };  // pink → same tone
         this.color = Colorset[setBlindColor_1] [colorIndex];
     } 
     public void setColor(int setBlindColor_1,  int colorIndex) {

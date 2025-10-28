@@ -26,10 +26,11 @@ public class GameTimer {
                 if (blockText.getCurrentBlock() != null){  // 현재 블록이 있는지 확인
                     if(blockText.getCurrentBlock().canMoveDown(blockText.getBoard())) {  // 아래로 이동 할 수 있는지 검사. 현재 게임판을 검사함으로 써 블록과 board의 상태를 검사.
                         blockText.getCurrentBlock().moveDown(blockText.getBoard()); //떨어지기
+                        frameBoard.increaseScore(1); // 자동으로 떨어질 때마다 점수 1 증가
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
                     } else {
-                        blockText.placePiece(); //쌓이기
-                        blockText.lineClear(); // 라인 클리어가 있었다면 GameModel에서 리페인트 요청함
+                        int lineClearScore = blockText.placePiece(); //쌓이기 및 라인 클리어 점수 받기
+                        frameBoard.increaseScore(lineClearScore); // 라인 클리어 점수 추가
                         //게임오버인지 확인
                         if(blockText.isGameOver()){
                             frameBoard.gameOver();
