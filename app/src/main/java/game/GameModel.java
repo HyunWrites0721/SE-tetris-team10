@@ -330,21 +330,32 @@ public class GameModel extends JPanel {
         return blocksSpawned;
     }
 
+    // 현재 속도 레벨 반환 (점수산정용도)
+    public int getCurrentSpeedLevel() {
+        // 블록 개수 기준으로 속도 레벨 계산
+        int blockSpeedLevel = (blocksSpawned / 2 ) ;  // 20개마다 1레벨
+        
+        // 줄 삭제 기준으로 속도 레벨 계산 
+        int lineSpeedLevel = (totalLinesCleared / 5 ) ;  // 5줄마다 1레벨
+
+        // 둘 중 더 높은 레벨 사용 (최대 6레벨까지, 0-based이므로 6단계)
+        return Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
+    }
+
     // 속도 증가 조건 확인 및 GameTimer에 알림
     private void checkSpeedIncrease() {
         // 블록 생성 개수 조건: 10, 20, 30, 40, 50, 60개 이상
         // 줄 삭제 개수 조건: 5, 10, 15, 20, 25, 30줄 이상
-        boolean speedShouldIncrease = false;
         int speedLevel = 0;
         
         // 블록 개수 기준으로 속도 레벨 계산
-        int blockSpeedLevel = (blocksSpawned / 20);  // 20개마다 1레벨
+        int blockSpeedLevel = (blocksSpawned / 2);  // 20개마다 1레벨
         
         // 줄 삭제 기준으로 속도 레벨 계산 
         int lineSpeedLevel = (totalLinesCleared / 5);  // 5줄마다 1레벨
         
-        // 둘 중 더 높은 레벨 사용 (최대 5레벨까지, 0-based이므로 6단계)
-        speedLevel = Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 5);
+        // 둘 중 더 높은 레벨 사용 (최대 5레벨까지, 0(init)~5단계 이므로 총 6단계)
+        speedLevel = Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
         
         // GameTimer에 속도 업데이트 요청
         if (gameTimer != null) {
@@ -355,6 +366,7 @@ public class GameModel extends JPanel {
     // 라인 클리어에 따른 점수 계산
     public int calculateLineClearScore(int linesCleared) {
         int baseScore = 0;
+        //int speedMultiplier = getCurrentSpeedLevel() ;
         switch (linesCleared) {
             case 1:
                 baseScore = 100;  // 싱글
@@ -373,6 +385,7 @@ public class GameModel extends JPanel {
                 break;
         }
         return baseScore * currentLevel;  // 현재 레벨과 곱하기
+        //return baseScore * currentLevel * speedMultiplier;  // 현재 레벨과 곱하기
     }
 
     public boolean isGameOver() {

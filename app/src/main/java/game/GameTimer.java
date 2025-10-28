@@ -7,14 +7,16 @@ import java.awt.event.*;
 public class GameTimer {
     protected static final int Init_DELAY = 1000;  // 1s (=1000ms)
     // 속도 레벨별 딜레이 배열 (0~5레벨, 6단계)
-    private static final int[] SPEED_DELAYS = {1000, 800, 650, 500, 350, 200, 100};
+    private static final int[][] SPEED_DELAYS = {{1000, 800, 650, 500, 350, 200, 100},     // 노멀 모드 speed delays
+                                                {800, 640, 520, 400, 280, 160, 80},        // 하드 모드 speed delays
+                                                {1200, 960, 780, 600, 420, 250, 120}};     // 이지 모드 speed delays
     protected Timer timer;
     private GameView gameBoard;
     private GameModel blockText;
     private FrameBoard frameBoard;
     private boolean isRunning = false;
     private int currentSpeedLevel = 0;  // 현재 속도 레벨
-
+    public int difficulty = 0; // 0: 노멀, 1: 하드, 2: 이지
     public GameTimer(GameView gameBoard, GameModel blockText, FrameBoard frameBoard){
         System.out.println("NEW GameTimer created!");  // 새 타이머 생성 로그
         this.gameBoard = gameBoard;
@@ -24,7 +26,9 @@ public class GameTimer {
         // GameModel에 타이머 참조 설정
         blockText.setGameTimer(this);
         
-        timer = new Timer(Init_DELAY,new ActionListener() {   // 타이머 이벤트가 1초마다 발생함을 정의
+        // 초기 딜레이를 difficulty에 맞는 첫 번째 속도로 설정
+        int initialDelay = SPEED_DELAYS[difficulty][0];
+        timer = new Timer(initialDelay, new ActionListener() {   // 타이머 이벤트가 difficulty에 맞는 속도로 발생
             @Override
             public void actionPerformed(ActionEvent e){
                 // 타이머가 정지되었거나 일시정지 중이면 아무 것도 하지 않음
@@ -34,7 +38,9 @@ public class GameTimer {
                 if (blockText.getCurrentBlock() != null){  // 현재 블록이 있는지 확인
                     if(blockText.getCurrentBlock().canMoveDown(blockText.getBoard())) {  // 아래로 이동 할 수 있는지 검사. 현재 게임판을 검사함으로 써 블록과 board의 상태를 검사.
                         blockText.getCurrentBlock().moveDown(blockText.getBoard()); //떨어지기
-                        frameBoard.increaseScore(1); // 자동으로 떨어질 때마다 점수 1 증가
+                        // 자동 낙하 점수에 속도 배율 적용
+                        int speedMultiplier = blockText.getCurrentSpeedLevel() + 1;
+                        frameBoard.increaseScore(1 * speedMultiplier); // 자동으로 떨어질 때마다 점수 * 속도 배율
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
                     } else {
                         int lineClearScore = blockText.placePiece(); //쌓이기 및 라인 클리어 점수 받기
@@ -79,9 +85,9 @@ public class GameTimer {
     
     // 속도 업데이트 메서드
     public void updateSpeed(int speedLevel) {
-        if (speedLevel != currentSpeedLevel && speedLevel >= 0 && speedLevel < SPEED_DELAYS.length) {
+        if (speedLevel != currentSpeedLevel && speedLevel >= 0 && speedLevel < SPEED_DELAYS[difficulty].length) {
             currentSpeedLevel = speedLevel;
-            int newDelay = SPEED_DELAYS[speedLevel];
+            int newDelay = SPEED_DELAYS[difficulty][speedLevel];
             
             System.out.println("Speed increased! Level: " + speedLevel + ", Delay: " + newDelay + "ms");
             

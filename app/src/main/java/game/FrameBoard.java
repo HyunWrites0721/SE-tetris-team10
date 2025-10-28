@@ -162,7 +162,7 @@ public class FrameBoard extends JFrame {
    // scoreBoard.setBounds(0, 0, 6 * cellSizeInit, 4 * cellSizeInit);
    // layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
     
-    // GameView 초기화 후 ScoreBoard 위치를 정확히 설정
+    /* GameView 초기화 후 ScoreBoard 위치를 정확히 설정
     SwingUtilities.invokeLater(() -> {
         if (gameBoard != null) {
             int cellSize = gameBoard.CELL_SIZE;
@@ -179,12 +179,13 @@ public class FrameBoard extends JFrame {
             int nextY = margin + gameBoard.NEXT_MARGIN * cellSize;
             
             // ScoreBoard를 NEXT 패널 바로 아래에 배치 (간격 없이)
-           /* scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
+            scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
                                nextY + nextHeight,         // NEXT 패널 바로 아래
                                nextWidth,                  // NEXT 패널과 동일한 너비
-                               4 * cellSize);   */           // 높이 4칸
+                               4 * cellSize);              // 높이 4칸
         }
-    });
+    });*/
+    
 
 
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
