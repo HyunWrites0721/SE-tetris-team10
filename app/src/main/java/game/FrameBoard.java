@@ -15,7 +15,7 @@ public class FrameBoard extends JFrame {
         int minHeight = (int)(600 * scale);
         
         // ScoreBoard 위치 업데이트
-        if (scoreBoard != null) {
+       /*  if (scoreBoard != null) {
             scoreBoard.convertScale(scale);
             int cellSize = gameBoard.CELL_SIZE;
             int boardWidth = gameBoard.COLS * cellSize;
@@ -35,14 +35,14 @@ public class FrameBoard extends JFrame {
                                nextY + nextHeight,         // NEXT 패널 바로 아래
                                nextWidth,                  // NEXT 패널과 동일한 너비
                                4 * cellSize);              // 높이 4칸
-        }
+        }*/
         
         FRAME_WIDTH = minWidth;
         FRAME_HEIGHT = minHeight;
         setSize(FRAME_WIDTH, FRAME_HEIGHT);
 
         // ScoreBoard 위치 업데이트
-        if (scoreBoard != null && gameBoard != null) {
+        /*if (scoreBoard != null && gameBoard != null) {
             scoreBoard.convertScale(scale);
             int cellSize = gameBoard.CELL_SIZE;
             int boardWidth = gameBoard.COLS * cellSize;
@@ -64,7 +64,7 @@ public class FrameBoard extends JFrame {
                                scoreY,               // y 좌표
                                sidePanelWidth,       // 너비
                                scoreHeight);         // 높이
-        }
+        }*/
 
         // Update PauseBoard scaling
         if (pauseBoard != null) {
@@ -91,13 +91,14 @@ public class FrameBoard extends JFrame {
     private final PauseBoard pauseBoard;
     private final GameModel gameModel;
     private final GameOverBoard gameOverBoard;
-    private final ScoreBoard scoreBoard;
+   // private final ScoreBoard scoreBoard;
     private GameTimer gameTimer;
     private int score = 0;  // 점수 변수 추가
 
     public void increaseScore(int points) {
         score += points;
-        scoreBoard.setScore(score);
+        //scoreBoard.setScore(score);
+        gameBoard.setScore(score);  // GameView에도 점수 전달
     }
 
     public GameView getGameBoard() {
@@ -152,14 +153,14 @@ public class FrameBoard extends JFrame {
     gameOverBoard.setVisible(isGameOver);
     layeredPane.add(gameOverBoard, JLayeredPane.MODAL_LAYER);
 
-    scoreBoard = new ScoreBoard();
+   // scoreBoard = new ScoreBoard();
     // GameView의 좌표 계산 방식을 따라 ScoreBoard 위치 설정 (StartFrame.screenRatio 반영)
     int cellSizeInit = (int)(30 * start.StartFrame.screenRatio);
     
     // GameView가 생성된 후에 정확한 위치를 계산하기 위해 임시로 기본 위치 설정
     // 실제 위치는 updateFrameSize에서 정확히 계산됨
-    scoreBoard.setBounds(0, 0, 6 * cellSizeInit, 4 * cellSizeInit);
-    layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
+   // scoreBoard.setBounds(0, 0, 6 * cellSizeInit, 4 * cellSizeInit);
+   // layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
     
     // GameView 초기화 후 ScoreBoard 위치를 정확히 설정
     SwingUtilities.invokeLater(() -> {
@@ -178,10 +179,10 @@ public class FrameBoard extends JFrame {
             int nextY = margin + gameBoard.NEXT_MARGIN * cellSize;
             
             // ScoreBoard를 NEXT 패널 바로 아래에 배치 (간격 없이)
-            scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
+           /* scoreBoard.setBounds(rightPanelX,              // NEXT 패널과 동일한 x 좌표
                                nextY + nextHeight,         // NEXT 패널 바로 아래
                                nextWidth,                  // NEXT 패널과 동일한 너비
-                               4 * cellSize);              // 높이 4칸
+                               4 * cellSize);   */           // 높이 4칸
         }
     });
 
@@ -259,7 +260,8 @@ public class FrameBoard extends JFrame {
 
         // 점수 초기화
         score = 0;
-        scoreBoard.setScore(0);
+        //scoreBoard.setScore(0);
+        gameBoard.setScore(0);  // GameView에도 점수 초기화
         
         // 일시정지 상태 해제
         isPaused = false;
