@@ -193,7 +193,7 @@ public class GameView extends JPanel {
         }
 
         // 넥스트 격자 무늬 그리기
-        for (int row = NEXT_MARGIN; row < NEXT_ROWS + NEXT_MARGIN; row++) {
+        /*for (int row = NEXT_MARGIN; row < NEXT_ROWS + NEXT_MARGIN; row++) {
             for (int col = COLS; col < COLS + NEXT_COLS; col++) {
                 g2d.setColor(new Color(0, 0, 0, 100));
                 g2d.drawRect(x + col * CELL_SIZE, y + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -214,7 +214,7 @@ public class GameView extends JPanel {
                 g2d.setColor(new Color(0, 0, 0, 100));
                 g2d.drawRect(x + boardWidth + col * CELL_SIZE, highScoreStartY + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
-        }
+        }*/
 
         // 테두리 설정
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));

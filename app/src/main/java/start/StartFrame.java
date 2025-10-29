@@ -176,5 +176,4 @@ public class StartFrame extends JFrame {
         }
     }
 
-
 }
