@@ -1,33 +1,18 @@
 package settings;
 
 import com.google.gson.Gson;
-import java.io.File;
 
 public class SettingModel {
     private boolean colorBlindMode;
     private String controlType = "arrow";
     private String screenSize = "medium";
     private String difficulty = "normal";
-    
-    // 설정 파일의 절대 경로를 반환하는 헬퍼 메서드
-    private static java.nio.file.Path getSettingFilePath(String filename) {
-        // 현재 작업 디렉토리 확인
-        String currentDir = System.getProperty("user.dir");
-        // app 폴더가 현재 디렉토리인지 확인
-        File appDir = new File(currentDir);
-        if (appDir.getName().equals("app")) {
-            // 이미 app 폴더 안에 있음
-            return java.nio.file.Paths.get(currentDir, "src/main/java/settings/data", filename);
-        } else {
-            // 프로젝트 루트에 있음
-            return java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data", filename);
-        }
-    }
 
     public SettingModel() {
         try {
-            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
-            String json = java.nio.file.Files.readString(path);
+            // ConfigManager를 사용하여 설정 파일 경로 가져오기
+            String settingsPath = ConfigManager.getSettingsPath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             
@@ -84,14 +69,14 @@ public class SettingModel {
         // SettingSave.json 파일에 colorBlindMode 값 실제로 저장함. 
         //
         try {
-            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
-            String json = java.nio.file.Files.readString(path);
+            String settingsPath = ConfigManager.getSettingsPath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             // colorBlindMode 값을 저장 (boolean이므로 항상 유효함)
             data.colorBlindMode = this.colorBlindMode;
             String newJson = gson.toJson(data);
-            java.nio.file.Files.writeString(path, newJson);
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
         }
@@ -106,8 +91,8 @@ public class SettingModel {
         // SettingSave.json 파일에 screenSize 값 실제로 저장함. 
         //
         try {
-            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
-            String json = java.nio.file.Files.readString(path);
+            String settingsPath = ConfigManager.getSettingsPath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             // screenSize가 유효한 값인지 확인 (equals 사용)
@@ -117,7 +102,7 @@ public class SettingModel {
             }
             data.screenSize = this.screenSize;
             String newJson = gson.toJson(data);
-            java.nio.file.Files.writeString(path, newJson);
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
         }
@@ -132,8 +117,8 @@ public class SettingModel {
         // SettingSave.json 파일에 controlType 값 실제로 저장함. 
         //
         try {
-            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
-            String json = java.nio.file.Files.readString(path);
+            String settingsPath = ConfigManager.getSettingsPath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             // controlType이 유효한 값인지 확인 (equals 사용)
@@ -143,7 +128,7 @@ public class SettingModel {
             }
             data.controlType = this.controlType;
             String newJson = gson.toJson(data);
-            java.nio.file.Files.writeString(path, newJson);
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
         }
@@ -158,8 +143,8 @@ public class SettingModel {
         // SettingSave.json 파일에 difficulty 값 실제로 저장함. 
         //
         try {
-            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
-            String json = java.nio.file.Files.readString(path);
+            String settingsPath = ConfigManager.getSettingsPath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             // difficulty가 유효한 값이면 파일에 덮어씀
@@ -169,7 +154,7 @@ public class SettingModel {
             }
             data.difficulty = this.difficulty;
             String newJson = gson.toJson(data);
-            java.nio.file.Files.writeString(path, newJson);
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
         }
@@ -184,10 +169,10 @@ public class SettingModel {
     //설정 초기화 -> DefaultSetting.json 파일로 덮어씀
     public void resetSettings() {
         try {
-            java.nio.file.Path defaultPath = getSettingFilePath("DefaultSetting.json");
-            java.nio.file.Path savePath = getSettingFilePath("SettingSave.json");
-            String defaultJson = java.nio.file.Files.readString(defaultPath);
-            java.nio.file.Files.writeString(savePath, defaultJson);
+            String defaultPath = ConfigManager.getDefaultSettingsPath();
+            String savePath = ConfigManager.getSettingsPath();
+            String defaultJson = java.nio.file.Files.readString(java.nio.file.Paths.get(defaultPath));
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(savePath), defaultJson);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
         }

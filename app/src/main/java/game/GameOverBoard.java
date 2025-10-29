@@ -145,7 +145,7 @@ public class GameOverBoard extends JPanel implements KeyListener {
         String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
         String difficulty = getDifficultyString();
         infoLabel = new JLabel(mode + " [" + difficulty + "]");
-        infoLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        infoLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, 16));
         infoLabel.setForeground(Color.LIGHT_GRAY);
         infoLabel.setHorizontalAlignment(JLabel.CENTER);
         infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -154,9 +154,9 @@ public class GameOverBoard extends JPanel implements KeyListener {
         // Add spacing
         topPanel.add(Box.createVerticalStrut(5));
         
-        // Add score
+        // Add score with Korean-supporting font
         scoreLabel = new JLabel("점수: " + frameBoard.getGameBoard().getScore());
-        scoreLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        scoreLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, 20));
         scoreLabel.setForeground(Color.WHITE);
         scoreLabel.setHorizontalAlignment(JLabel.CENTER);
         scoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);

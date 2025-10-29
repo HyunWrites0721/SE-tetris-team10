@@ -3,6 +3,7 @@ import settings.HighScoreModel;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
+import java.awt.Font;
 
 // Note: Do not depend on StartFrame initialization. Use safeScreenRatio() to fallback when needed.
 
@@ -244,6 +245,10 @@ public class FrameBoard extends JFrame {
     
     // 플레이어 이름 입력받기
     private String promptPlayerName() {
+        // 한글 지원 폰트 설정
+        javax.swing.UIManager.put("OptionPane.messageFont", settings.FontManager.getKoreanFont(Font.PLAIN, 14));
+        javax.swing.UIManager.put("OptionPane.buttonFont", settings.FontManager.getKoreanFont(Font.PLAIN, 12));
+        
         String name = JOptionPane.showInputDialog(
             this,
             "게임 종료! 이름을 입력하세요:",
