@@ -7,10 +7,12 @@ import blocks.item.WeightBlock;
 
 public class GameTimer {
     protected static final int Init_DELAY = 1000;  // 1s (=1000ms)
-    // 속도 레벨별 딜레이 배열 (0~5레벨, 6단계)
+    // 속도 레벨별 딜레이 배열 (0~6레벨, 7단계)
     private static final int[][] SPEED_DELAYS = {{1000, 800, 650, 500, 350, 200, 100},     // 노멀 모드 speed delays
                                                 {800, 640, 520, 400, 280, 160, 80},        // 하드 모드 speed delays
                                                 {1200, 960, 780, 600, 420, 250, 120}};     // 이지 모드 speed delays
+    // 난이도별 점수 가중치 배열 (0: normal=1.0, 1: hard=1.1, 2: easy=0.9)
+    private static final double[] DIFFICULTY_MULTIPLIERS = {1.0, 1.1, 0.9};
     protected Timer timer;
     private GameView gameBoard;
     private GameModel blockText;
@@ -24,6 +26,9 @@ public class GameTimer {
         this.gameBoard = gameBoard;
         this.blockText = blockText;
         this.frameBoard = frameBoard;
+        
+        // SettingSave.json에서 난이도 설정 읽어오기
+        loadDifficultyFromSettings();
         
         // GameModel에 타이머 참조 설정
         blockText.setGameTimer(this);
@@ -45,9 +50,12 @@ public class GameTimer {
                 if (blockText.getCurrentBlock() != null){  // 현재 블록이 있는지 확인
                     if(blockText.getCurrentBlock().canMoveDown(blockText.getBoard())) {  // 아래로 이동 할 수 있는지 검사. 현재 게임판을 검사함으로 써 블록과 board의 상태를 검사.
                         blockText.getCurrentBlock().moveDown(blockText.getBoard()); //떨어지기
-                        // 자동 낙하 점수에 속도 배율 적용
+                        // 자동 낙하 점수에 속도 배율과 난이도 가중치 적용
                         int speedMultiplier = blockText.getCurrentSpeedLevel() + 1;
-                        frameBoard.increaseScore(1 * speedMultiplier); // 자동으로 떨어질 때마다 점수 * 속도 배율
+                        double difficultyMultiplier = (difficulty >= 0 && difficulty < DIFFICULTY_MULTIPLIERS.length) 
+                            ? DIFFICULTY_MULTIPLIERS[difficulty] : DIFFICULTY_MULTIPLIERS[0];
+                        int autoDropScore = (int) Math.round(1 * speedMultiplier * difficultyMultiplier);
+                        frameBoard.increaseScore(autoDropScore); // 자동으로 떨어질 때마다 점수 * 속도 배율 * 난이도 가중치
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
                     } else {
                         // WeightBlock이면 특수 낙하 처리 (바닥까지 뚫고 내려가며 지움, 바닥에서 소멸)
@@ -118,6 +126,57 @@ public class GameTimer {
                 // 실행 중이 아니면 딜레이만 변경
                 timer.setDelay(newDelay);
             }
+        }
+    }
+    
+    // SettingSave.json에서 난이도 설정을 읽어오는 메서드
+    private void loadDifficultyFromSettings() {
+        try {
+            // 설정 파일 경로 설정
+            String currentDir = System.getProperty("user.dir");
+            java.io.File appDir = new java.io.File(currentDir);
+            java.nio.file.Path settingPath;
+            
+            if (appDir.getName().equals("app")) {
+                settingPath = java.nio.file.Paths.get(currentDir, "src/main/java/settings/data/SettingSave.json");
+            } else {
+                settingPath = java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data/SettingSave.json");
+            }
+            
+            // JSON 파일 읽기
+            String json = java.nio.file.Files.readString(settingPath);
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            
+            // JSON을 Map으로 파싱
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> settings = gson.fromJson(json, java.util.Map.class);
+            String difficultyStr = (String) settings.get("difficulty");
+            
+            // 난이도 문자열을 정수로 변환
+            if (difficultyStr != null) {
+                switch (difficultyStr.toLowerCase()) {
+                    case "normal":
+                        difficulty = 0;
+                        break;
+                    case "hard":
+                        difficulty = 1;
+                        break;
+                    case "easy":
+                        difficulty = 2;
+                        break;
+                    default:
+                        difficulty = 0; // 기본값: 노멀
+                        break;
+                }
+            } else {
+                difficulty = 0; // 기본값: 노멀
+            }
+            
+            System.out.println("Difficulty loaded from settings: " + difficultyStr + " (index: " + difficulty + ")");
+            
+        } catch (Exception e) {
+            System.err.println("난이도 설정 로드 실패: " + e.getMessage());
+            difficulty = 0; // 기본값: 노멀
         }
     }
 }

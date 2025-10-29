@@ -75,8 +75,15 @@ public class FrameBoard extends JFrame {
         score += points;
         gameBoard.setScore(score);  // GameView에 점수 업데이트
         
-        // GameView에 최고 점수도 전달 (현재까지의 최고점수 표시)
-        gameBoard.setHighScore(highScoreModel.getHighScore());
+        // 현재 점수가 최고 점수를 넘으면 실시간으로 하이스코어 갱신
+        int currentHighScore = highScoreModel.getHighScore();
+        if (score > currentHighScore) {
+            // 임시로 현재 점수를 하이스코어로 표시 (실제 저장은 게임 종료 시)
+            gameBoard.setHighScore(score);
+        } else {
+            // 현재 점수가 최고 점수를 넘지 않으면 기존 최고 점수 표시
+            gameBoard.setHighScore(currentHighScore);
+        }
     }
 
     public GameView getGameBoard() {
@@ -159,8 +166,7 @@ public class FrameBoard extends JFrame {
 
     // ESC로 일시정지/재개 토글: 오버레이 표시 + 타이머 정지/재시작
     public void paused() {
-        // 내부에서 토글하여 외부에서 isPaused를 직접 변경하지 않도록 함
-        isPaused = !isPaused;
+        // isPaused 상태에 따라 동작 (외부에서 이미 토글됨)
         pauseBoard.setVisible(isPaused);
         pauseBoard.setOpaque(isPaused);
          if (isPaused) {
@@ -236,7 +242,8 @@ public class FrameBoard extends JFrame {
          // 점수 초기화 (최고 점수는 유지)
         score = 0;
         scoreSaved = false;  // 점수 저장 플래그 리셋
-        // gameBoard.setScore(0);  // GameView에 setScore 메서드 구현 후 활성화
+        gameBoard.setScore(0);  // 현재 점수 0으로 초기화
+        gameBoard.setHighScore(highScoreModel.getHighScore());  // 최고 점수 다시 설정
 
         // 아이템 관련 상태 초기화
         gameModel.itemGenerateCount = 0;
