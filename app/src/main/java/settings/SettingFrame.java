@@ -112,39 +112,43 @@ public class SettingFrame extends JFrame {
             SettingView view = pair.view;
             SettingController controller = pair.controller;
 
-            // 카드 중복 추가 방지
-            boolean exists = false;
-            for (Component comp : cardPanel.getComponents()) {
+            // 기존 뷰가 있다면 제거하고 새로운 뷰를 추가 (재진입 문제 해결)
+            Component[] components = cardPanel.getComponents();
+            for (Component comp : components) {
                 if (comp.getName() != null && comp.getName().equals(menuName)) {
-                    exists = true;
+                    cardPanel.remove(comp);
                     break;
                 }
             }
-
-            if (!exists) {
-                view.setName(menuName);
-                cardPanel.add(view, menuName);
-                
-                // 취소 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
-                controller.setOnCancelCallback(() -> {
-                    cardLayout.show(cardPanel, "empty");
+            
+            // 새로운 뷰를 항상 추가
+            view.setName(menuName);
+            cardPanel.add(view, menuName);
+            cardPanel.revalidate();
+            cardPanel.repaint();
+            
+            // 콜백 설정은 매번 실행 (여러 번 진입 가능하도록)
+            view.resetFocus(); // 뷰를 표시하기 전에 포커스 상태를 초기화합니다.
+            
+            // 취소 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
+            controller.setOnCancelCallback(() -> {
+                cardLayout.show(cardPanel, "empty");
+                SwingUtilities.invokeLater(() -> {
                     menuPanel.requestFocusInWindow();
                 });
-                
-                // 확인 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
-                controller.setOnConfirmCallback(() -> {
-                    SwingUtilities.invokeLater(() -> {
-                        cardLayout.show(cardPanel, "empty");
-                        menuPanel.requestFocusInWindow();
-                    });
+            });
+            
+            // 확인 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
+            controller.setOnConfirmCallback(() -> {
+                cardLayout.show(cardPanel, "empty");
+                SwingUtilities.invokeLater(() -> {
+                    menuPanel.requestFocusInWindow();
                 });
-                
-                cardPanel.revalidate();
-                cardPanel.repaint();
-            }
+            });
+            
             cardLayout.show(cardPanel, menuName);
             
-            // 세부 메뉴에 포커스 전달 (키보드 진입 시에도 확실하게)
+            // 세부 메뉴에 포커스 전달
             SwingUtilities.invokeLater(() -> {
                 view.requestFocusInWindow();
                 view.setFocusable(true);

@@ -149,7 +149,9 @@ public class StartFrame extends JFrame {
             dispose(); // 현재 창 닫기 (또는 setVisible(false))
         } 
         else if (index == 2) {
-            //스코어보드
+            // 스코어보드 화면으로 이동
+            new ScoreBoardFrame();
+            dispose();
         } 
         else if (index == 3) {
             //게임 종료

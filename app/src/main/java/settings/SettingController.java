@@ -5,12 +5,14 @@ import javax.swing.SwingUtilities;
 public class SettingController implements ActionListener {
     private SettingModel model;
     private SettingView view;
+    private HighScoreModel highScoreModel; // 추가
     private Runnable onCancelCallback; // 취소 시 호출할 콜백
     private Runnable onConfirmCallback; // 확인 시 호출할 콜백
 
     public SettingController(SettingModel model, SettingView view) {
         this.model = model;
         this.view = view;
+        this.highScoreModel = HighScoreModel.getInstance(); // 싱글톤 인스턴스 사용
 
         // 모든 버튼에 ActionListener 연결 (case별로 분기)
         if (view.checkButton != null) {
@@ -59,9 +61,11 @@ public class SettingController implements ActionListener {
         if (src == view.cancelButton) {
             // 테두리 제거
             view.checkButton.setBorder(javax.swing.UIManager.getBorder("Button.border"));
-            view.cancelButton.setBorder(javax.swing.UIManager.getBorder("Button.border"));
+            if (view.cancelButton != null) {
+                view.cancelButton.setBorder(javax.swing.UIManager.getBorder("Button.border"));
+            }
             
-            view.resetFocus();
+            // 취소 콜백 호출
             if (onCancelCallback != null) {
                 onCancelCallback.run();
             }
@@ -82,7 +86,7 @@ public class SettingController implements ActionListener {
             }
             // 스코어보드 초기화
             else if ("스코어보드 초기화".equals(menu)) {
-                // 아직 미구현
+                highScoreModel.resetScores();
             }
             // 색맹 모드 - 선택된 라디오 버튼 확인 후 저장
             else if ("색맹 모드".equals(menu)) {
@@ -129,6 +133,14 @@ public class SettingController implements ActionListener {
                     model.setDifficulty("hard");
                     model.SaveDifficulty();
                 }
+            }
+            
+            // 포커스 리셋 (다음 진입을 위해)
+            view.resetFocus();
+            
+            // 확인 콜백 호출
+            if (onConfirmCallback != null) {
+                onConfirmCallback.run();
             }
         }
     }

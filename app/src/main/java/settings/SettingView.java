@@ -76,10 +76,11 @@ public class SettingView extends JPanel{
                 cancelButton = new JButton("취소");
                 cancelButton.setFocusable(false);
                 
-                // 버튼들을 아래쪽에 배치
+                // 버튼들을 아래쪽에 배치 (찌그러짐 방지를 위해 fill 설정 변경)
                 gbc.gridy = 2;
-                gbc.gridwidth = 1;
                 gbc.gridx = 0;
+                gbc.gridwidth = 1;
+                gbc.fill = GridBagConstraints.NONE; // 핵심: 버튼이 늘어나지 않도록
                 panel.add(checkButton, gbc);
                 gbc.gridx = 1;
                 panel.add(cancelButton, gbc);
@@ -93,10 +94,11 @@ public class SettingView extends JPanel{
                 cancelButton = new JButton("취소");
                 cancelButton.setFocusable(false);
                 
-                // 버튼들을 아래쪽에 배치
+                // 버튼들을 아래쪽에 배치 (찌그러짐 방지를 위해 fill 설정 변경)
                 gbc.gridy = 2;
-                gbc.gridwidth = 1;
                 gbc.gridx = 0;
+                gbc.gridwidth = 1;
+                gbc.fill = GridBagConstraints.NONE; // 핵심: 버튼이 늘어나지 않도록
                 panel.add(checkButton, gbc);
                 gbc.gridx = 1;
                 panel.add(cancelButton, gbc);
@@ -328,7 +330,28 @@ public class SettingView extends JPanel{
             public void keyPressed(KeyEvent e) {
                 int key = e.getKeyCode();
                 
-                if (!focusOnButtons && radioButtons.length > 0) {
+                // 초기화 메뉴 (라디오 버튼 없음)
+                if (radioButtons.length == 0) {
+                    if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_RIGHT) {
+                        // 확인/취소 버튼 간 좌우 이동
+                        if (checkButton.getBorder() != null && checkButton.getBorder() instanceof javax.swing.border.LineBorder) {
+                            // 확인 → 취소로 전환
+                            checkButton.setBorder(UIManager.getBorder("Button.border"));
+                            cancelButton.setBorder(BorderFactory.createLineBorder(Color.RED, 3));
+                        } else {
+                            // 취소 → 확인으로 전환
+                            cancelButton.setBorder(UIManager.getBorder("Button.border"));
+                            checkButton.setBorder(BorderFactory.createLineBorder(Color.RED, 3));
+                        }
+                    } else if (key == KeyEvent.VK_ENTER) {
+                        // 현재 하이라이트된 버튼 클릭
+                        if (checkButton.getBorder() != null && checkButton.getBorder() instanceof javax.swing.border.LineBorder) {
+                            checkButton.doClick();
+                        } else if (cancelButton.getBorder() != null && cancelButton.getBorder() instanceof javax.swing.border.LineBorder) {
+                            cancelButton.doClick();
+                        }
+                    }
+                } else if (!focusOnButtons && radioButtons.length > 0) {
                     // 라디오 버튼 간 좌우 이동
                     if (key == KeyEvent.VK_LEFT) {
                         selectedRadioIndex = (selectedRadioIndex - 1 + radioButtons.length) % radioButtons.length;
@@ -372,10 +395,14 @@ public class SettingView extends JPanel{
             }
         });
         
-        // 초기 라디오 버튼 하이라이트 및 포커스 설정
+        // 초기 하이라이트 설정
         if (radioButtons.length > 0) {
+            // 라디오 버튼이 있는 경우: 첫 번째 라디오 버튼 하이라이트
             selectedRadioIndex = 0;
             updateRadioButtonFocus();
+        } else {
+            // 라디오 버튼이 없는 경우 (초기화 메뉴): 확인 버튼 하이라이트
+            checkButton.setBorder(BorderFactory.createLineBorder(Color.RED, 3));
         }
         
         // 패널이 표시될 때 자동으로 포커스 요청
@@ -402,7 +429,7 @@ public class SettingView extends JPanel{
         requestFocusInWindow();
     }
     
-    // 포커스를 라디오 버튼으로 리셋 (취소 버튼용)
+    // 포커스를 라디오 버튼으로 리셋 (취소/확인 버튼 후 재진입용)
     public void resetFocus() {
         focusOnButtons = false;
         selectedRadioIndex = 0;
@@ -410,9 +437,15 @@ public class SettingView extends JPanel{
         if (cancelButton != null) {
             cancelButton.setBorder(UIManager.getBorder("Button.border"));
         }
+        
         if (radioButtons.length > 0) {
+            // 라디오 버튼이 있는 경우: 첫 번째 라디오 버튼 하이라이트
             updateRadioButtonFocus();
+        } else {
+            // 라디오 버튼이 없는 경우 (초기화 메뉴): 확인 버튼에 빨간 테두리 다시 표시
+            checkButton.setBorder(BorderFactory.createLineBorder(Color.RED, 3));
         }
+        
         requestFocusInWindow();
     }
 
