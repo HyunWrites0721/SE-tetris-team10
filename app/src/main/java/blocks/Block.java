@@ -139,51 +139,16 @@ public abstract class Block {
                 newBlock = new IBlock(); // 기본값으로 IBlock 반환
                 break;
         }
-        
-        public static Block spawnItem(Block b) {
-        int itemRandom = (int)(Math.random() * 5);
-        int[][] shape = b.getShape();
-        Block newBlock;
-        switch (itemRandom) {
-            case 0:
-                newBlock = new AllClearBlock();
-                break;
-            case 1:
-                newBlock = new BoxClearBlock();
-                break;
-            case 2:
-                newBlock = new OneLineClearBlock(shape);
-                // Inherit the color from the base block so NEXT preview matches currentBlock
-                newBlock.setExactColor(b.getColor());
-                break;
-            case 3:
-                newBlock = new ScoreDoubleBlock(shape);
-                newBlock.setExactColor(b.getColor());
-                break;
-            case 4:
-                newBlock = new WeightBlock();
-                break;
 
-            default:
-                newBlock = new AllClearBlock(); // 기본값으로 AllClearBlock 반환
-                break;
-        }
-
-        // 블록 생성 시 기본 모양을 초기화해 둔다 (렌더링/회전에 필요)
+        // 블록의 shape을 초기화
         newBlock.setShape();
-        switch(selectedIndex) {
-            case 0:  // IBlock (5×5)
-                newBlock.setPosition(3, 0);
-                break;
-            case 3:  // OBlock (2×2)
-                newBlock.setPosition(5, 2);
-                break;
-            case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
-                newBlock.setPosition(4, 2);
-                break;
-        }
+        // 초기 위치 설정
+        newBlock.setPosition(5, 2);
+
         return newBlock;
     }
+
+    
     
     public static Block spawnItem(Block b) {
         int itemRandom = (int)(Math.random() * 5);
@@ -235,16 +200,16 @@ public abstract class Block {
     //newBlock.setPosition(BOARD_WIDTH/2 - 2, 0); // 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
     
     
-    public void hardDrop(int[][] board) {
+    public int hardDrop(int[][] board) {
         int dropDistance = 0;  // dropDistance는 블록이 아래로 몇칸이나 떨어질 수 있는가를 의미
         while (!checkCollision(board, 0, dropDistance + 1)) {  // 한 칸 내려갔을때 충돌이 생기는 지를 확인. 충돌이 안생기면 false가 리턴될 것이고 not 이니까 while9(true) 즉 무한 루프가 됨.    
             dropDistance++;  // 충돌 안생기면 +1
         }
         y += dropDistance; // 충돌 직전까지 +1이 계속 누적될 것이고. 충돌되면 y 좌표에 더함.
+        return dropDistance; // 몇칸 떨어졌는지 반환
     }
-    
-     
-    private boolean checkCollision(int[][] board, int deltaX, int deltaY) {   
+
+    private boolean checkCollision(int[][] board, int deltaX, int deltaY) {
         // deltaX: x축 방향으로 이동할 거리 (왼쪽: -1, 오른쪽: +1)
         // deltaY: y축 방향으로 이동할 거리 (위: -1, 아래: +1) 
         for (int row = 0; row < shape.length; row++) {
