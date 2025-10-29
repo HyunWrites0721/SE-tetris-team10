@@ -2,6 +2,7 @@ package game;
 import settings.HighScoreModel;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
+import javax.swing.JOptionPane;
 
 // Note: Do not depend on StartFrame initialization. Use safeScreenRatio() to fallback when needed.
 
@@ -226,9 +227,12 @@ public class FrameBoard extends JFrame {
                 }
             }
             
-            highScoreModel.addScore("Player", score, difficulty, itemMode);
+            // 사용자 이름 입력받기
+            String playerName = promptPlayerName();
+            
+            highScoreModel.addScore(playerName, score, difficulty, itemMode);
             scoreSaved = true;  // 저장 완료 플래그 설정
-            System.out.println("점수 저장 완료: " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficulty + ")");
+            System.out.println("점수 저장 완료: " + playerName + " - " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficulty + ")");
             
             // HighScore는 내부적으로만 업데이트 (UI는 제거됨)
         }
@@ -236,6 +240,28 @@ public class FrameBoard extends JFrame {
         // 게임오버 화면이 표시될 때 포커스 설정
         gameOverBoard.setFocusable(true);
         gameOverBoard.requestFocusInWindow();
+    }
+    
+    // 플레이어 이름 입력받기
+    private String promptPlayerName() {
+        String name = JOptionPane.showInputDialog(
+            this,
+            "게임 종료! 이름을 입력하세요:",
+            "Player Name",
+            JOptionPane.PLAIN_MESSAGE
+        );
+        
+        // 이름이 입력되지 않았거나 빈 문자열이면 기본값 사용
+        if (name == null || name.trim().isEmpty()) {
+            return "Player";
+        }
+        
+        // 이름이 너무 길면 자르기 (최대 10자)
+        if (name.length() > 10) {
+            name = name.substring(0, 10);
+        }
+        
+        return name.trim();
     }
 
     public void gameInit() {
