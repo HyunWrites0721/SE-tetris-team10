@@ -10,6 +10,9 @@ public class GameOverBoard extends JPanel implements KeyListener {
 
     private final FrameBoard frameBoard;
     private JLabel gameOverLabel;
+    private JLabel highScoreLabel;
+    private JLabel infoLabel;
+    private JLabel scoreLabel;
     private JPanel buttonPanel;
     private javax.swing.JButton restartButton;
     private javax.swing.JButton mainButton;
@@ -21,6 +24,17 @@ public class GameOverBoard extends JPanel implements KeyListener {
     public void convertScale(double scale) {
         // Update game over label font
         gameOverLabel.setFont(new Font("Arial", Font.BOLD, (int)(32 * scale)));
+        
+        // Update additional labels
+        if (highScoreLabel != null) {
+            highScoreLabel.setFont(new Font("Arial", Font.BOLD, (int)(24 * scale)));
+        }
+        if (infoLabel != null) {
+            infoLabel.setFont(new Font("Arial", Font.PLAIN, (int)(16 * scale)));
+        }
+        if (scoreLabel != null) {
+            scoreLabel.setFont(new Font("Arial", Font.BOLD, (int)(20 * scale)));
+        }
 
         // Update button panel margins
         buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(
@@ -100,7 +114,8 @@ public class GameOverBoard extends JPanel implements KeyListener {
         setBackground(new Color(0,0,0,255));
         setLayout(new BorderLayout());
 
-        JPanel topPanel = new JPanel(new BorderLayout());
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setOpaque(false);
         topPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(40, 0, 0, 0)); // top margin
 
@@ -108,8 +123,45 @@ public class GameOverBoard extends JPanel implements KeyListener {
         gameOverLabel.setFont(new Font("Arial", Font.BOLD, 32));
         gameOverLabel.setForeground(Color.WHITE);
         gameOverLabel.setHorizontalAlignment(JLabel.CENTER);
-        gameOverLabel.setVerticalAlignment(JLabel.TOP);
-        topPanel.add(gameOverLabel, BorderLayout.CENTER);
+        gameOverLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        topPanel.add(gameOverLabel);
+        
+        // Add spacing for high score label
+        topPanel.add(Box.createVerticalStrut(10));
+        
+        // High score label (initially hidden, will be shown if high score)
+        highScoreLabel = new JLabel("High Score!");
+        highScoreLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        highScoreLabel.setForeground(Color.YELLOW);
+        highScoreLabel.setHorizontalAlignment(JLabel.CENTER);
+        highScoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        highScoreLabel.setVisible(false); // 초기에는 숨김
+        topPanel.add(highScoreLabel);
+        
+        // Add spacing
+        topPanel.add(Box.createVerticalStrut(20));
+        
+        // Add mode and difficulty info
+        String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
+        String difficulty = getDifficultyString();
+        infoLabel = new JLabel(mode + " [" + difficulty + "]");
+        infoLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        infoLabel.setForeground(Color.LIGHT_GRAY);
+        infoLabel.setHorizontalAlignment(JLabel.CENTER);
+        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        topPanel.add(infoLabel);
+        
+        // Add spacing
+        topPanel.add(Box.createVerticalStrut(5));
+        
+        // Add score
+        scoreLabel = new JLabel("점수: " + frameBoard.getGameBoard().getScore());
+        scoreLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        scoreLabel.setForeground(Color.WHITE);
+        scoreLabel.setHorizontalAlignment(JLabel.CENTER);
+        scoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        topPanel.add(scoreLabel);
+        
         add(topPanel, BorderLayout.NORTH);
 
         buttonPanel = new JPanel();
@@ -193,6 +245,53 @@ public class GameOverBoard extends JPanel implements KeyListener {
 
         // 버튼 패널을 바로 추가 (y축은 자연스럽게 배치)
         add(buttonPanel, BorderLayout.CENTER);
+    }
+    
+    private boolean checkIfHighScore() {
+        if (frameBoard == null) return false;
+        int currentScore = frameBoard.getGameBoard().getScore();
+        // HighScoreModel을 사용하여 현재 점수가 하이스코어인지 확인
+        settings.HighScoreModel highScoreModel = settings.HighScoreModel.getInstance();
+        int topScore = highScoreModel.getHighScore(frameBoard.itemMode);
+        return currentScore >= topScore && currentScore > 0;
+    }
+    
+    private String getDifficultyString() {
+        if (frameBoard.getGameTimer() != null) {
+            int difficulty = frameBoard.getGameTimer().difficulty;
+            switch(difficulty) {
+                case 0: return "Easy";
+                case 1: return "Normal";
+                case 2: return "Hard";
+                default: return "Normal";
+            }
+        }
+        return "Normal";
+    }
+    
+    // GameOverBoard가 표시될 때 점수 및 정보를 업데이트하는 메서드
+    public void updateInfo() {
+        if (frameBoard == null) return;
+        
+        // 하이스코어 체크 및 라벨 업데이트
+        boolean isHighScore = checkIfHighScore();
+        if (highScoreLabel != null) {
+            highScoreLabel.setVisible(isHighScore);
+        }
+        
+        // 점수 업데이트
+        if (scoreLabel != null && frameBoard.getGameBoard() != null) {
+            scoreLabel.setText("점수: " + frameBoard.getGameBoard().getScore());
+        }
+        
+        // 모드 및 난이도 정보 업데이트
+        if (infoLabel != null) {
+            String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
+            String difficulty = getDifficultyString();
+            infoLabel.setText(mode + " [" + difficulty + "]");
+        }
+        
+        repaint();
     }
 
 }

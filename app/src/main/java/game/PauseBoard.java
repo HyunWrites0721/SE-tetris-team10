@@ -17,6 +17,8 @@ public class PauseBoard extends JPanel implements KeyListener {
 
     private FrameBoard frameBoard;
     private JLabel pauseLabel;
+    private JLabel infoLabel;
+    private JLabel scoreLabel;
     private JPanel buttonPanel;
     private javax.swing.JButton resumeButton;
     private javax.swing.JButton restartButton;
@@ -33,6 +35,14 @@ public class PauseBoard extends JPanel implements KeyListener {
             
         // Update pause label font
         pauseLabel.setFont(new Font("Arial", Font.BOLD, (int)(32 * scale)));
+        
+        // Update info and score labels
+        if (infoLabel != null) {
+            infoLabel.setFont(new Font("Arial", Font.PLAIN, (int)(16 * scale)));
+        }
+        if (scoreLabel != null) {
+            scoreLabel.setFont(new Font("Arial", Font.BOLD, (int)(20 * scale)));
+        }
         
         // Update button panel margins
         buttonPanel.setBorder(javax.swing.BorderFactory.createEmptyBorder(
@@ -126,7 +136,24 @@ public class PauseBoard extends JPanel implements KeyListener {
         pauseLabel.setForeground(Color.black);
         pauseLabel.setHorizontalAlignment(JLabel.CENTER);
         pauseLabel.setVerticalAlignment(JLabel.TOP);
-        topPanel.add(pauseLabel, BorderLayout.CENTER);
+        topPanel.add(pauseLabel, BorderLayout.NORTH);
+        
+        // Add info label (mode and difficulty)
+        String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
+        String difficulty = getDifficultyString();
+        infoLabel = new JLabel(mode + " [" + difficulty + "]");
+        infoLabel.setFont(new Font("Arial", Font.PLAIN, (int)(16 * start.StartFrame.screenRatio)));
+        infoLabel.setForeground(Color.DARK_GRAY);
+        infoLabel.setHorizontalAlignment(JLabel.CENTER);
+        topPanel.add(infoLabel, BorderLayout.CENTER);
+        
+        // Add score label
+        scoreLabel = new JLabel("점수: " + frameBoard.getGameBoard().getScore());
+        scoreLabel.setFont(new Font("Arial", Font.BOLD, (int)(20 * start.StartFrame.screenRatio)));
+        scoreLabel.setForeground(Color.BLACK);
+        scoreLabel.setHorizontalAlignment(JLabel.CENTER);
+        topPanel.add(scoreLabel, BorderLayout.SOUTH);
+        
         add(topPanel, BorderLayout.NORTH);
 
         buttonPanel = new JPanel();
@@ -228,6 +255,32 @@ public class PauseBoard extends JPanel implements KeyListener {
         updateButtonSelection();
         
         add(buttonPanel, BorderLayout.CENTER);
+    }
+    
+    private String getDifficultyString() {
+        // GameTimer의 난이도 정보를 가져오기
+        if (frameBoard.getGameTimer() != null) {
+            int difficulty = frameBoard.getGameTimer().difficulty;
+            switch(difficulty) {
+                case 0: return "Easy";
+                case 1: return "Normal";
+                case 2: return "Hard";
+                default: return "Normal";
+            }
+        }
+        return "Normal";
+    }
+    
+    // PauseBoard가 표시될 때 점수를 업데이트하는 메서드
+    public void updateInfo() {
+        if (scoreLabel != null && frameBoard != null && frameBoard.getGameBoard() != null) {
+            scoreLabel.setText("점수: " + frameBoard.getGameBoard().getScore());
+        }
+        if (infoLabel != null) {
+            String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
+            String difficulty = getDifficultyString();
+            infoLabel.setText(mode + " [" + difficulty + "]");
+        }
     }
     
 }

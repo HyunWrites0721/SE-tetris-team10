@@ -8,17 +8,20 @@ import java.util.List;
 
 public class HighScoreModel {
     private static HighScoreModel instance; // 싱글톤 인스턴스
-    private List<ScoreEntry> scores;
+    private List<ScoreEntry> normalScores;  // 일반 모드 점수
+    private List<ScoreEntry> itemScores;    // 아이템 모드 점수
     private static final int MAX_SCORES = 10;
     
     // 내부 클래스: 점수 항목
     public static class ScoreEntry implements Comparable<ScoreEntry> {
         private String name;
         private int score;
+        private String difficulty;  // "easy", "normal", "hard"
         
-        public ScoreEntry(String name, int score) {
+        public ScoreEntry(String name, int score, String difficulty) {
             this.name = name;
             this.score = score;
+            this.difficulty = difficulty;
         }
         
         public String getName() {
@@ -27,6 +30,10 @@ public class HighScoreModel {
         
         public int getScore() {
             return score;
+        }
+        
+        public String getDifficulty() {
+            return difficulty;
         }
         
         @Override
@@ -38,7 +45,8 @@ public class HighScoreModel {
     
     // JSON 구조와 매핑
     private static class HighScoreData {
-        List<ScoreEntry> scores;
+        List<ScoreEntry> normalScores;
+        List<ScoreEntry> itemScores;
     }
     
     // 설정 파일의 절대 경로를 반환하는 헬퍼 메서드
@@ -84,13 +92,16 @@ public class HighScoreModel {
             Gson gson = new Gson();
             HighScoreData data = gson.fromJson(json, HighScoreData.class);
             
-            if (data != null && data.scores != null) {
-                this.scores = data.scores;
+            if (data != null) {
+                this.normalScores = data.normalScores != null ? data.normalScores : new ArrayList<>();
+                this.itemScores = data.itemScores != null ? data.itemScores : new ArrayList<>();
             } else {
-                this.scores = new ArrayList<>();
+                this.normalScores = new ArrayList<>();
+                this.itemScores = new ArrayList<>();
             }
         } catch (Exception e) {
-            this.scores = new ArrayList<>();
+            this.normalScores = new ArrayList<>();
+            this.itemScores = new ArrayList<>();
         }
     }
     
@@ -99,7 +110,8 @@ public class HighScoreModel {
         try {
             java.nio.file.Path path = getHighScoreFilePath();
             HighScoreData data = new HighScoreData();
-            data.scores = this.scores;
+            data.normalScores = this.normalScores;
+            data.itemScores = this.itemScores;
             
             Gson gson = new Gson();
             String json = gson.toJson(data);
@@ -111,21 +123,26 @@ public class HighScoreModel {
     }
     
     // 새 점수 추가 (Top 10에 들어가는지 확인)
-    public boolean addScore(String name, int score) {
+    public boolean addScore(String name, int score, String difficulty, boolean isItemMode) {
         // 점수가 0이면 추가하지 않음
         if (score <= 0) {
             return false;
         }
         
-        ScoreEntry newEntry = new ScoreEntry(name, score);
-        scores.add(newEntry);
+        ScoreEntry newEntry = new ScoreEntry(name, score, difficulty);
+        List<ScoreEntry> targetList = isItemMode ? itemScores : normalScores;
+        targetList.add(newEntry);
         
         // 정렬 (내림차순)
-        Collections.sort(scores);
+        Collections.sort(targetList);
         
         // Top 10만 유지
-        if (scores.size() > MAX_SCORES) {
-            scores = new ArrayList<>(scores.subList(0, MAX_SCORES));  // 새로운 ArrayList로 생성
+        if (targetList.size() > MAX_SCORES) {
+            if (isItemMode) {
+                itemScores = new ArrayList<>(targetList.subList(0, MAX_SCORES));
+            } else {
+                normalScores = new ArrayList<>(targetList.subList(0, MAX_SCORES));
+            }
         }
         
         // 저장
@@ -135,35 +152,38 @@ public class HighScoreModel {
     }
     
     // Top 10 점수 목록 반환
-    public List<ScoreEntry> getTopScores() {
-        return new ArrayList<>(scores);
+    public List<ScoreEntry> getTopScores(boolean isItemMode) {
+        return new ArrayList<>(isItemMode ? itemScores : normalScores);
     }
     
     // 최고 점수 반환 (1등)
-    public int getHighScore() {
-        if (scores.isEmpty()) {
+    public int getHighScore(boolean isItemMode) {
+        List<ScoreEntry> targetList = isItemMode ? itemScores : normalScores;
+        if (targetList.isEmpty()) {
             return 0;
         }
-        return scores.get(0).getScore();
+        return targetList.get(0).getScore();
     }
     
     // 특정 순위의 점수 반환
-    public ScoreEntry getScoreByRank(int rank) {
-        if (rank < 1 || rank > scores.size()) {
+    public ScoreEntry getScoreByRank(int rank, boolean isItemMode) {
+        List<ScoreEntry> targetList = isItemMode ? itemScores : normalScores;
+        if (rank < 1 || rank > targetList.size()) {
             return null;
         }
-        return scores.get(rank - 1);
+        return targetList.get(rank - 1);
     }
     
-    // Top 10에 들어갈 수 있는지 확인 (10개 미만이거나 현재 점수가 10등보다 높으면 true)
-    public boolean isTopScore(int score) {
+    // Top 10에 들어갈 수 있는지 확인
+    public boolean isTopScore(int score, boolean isItemMode) {
         if (score <= 0) {
             return false;
         }
-        if (scores.size() < MAX_SCORES) {
+        List<ScoreEntry> targetList = isItemMode ? itemScores : normalScores;
+        if (targetList.size() < MAX_SCORES) {
             return true;
         }
-        return score > scores.get(MAX_SCORES - 1).getScore();
+        return score > targetList.get(MAX_SCORES - 1).getScore();
     }
     
     // 점수 초기화 - Default 파일을 복사
@@ -176,8 +196,9 @@ public class HighScoreModel {
             String defaultContent = java.nio.file.Files.readString(defaultPath);
             java.nio.file.Files.writeString(highScorePath, defaultContent);
             
-            // 메모리의 scores 리스트도 초기화
-            scores = new ArrayList<>();
+            // 메모리의 점수 리스트도 초기화
+            normalScores = new ArrayList<>();
+            itemScores = new ArrayList<>();
             
             System.out.println("점수 초기화 완료: Default 파일로부터 복사됨");
         } catch (Exception e) {
@@ -185,7 +206,8 @@ public class HighScoreModel {
             e.printStackTrace();
             
             // 파일 복사 실패 시 직접 초기화
-            scores = new ArrayList<>();
+            normalScores = new ArrayList<>();
+            itemScores = new ArrayList<>();
             saveScores();
         }
     }

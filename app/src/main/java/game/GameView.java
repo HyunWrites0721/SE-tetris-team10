@@ -57,6 +57,11 @@ public class GameView extends JPanel {
         repaint();
     }
 
+    // 점수 조회 메서드
+    public int getScore() {
+        return this.score;
+    }
+
     // 최고 점수 설정 메서드
     public void setHighScore(int highScore) {
         this.highScore = highScore;
