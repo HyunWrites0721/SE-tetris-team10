@@ -69,3 +69,19 @@ jacocoTestCoverageVerification {
         }
     }
 }
+
+// 실행 가능한 JAR 파일 생성 설정
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'App',
+            'Implementation-Title': 'Tetris Game',
+            'Implementation-Version': '1.0'
+        )
+    }
+    // 모든 의존성을 포함한 fat JAR 생성
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
