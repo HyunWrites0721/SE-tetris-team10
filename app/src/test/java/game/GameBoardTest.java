@@ -17,7 +17,7 @@ public class GameBoardTest {
 	void setUp() throws Exception {
 		// EDT에서 FrameBoard를 직접 생성하여 GameStart 의존성 제거
 		SwingUtilities.invokeAndWait(() -> {
-			frameBoard = new FrameBoard();
+			frameBoard = new FrameBoard(false); // Normal mode
 			frameBoard.setVisible(true); // UI 표시
 			gameTimer = frameBoard.getGameTimer();
 			// GameStart가 하던 역할: 프레임 보유 타이머 시작

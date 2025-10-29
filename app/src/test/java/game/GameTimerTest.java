@@ -15,7 +15,7 @@ public class GameTimerTest {
     void setUp() {
         try {
             SwingUtilities.invokeAndWait(() -> {
-                frameBoard = new FrameBoard();
+                frameBoard = new FrameBoard(false); // Normal mode
                 frameBoard.setVisible(false); // GUI 표시하지 않음
                 gameModel = frameBoard.getGameModel();
                 gameTimer = frameBoard.getGameTimer();
@@ -261,7 +261,7 @@ public class GameTimerTest {
         SwingUtilities.invokeLater(() -> {
             try {
                 // 임시 FrameBoard 생성으로 새 GameTimer 생성
-                FrameBoard tempFrame = new FrameBoard();
+                FrameBoard tempFrame = new FrameBoard(false); // Normal mode
                 GameTimer tempTimer = tempFrame.getGameTimer();
                 
                 // 설정 파일에 문제가 있어도 기본값(0)으로 설정되어야 함

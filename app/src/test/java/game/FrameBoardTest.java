@@ -19,7 +19,7 @@ public class FrameBoardTest {
     void setUp() throws Exception {
         // EDT에서 FrameBoard 생성
         SwingUtilities.invokeAndWait(() -> {
-            frameBoard = new FrameBoard();
+            frameBoard = new FrameBoard(false); // Normal mode로 테스트
             frameBoard.setVisible(false); // 테스트 중에는 화면에 표시하지 않음
         });
         
