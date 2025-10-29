@@ -56,8 +56,22 @@ public class GameModel extends JPanel {
     private int currentLevel = 1;       // 현재 레벨
     private int lastLineClearScore = 0; // 마지막으로 얻은 라인 클리어 점수
     private int blocksSpawned = 0;      // 생성된 블록 개수 추가
+    
+    // 난이도별 점수 가중치 배열 (0: normal=1.0, 1: hard=1.1, 2: easy=0.9)
+    private static final double[] DIFFICULTY_MULTIPLIERS = {1.0, 1.1, 0.9};
 
     public int[][] boardArray = new int[ROWS][COLS];
+    
+    // 현재 난이도 가중치를 가져오는 메서드
+    private double getDifficultyMultiplier() {
+        if (gameTimer != null) {
+            int difficulty = gameTimer.difficulty;
+            if (difficulty >= 0 && difficulty < DIFFICULTY_MULTIPLIERS.length) {
+                return DIFFICULTY_MULTIPLIERS[difficulty];
+            }
+        }
+        return DIFFICULTY_MULTIPLIERS[0]; // 기본값: normal (1.0)
+    }
 
 
 
@@ -736,7 +750,9 @@ public class GameModel extends JPanel {
                 baseScore = 0;
                 break;
         }
-        return baseScore * currentLevel;  // 현재 레벨과 곱하기
+        // 현재 레벨과 난이도 가중치를 모두 적용
+        double difficultyMultiplier = getDifficultyMultiplier();
+        return (int) Math.round(baseScore * currentLevel * difficultyMultiplier);
     }
 
     // 속도 증가 조건 확인 및 GameTimer에 알림

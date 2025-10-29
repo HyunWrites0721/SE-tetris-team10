@@ -64,6 +64,11 @@ public class PauseBoard extends JPanel implements KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
+            case KeyEvent.VK_ESCAPE:
+                // ESC를 다시 누르면 게임 재개
+                frameBoard.isPaused = false;
+                frameBoard.paused();
+                break;
             case KeyEvent.VK_UP:
                 selectedButtonIndex = (selectedButtonIndex - 1 + buttons.length) % buttons.length;
                 updateButtonSelection();
@@ -150,12 +155,10 @@ public class PauseBoard extends JPanel implements KeyListener {
         resumeButton.setFocusPainted(false); 
         resumeButton.setOpaque(true);
         resumeButton.addActionListener(e -> {
-            // PauseBoard만 숨기고 게임 화면으로 복귀
-            PauseBoard.this.setVisible(false);
-            setOpaque(false);
-            // 프레임보드에 토글 위임 (현재 일시정지 상태에서 호출되므로 재개됨)
+            // 일시정지 상태 해제
+            frameBoard.isPaused = false;
+            // PauseBoard 숨기고 게임 재개
             frameBoard.paused();
-
         });
 
         restartButton = new javax.swing.JButton("restart");
