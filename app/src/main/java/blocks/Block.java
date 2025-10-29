@@ -12,10 +12,58 @@ public abstract class Block {
     private Color[][] Colorset;
     private static settings.SettingModel settingModel;
     
+    // 난이도 설정 캐싱
+    private static String cachedDifficulty = null;
+    private static double[] cachedWeights = null;
+    
     // 색맹모드 설정 여부를 SettingModel에서 읽어옴
     private boolean getColorBlindModeFromSettings() {
         settingModel = new settings.SettingModel();  // 항상 새로 로드하여 최신 설정을 반영
         return settingModel.isColorBlindMode();
+    }
+    
+    // 난이도 설정을 로드하거나 캐시된 값 반환
+    private static String getDifficultyFromSettings() {
+        if (cachedDifficulty == null) {
+            try {
+                settings.SettingModel model = new settings.SettingModel();
+                cachedDifficulty = model.getDifficulty();
+            } catch (Exception e) {
+                cachedDifficulty = "normal";
+            }
+        }
+        return cachedDifficulty;
+    }
+    
+    // 캐시된 설정 초기화 (게임 재시작 시 호출)
+    public static void reloadSettings() {
+        cachedDifficulty = null;
+        cachedWeights = null;
+    }
+    
+    // 난이도에 따른 가중치 계산 및 캐싱
+    private static double[] getWeights() {
+        if (cachedWeights == null) {
+            String difficulty = getDifficultyFromSettings();
+            cachedWeights = new double[7];
+            
+            if ("easy".equals(difficulty)) {
+                cachedWeights[0] = 1.2;   // I블록
+                for (int i = 1; i < 7; i++) {
+                    cachedWeights[i] = 0.933; // 나머지
+                }
+            } else if ("hard".equals(difficulty)) {
+                cachedWeights[0] = 0.8;    // I블록
+                for (int i = 1; i < 7; i++) {
+                    cachedWeights[i] = 1.033; // 나머지
+                }
+            } else { // normal
+                for (int i = 0; i < 7; i++) {
+                    cachedWeights[i] = 1.0;
+                }
+            }
+        }
+        return cachedWeights;
     }
     // private Block currentBlock; gameboard로?
     
@@ -30,11 +78,33 @@ public abstract class Block {
         return getColorBlindModeFromSettings() ? 1 : 0;
     }
     
-    
-    public static Block spawn() {            // 랜덤으로 블록 지정
-        int random = (int)(Math.random() * 7);
+    // 난이도에 따른 블록 생성
+    public static Block spawn() {
+        // 캐싱된 가중치 가져오기 (첫 호출 시 설정 파일 읽음)
+        double[] weights = getWeights();
+        
+        // 가중치 합계 계산
+        double totalWeight = 0;
+        for (double weight : weights) {
+            totalWeight += weight;
+        }
+        
+        // 가중치 기반 랜덤 선택
+        double random = Math.random() * totalWeight;
+        double cumulativeWeight = 0;
+        int selectedIndex = 0;
+        
+        for (int i = 0; i < weights.length; i++) {
+            cumulativeWeight += weights[i];
+            if (random <= cumulativeWeight) {
+                selectedIndex = i;
+                break;
+            }
+        }
+        
+        // 선택된 인덱스로 블록 생성
         Block newBlock;
-        switch (random) {
+        switch (selectedIndex) {
             case 0:
                 newBlock = new IBlock();
                 break;
@@ -60,23 +130,22 @@ public abstract class Block {
                 newBlock = new IBlock(); // 기본값으로 IBlock 반환
                 break;
         }
+        
         // 블록 생성 시 기본 모양을 초기화해 둔다 (렌더링/회전에 필요)
         newBlock.setShape();
-      switch(random) {
-         case 0:  // IBlock (5×5)
-            newBlock.setPosition(3, 0);
-            break;
-        case 3:  // OBlock (2×2)
-            newBlock.setPosition(5, 2);
-            break;
-        case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
-            newBlock.setPosition(4, 2);
-            break;
+        switch(selectedIndex) {
+            case 0:  // IBlock (5×5)
+                newBlock.setPosition(3, 0);
+                break;
+            case 3:  // OBlock (2×2)
+                newBlock.setPosition(5, 2);
+                break;
+            case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
+                newBlock.setPosition(4, 2);
+                break;
         }
-    return newBlock;
-    }   
-
-    //newBlock.setPosition(BOARD_WIDTH/2 - 2, 0); // 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
+        return newBlock;
+    }
     
     
     public void hardDrop(int[][] board) {

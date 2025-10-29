@@ -103,6 +103,9 @@ public class FrameBoard extends JFrame {
     setTitle("Tetris");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setResizable(false);
+    
+    // 게임 시작 시 블록 생성 설정 로드
+    blocks.Block.reloadSettings();
 
     JLayeredPane layeredPane = getLayeredPane();
 
@@ -196,6 +199,9 @@ public class FrameBoard extends JFrame {
     }
 
     public void gameInit() {
+        // 게임 재시작 시 블록 생성 설정 리로드
+        blocks.Block.reloadSettings();
+        
         // 보드/색상 초기화
         gameModel.boardInit();
         // 블록 상태 초기화 및 뷰 동기화

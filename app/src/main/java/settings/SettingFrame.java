@@ -13,9 +13,10 @@ public class SettingFrame extends JFrame {
     private JButton[] menuButtons;
     private CardLayout cardLayout;
     private JPanel cardPanel;
+    private JPanel menuPanel; // menuPanel을 필드로 변경
     
     private String[] menuNames = {
-        "색맹 모드", "화면 크기 설정", "조작키 설정", 
+        "색맹 모드", "화면 크기 설정", "조작키 설정", "난이도 설정",
         "스코어보드 초기화", "설정값 초기화", "나가기"
     };
 
@@ -32,7 +33,7 @@ public class SettingFrame extends JFrame {
         add(titleLabel, BorderLayout.NORTH);
 
         // 우측 메뉴 패널 (GridBagLayout으로 중앙 정렬)
-        JPanel menuPanel = new JPanel(new GridBagLayout());
+        menuPanel = new JPanel(new GridBagLayout());
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -51,6 +52,12 @@ public class SettingFrame extends JFrame {
             btn.setPreferredSize(btnSize);
             btn.setMaximumSize(btnSize);
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
+            
+            // 마우스 클릭 이벤트 처리
+            final int index = i;
+            btn.addActionListener(e -> handleMenuAction(index));
+            
             buttonBox.add(btn);
             if (i < menuNames.length - 1)
                 buttonBox.add(Box.createVerticalStrut((int)(20*screenRatio)));
@@ -81,35 +88,67 @@ public class SettingFrame extends JFrame {
                     selectedIndex = (selectedIndex +1) % menuButtons.length;
                     StartFrame.updateMenuHighlight(menuButtons, selectedIndex);
                 } else if (key == KeyEvent.VK_ENTER) {
-                    if (selectedIndex == menuButtons.length -1) { // 나가기
-                        new StartFrame();
-                        dispose();
-                    } else {
-                        String menuName = menuNames[selectedIndex];
-                        SettingView view = SettingMain.launchSetting(menuName);
-
-                        // 카드 중복 추가 방지
-                        boolean exists = false;
-                        for (Component comp : cardPanel.getComponents()) {
-                            if (comp.getName() != null && comp.getName().equals(menuName)) {
-                                exists = true;
-                                break;
-                            }
-                        }
-
-                        if (!exists) {
-                            view.setName(menuName);
-                            cardPanel.add(view, menuName);
-                            cardPanel.revalidate();
-                            cardPanel.repaint();
-                        }
-                        cardLayout.show(cardPanel, menuName);
-                    }
+                    handleMenuAction(selectedIndex);
                 }
             }
         });
 
         setVisible(true);
         SwingUtilities.invokeLater(menuPanel::requestFocusInWindow);
+    }
+    
+    // 메뉴 액션 처리 (키보드와 마우스 공통)
+    private void handleMenuAction(int index) {
+        // 마우스 클릭 시에도 selectedIndex 업데이트 및 하이라이트 갱신
+        selectedIndex = index;
+        StartFrame.updateMenuHighlight(menuButtons, selectedIndex);
+        
+        if (index == menuButtons.length - 1) { // 나가기
+            new StartFrame();
+            dispose();
+        } else {
+            String menuName = menuNames[index];
+            SettingMain.SettingViewControllerPair pair = SettingMain.launchSetting(menuName);
+            SettingView view = pair.view;
+            SettingController controller = pair.controller;
+
+            // 카드 중복 추가 방지
+            boolean exists = false;
+            for (Component comp : cardPanel.getComponents()) {
+                if (comp.getName() != null && comp.getName().equals(menuName)) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                view.setName(menuName);
+                cardPanel.add(view, menuName);
+                
+                // 취소 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
+                controller.setOnCancelCallback(() -> {
+                    cardLayout.show(cardPanel, "empty");
+                    menuPanel.requestFocusInWindow();
+                });
+                
+                // 확인 버튼 콜백 설정 - 우측 메뉴로 포커스 복귀
+                controller.setOnConfirmCallback(() -> {
+                    SwingUtilities.invokeLater(() -> {
+                        cardLayout.show(cardPanel, "empty");
+                        menuPanel.requestFocusInWindow();
+                    });
+                });
+                
+                cardPanel.revalidate();
+                cardPanel.repaint();
+            }
+            cardLayout.show(cardPanel, menuName);
+            
+            // 세부 메뉴에 포커스 전달 (키보드 진입 시에도 확실하게)
+            SwingUtilities.invokeLater(() -> {
+                view.requestFocusInWindow();
+                view.setFocusable(true);
+            });
+        }
     }
 }

@@ -7,6 +7,7 @@ import game.GameStart;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 
 public class StartFrame extends JFrame {
     // JSON 매핑용 내부 클래스 (Gson 정상 동작)
@@ -23,12 +24,26 @@ public class StartFrame extends JFrame {
     private int selectedIndex = 0; // 현재 선택된 메뉴 인덱스
     private JButton[] menuButtons; // 메뉴 버튼 배열
 
+    // 설정 파일의 절대 경로를 반환하는 헬퍼 메서드
+    private static java.nio.file.Path getSettingFilePath(String filename) {
+        // 현재 작업 디렉토리 확인
+        String currentDir = System.getProperty("user.dir");
+        // app 폴더가 현재 디렉토리인지 확인
+        File appDir = new File(currentDir);
+        if (appDir.getName().equals("app")) {
+            // 이미 app 폴더 안에 있음
+            return java.nio.file.Paths.get(currentDir, "src/main/java/settings/data", filename);
+        } else {
+            // 프로젝트 루트에 있음
+            return java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data", filename);
+        }
+    }
 
     public StartFrame() {
         // 화면 비율 값 초기화
         screenRatio = 1.2; // 기본값
         try {
-            java.nio.file.Path path = java.nio.file.Paths.get("app/src/main/java/settings/data/SettingSave.json");
+            java.nio.file.Path path = getSettingFilePath("SettingSave.json");
             String json = java.nio.file.Files.readString(path);
             com.google.gson.Gson gson = new com.google.gson.Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
@@ -75,6 +90,12 @@ public class StartFrame extends JFrame {
             JButton btn = new JButton(menuNames[i]);
             btn.setMaximumSize(new Dimension((int)(200*screenRatio), (int)(50*screenRatio)));
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
+            
+            // 마우스 클릭 이벤트 처리
+            final int index = i;
+            btn.addActionListener(e -> handleMenuAction(index));
+            
             menuPanel.add(btn);
             menuPanel.add(Box.createRigidArea(new Dimension((int)(10*screenRatio), (int)(50*screenRatio))));
             menuButtons[i] = btn;
@@ -100,23 +121,7 @@ public class StartFrame extends JFrame {
                     selectedIndex = (selectedIndex + 1) % menuButtons.length;
                     updateMenuHighlight(menuButtons, selectedIndex);
                 } else if (key == KeyEvent.VK_ENTER) {
-                    if (selectedIndex == 0) {
-                        new GameStart(); //게임 시작
-                        dispose();
-                    } 
-                    else if (selectedIndex == 1) { 
-                        // 설정 메뉴로 이동
-                        new SettingFrame(); //설정 창 띄우기
-                        dispose(); // 현재 창 닫기 (또는 setVisible(false))
-                    } 
-                    else if (selectedIndex == 2) {
-                        //스코어보드
-                    } 
-                    else if (selectedIndex == 3) {
-                        //게임 종료
-                        System.exit(0);
-                    }
-
+                    handleMenuAction(selectedIndex);
                 } 
 
             }
@@ -126,6 +131,30 @@ public class StartFrame extends JFrame {
         setVisible(true);
 
         SwingUtilities.invokeLater(menuPanel::requestFocusInWindow);
+    }
+    
+    // 메뉴 액션 처리 (키보드와 마우스 공통)
+    private void handleMenuAction(int index) {
+        // 마우스 클릭 시에도 selectedIndex 업데이트 및 하이라이트 갱신
+        selectedIndex = index;
+        updateMenuHighlight(menuButtons, selectedIndex);
+        
+        if (index == 0) {
+            new GameStart(); //게임 시작
+            dispose();
+        } 
+        else if (index == 1) { 
+            // 설정 메뉴로 이동
+            new SettingFrame(); //설정 창 띄우기
+            dispose(); // 현재 창 닫기 (또는 setVisible(false))
+        } 
+        else if (index == 2) {
+            //스코어보드
+        } 
+        else if (index == 3) {
+            //게임 종료
+            System.exit(0);
+        }
     }
 
     // 버튼 하이라이트 함수
