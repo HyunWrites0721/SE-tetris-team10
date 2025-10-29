@@ -109,7 +109,7 @@ public class GameKeyListener extends KeyAdapter  {
             case KeyEvent.VK_SPACE:
                 if (!frameBoard.isPaused && blockText != null) {
                     int dropDistance = blockText.HardDrop();
-                    int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 속도 레벨 배율 (1~6배)
+                    int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 속도 레벨 배율 (1~7배, 레벨 0~6)
                     int lineClearScore = blockText.getLastLineClearScore();  // 마지막 라인 클리어 점수 가져오기
                     // 하드드롭 점수에만 배율 적용, 라인클리어 점수는 이미 계산되어 더해진 상태
                     frameBoard.increaseScore(dropDistance * 2 * speedMultiplier + lineClearScore);
@@ -143,8 +143,10 @@ public class GameKeyListener extends KeyAdapter  {
             case KeyEvent.VK_S:
                 if (isValidKey(e.getKeyCode(), "DOWN") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
                     if (blockText.getCurrentBlock().isMoveDown(blockText.getBoard())) {
-                        // 성공적으로 아래로 이동했을 때만 점수 증가
-                        frameBoard.increaseScore(1);
+                        // 성공적으로 아래로 이동했을 때 점수 증가 (속도 배율만 적용)
+                        int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 1~7배
+                        int softDropScore = 1 * speedMultiplier;
+                        frameBoard.increaseScore(softDropScore);
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
                         gameBoard.repaint();
                     }
