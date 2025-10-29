@@ -1,5 +1,6 @@
 {
   "colorBlindMode": false,
   "screenSize": "medium",         
-  "controlType": "arrow"
+  "controlType": "arrow",
+  "difficulty": "normal"
 }

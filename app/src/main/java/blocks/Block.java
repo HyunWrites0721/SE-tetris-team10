@@ -1,8 +1,6 @@
 package blocks;
 
 import java.awt.Color;
-import java.lang.Math;
-
 
 import blocks.item.AllClearBlock;
 import blocks.item.BoxClearBlock;

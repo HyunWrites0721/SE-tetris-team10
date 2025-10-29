@@ -1,1 +1,6 @@
-{"colorBlindMode":false,"controlType":"arrow","screenSize":"small","difficulty":"normal"}
+{
+  "colorBlindMode": false,
+  "screenSize": "medium",         
+  "controlType": "arrow",
+  "difficulty": "normal"
+}
