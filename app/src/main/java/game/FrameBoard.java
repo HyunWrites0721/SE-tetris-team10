@@ -60,6 +60,7 @@ public class FrameBoard extends JFrame {
     public boolean isPaused = false;
     public boolean isGameOver = false;
     private boolean scoreSaved = false;  // 점수 저장 여부 플래그 추가
+    public boolean itemMode = false;     // 아이템 모드 플래그 추가
 
     // 게임 보드와 일시정지 보드, 블록 텍스트
     private final GameView gameBoard;
@@ -76,7 +77,7 @@ public class FrameBoard extends JFrame {
         gameBoard.setScore(score);  // GameView에 점수 업데이트
         
         // 현재 점수가 최고 점수를 넘으면 실시간으로 하이스코어 갱신
-        int currentHighScore = highScoreModel.getHighScore();
+        int currentHighScore = highScoreModel.getHighScore(itemMode);
         if (score > currentHighScore) {
             // 임시로 현재 점수를 하이스코어로 표시 (실제 저장은 게임 종료 시)
             gameBoard.setHighScore(score);
@@ -98,8 +99,11 @@ public class FrameBoard extends JFrame {
     }
 
 
-    public FrameBoard() {
+    public FrameBoard(boolean itemMode) {
     System.out.println("[DEBUG] FrameBoard: constructor enter");
+    this.itemMode = itemMode; // 아이템 모드 설정
+    System.out.println("[DEBUG] Item Mode: " + (itemMode ? "ON" : "OFF"));
+    
     setTitle("Tetris");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setResizable(false);
@@ -123,7 +127,7 @@ public class FrameBoard extends JFrame {
     } catch (Exception ignored) {}
 
     // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
-    gameModel = new GameModel(gameBoard);
+    gameModel = new GameModel(gameBoard, itemMode);
     gameModel.setBounds(gameBoard.getBounds());
     layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);
 
@@ -133,7 +137,7 @@ public class FrameBoard extends JFrame {
     
     // 초기 점수와 최고 점수 설정
     gameBoard.setScore(0);
-    gameBoard.setHighScore(highScoreModel.getHighScore());
+    gameBoard.setHighScore(highScoreModel.getHighScore(itemMode));
 
     // 타이머 생성: 1초마다 블록 낙하 및 화면 갱신
     gameTimer = new GameTimer(gameBoard, gameModel, this);
@@ -171,6 +175,8 @@ public class FrameBoard extends JFrame {
         pauseBoard.setOpaque(isPaused);
          if (isPaused) {
              if (gameTimer != null) gameTimer.stop();
+             // 일시정지 화면이 표시될 때 점수 및 정보 업데이트
+             pauseBoard.updateInfo();
              // 일시정지 화면이 표시될 때 포커스 설정
              pauseBoard.setFocusable(true);
              pauseBoard.requestFocusInWindow();
@@ -199,6 +205,8 @@ public class FrameBoard extends JFrame {
             System.out.println("Final Score: " + score);  // 최종 점수 출력
             isGameOver = true;  // 게임오버 상태로 설정
         }
+        // GameOverBoard 정보 업데이트
+        gameOverBoard.updateInfo();
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
         if (gameTimer != null) {
@@ -207,9 +215,20 @@ public class FrameBoard extends JFrame {
         
         // 점수가 이미 저장되었으면 다시 저장하지 않음 (중복 방지)
         if (!scoreSaved && score > 0) {
-            highScoreModel.addScore("Player", score);
+            // 난이도 문자열 변환 (0: normal, 1: hard, 2: easy)
+            String difficulty = "normal";
+            if (gameTimer != null) {
+                switch (gameTimer.difficulty) {
+                    case 0: difficulty = "normal"; break;
+                    case 1: difficulty = "hard"; break;
+                    case 2: difficulty = "easy"; break;
+                    default: difficulty = "normal"; break;
+                }
+            }
+            
+            highScoreModel.addScore("Player", score, difficulty, itemMode);
             scoreSaved = true;  // 저장 완료 플래그 설정
-            System.out.println("점수 저장 완료: " + score);
+            System.out.println("점수 저장 완료: " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficulty + ")");
             
             // HighScore는 내부적으로만 업데이트 (UI는 제거됨)
         }
@@ -243,7 +262,7 @@ public class FrameBoard extends JFrame {
         score = 0;
         scoreSaved = false;  // 점수 저장 플래그 리셋
         gameBoard.setScore(0);  // 현재 점수 0으로 초기화
-        gameBoard.setHighScore(highScoreModel.getHighScore());  // 최고 점수 다시 설정
+        gameBoard.setHighScore(highScoreModel.getHighScore(itemMode));  // 최고 점수 다시 설정
 
         // 아이템 관련 상태 초기화
         gameModel.itemGenerateCount = 0;

@@ -14,6 +14,7 @@ public class GameModel extends JPanel {
     private final GameView gameBoard;
     private final int ROWS = 23;
     private final int COLS = 12;
+    private final boolean itemMode; // 아이템 모드 플래그
 
     private final int INNER_TOP = 2;
     private final int INNER_BOTTOM = ROWS - 2;
@@ -77,8 +78,9 @@ public class GameModel extends JPanel {
 
 
 
-    public GameModel(GameView gameBoard) {
+    public GameModel(GameView gameBoard, boolean itemMode) {
         this.gameBoard = gameBoard;
+        this.itemMode = itemMode;
     setOpaque(false);
     setVisible(true);
         // 생성 시 왼쪽, 오른쪽, 아랫벽을 true로 초기화
@@ -348,13 +350,15 @@ public class GameModel extends JPanel {
             nextBlock = Block.spawn();
         }
         currentBlock = nextBlock;  // 생성한 nextBlock을 currentBlock으로 설정
-        if(lineClearCount/divisor > itemGenerateCount) {
+        
+        // 아이템 모드일 때만 아이템 블록 생성
+        if (itemMode && lineClearCount/divisor > itemGenerateCount) {
             nextBlock = Block.spawn(); // 아이템 블록 생성
             nextBlock = Block.spawnItem(nextBlock);
             itemGenerateCount++;
         }
-        else{
-        nextBlock = Block.spawn(); // 새로운 nextBlock 생성
+        else {
+            nextBlock = Block.spawn(); // 새로운 nextBlock 생성
         }
         blocksSpawned++;  // 생성된 블록 개수 증가
         
@@ -761,12 +765,12 @@ public class GameModel extends JPanel {
         // 줄 삭제 개수 조건: 5, 10, 15, 20, 25, 30줄 이상
         
         // 블록 개수 기준으로 속도 레벨 계산
-        int blockSpeedLevel = (blocksSpawned / 2);  // 20개마다 1레벨
+        int blockSpeedLevel = (blocksSpawned / 30);  // 30개마다 1레벨
         
         // 줄 삭제 기준으로 속도 레벨 계산 
         int lineSpeedLevel = (totalLinesCleared / 5);  // 5줄마다 1레벨
         
-        // 둘 중 더 높은 레벨 사용 (최대 5레벨까지, 0(init)~5단계 이므로 총 6단계)
+        // 둘 중 더 높은 레벨 사용 (최대 레벨 6, 0~6단계이므로 총 7단계)
         int speedLevel = Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
         
         // GameTimer에 속도 업데이트 요청
@@ -796,12 +800,12 @@ public class GameModel extends JPanel {
     // 현재 속도 레벨 반환 (점수산정용도)
     public int getCurrentSpeedLevel() {
         // 블록 개수 기준으로 속도 레벨 계산
-        int blockSpeedLevel = (blocksSpawned / 2 ) ;  // 20개마다 1레벨
+        int blockSpeedLevel = (blocksSpawned / 30 ) ;  // 30개마다 1레벨
         
         // 줄 삭제 기준으로 속도 레벨 계산 
         int lineSpeedLevel = (totalLinesCleared / 5 ) ;  // 5줄마다 1레벨
 
-        // 둘 중 더 높은 레벨 사용 (최대 6레벨까지, 0-based이므로 6단계)
+        // 둘 중 더 높은 레벨 사용 (최대 레벨 6, 0~6단계이므로 총 7단계)
         return Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
     }
 
