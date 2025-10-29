@@ -225,6 +225,12 @@ public class GameModel extends JPanel {
         allClearFlashBlack = true;
         if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
 
+        // AllClear 점수 계산: 500점 * 속도 가중치 * 난이도 가중치
+        int speedMultiplier = getCurrentSpeedLevel() + 1;
+        double difficultyMultiplier = getDifficultyMultiplier();
+        int allClearScore = (int) Math.round(500 * speedMultiplier * difficultyMultiplier);
+        lastLineClearScore = allClearScore;  // 점수 저장
+        
         if (allClearTimer != null) {
             allClearTimer.stop();
         }
@@ -255,6 +261,11 @@ public class GameModel extends JPanel {
         for (int[] rc : centers) {
             boxFlashCenters.add(new int[]{rc[0], rc[1]});
         }
+        
+        // BoxClear 점수: 두 줄 지운 것과 동일 (2줄 클리어 점수)
+        int boxClearScore = calculateLineClearScore(2);
+        lastLineClearScore = boxClearScore;
+        
         boxClearAnimating = true;
         boxFlashBlack = true;
         if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
@@ -316,13 +327,13 @@ public class GameModel extends JPanel {
                 // 내릴 때 인덱스 꼬임을 방지하기 위해 아래쪽부터 처리
                 java.util.List<Integer> sorted = new java.util.ArrayList<>(flashingRows);
                 sorted.sort(java.util.Collections.reverseOrder());
+                
+                // OneLineClearBlock 점수: 지워진 줄 수 + 1로 계산
+                int linesCleared = sorted.size();
+                int oneLineClearScore = calculateLineClearScore(linesCleared + 1);
+                lastLineClearScore = oneLineClearScore;
+                
                 for (int r : sorted) {
-                    // 점수 더블 여부: 이 줄에 '5'가 포함되어 있으면 두 배 처리
-                    boolean containsFive = false;
-                    for (int c = INNER_LEFT; c <= INNER_RIGHT; c++) {
-                        if (boardArray[r][c] == 5) { containsFive = true; break; }
-                    }
-                    if (containsFive) { lineClearScore(); lineClearScore(); } else { lineClearScore(); }
                     clearRowForce(r);
                     lineClearCount++;
                 }
@@ -550,18 +561,27 @@ public class GameModel extends JPanel {
     // 기존 즉시 라인 클리어 로직을 메서드로 분리
     private void performImmediateLineClear() {
         boolean anyCleared = false;
+        int normalLines = 0;      // 일반 줄 개수
+        int doubleScoreLines = 0; // ScoreDouble(값 5) 포함 줄 개수
+        
         for (int row = INNER_TOP; row <= INNER_BOTTOM; row++) {
             boolean full = true;
             for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
                 if (boardArray[row][col] == 0) { full = false; break; }
             }
             if (full) {
-                // 점수 더블 여부: 이 줄에 '5'가 포함되어 있으면 두 배 처리
+                // 점수 더블 여부: 이 줄에 '5'가 포함되어 있는지 확인
                 boolean containsFive = false;
                 for (int c = INNER_LEFT; c <= INNER_RIGHT; c++) {
                     if (boardArray[row][c] == 5) { containsFive = true; break; }
                 }
-                if (containsFive) { lineClearScore(); lineClearScore(); } else { lineClearScore(); }
+                
+                if (containsFive) {
+                    doubleScoreLines++;
+                } else {
+                    normalLines++;
+                }
+                
                 for (int r = row; r > 0; r--) {
                     System.arraycopy(boardArray[r - 1], 0, boardArray[r], 0, COLS);
                     System.arraycopy(colorBoard[r - 1], 0, colorBoard[r], 0, COLS);
@@ -578,7 +598,12 @@ public class GameModel extends JPanel {
             }
         }
         if (anyCleared) {
-            // 후처리 훅 필요 시 여기에 추가 (예: 점수)
+            // ScoreDoubleBlock 점수 계산:
+            // 일반 줄 점수 + (ScoreDouble 줄 점수 * 2)
+            int totalLines = normalLines + doubleScoreLines;
+            int normalScore = calculateLineClearScore(normalLines);
+            int doubleScore = calculateLineClearScore(doubleScoreLines) * 2;
+            lastLineClearScore = normalScore + doubleScore;
         }
     }
 
