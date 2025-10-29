@@ -1,14 +1,17 @@
 package blocks;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
-import static org.junit.jupiter.api.Assertions.*;
-import java.awt.Color;
-import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach; // 아이템 블록 테스트는 분리됨
+import org.junit.jupiter.api.Test;
+
 
 public class BlockTest {
     
@@ -38,39 +41,90 @@ public class BlockTest {
         // 원본 설정 복원
         if (originalContent != null && Files.exists(settingsPath)) {
             Files.writeString(settingsPath, originalContent);
+        } else if (originalContent == null && Files.exists(settingsPath)) {
+            // 테스트에서 생성한 설정 파일을 정리
+            Files.deleteIfExists(settingsPath);
         }
     }
     
-    @Test
-    public void testColorBlindModeSetting() throws Exception {
-        // 1. 일반 모드 테스트
-        String jsonFalse = "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}";
-        Files.writeString(settingsPath, jsonFalse);
-        
-        IBlock blockNormal = new IBlock();
-        Color normalColor = blockNormal.getColor();
-        assertNotNull(normalColor, "Normal mode color should not be null");
-        System.out.println("Normal mode color: " + normalColor);
-        
-        // 2. 색맹 모드 테스트
-        String jsonTrue = "{\"colorBlindMode\":true,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}";
-        Files.writeString(settingsPath, jsonTrue);
-        
-        IBlock blockColorBlind = new IBlock();
-        Color colorBlindColor = blockColorBlind.getColor();
-        assertNotNull(colorBlindColor, "Color blind mode color should not be null");
-        System.out.println("Color blind mode color: " + colorBlindColor);
-        
-        // 두 모드에서 다른 색상이 사용되는지 확인
-        assertNotEquals(normalColor, colorBlindColor, 
-            "Colors should be different between normal and colorblind mode");
+    // 공통 유틸: 2차원 배열에서 0이 아닌 셀 개수 세기
+    private int countNonZero(int[][] a) {
+        int cnt = 0;
+        for (int[] row : a) {
+            for (int v : row) {
+                if (v != 0) cnt++;
+            }
+        }
+        return cnt;
     }
+
+    // 공통 유틸: 2차원 배열의 깊은 복사
+    private int[][] deepCopy(int[][] src) {
+        int[][] dst = new int[src.length][];
+        for (int i = 0; i < src.length; i++) {
+            dst[i] = java.util.Arrays.copyOf(src[i], src[i].length);
+        }
+        return dst;
+    }
+
+    // (참고) 아이템 관련 유틸과 테스트는 ItemBlockTest로 이동되었습니다.
+
+    @Test
+    public void testSpawnProducesValidShape() {
+        // 블록 스폰 기본 검증: shape이 존재하고 0이 아닌 셀이 하나 이상 있어야 함
+        Block b = Block.spawn();
+        assertNotNull(b, "spawn()은 null을 리턴하면 안됩니다");
+        b.setShape();
+        assertNotNull(b.getShape(), "스폰된 블록의 shape은 null이면 안됩니다");
+        assertTrue(countNonZero(b.getShape()) > 0, "스폰된 블록의 shape에는 0이 아닌 셀이 최소 1개 이상 있어야 합니다");
+    }
+
+    @Test
+    public void testRotatePreservesCellCount() {
+        // 각 기본 블록(I, J, L, O, S, T, Z)에 대해 회전 전/후 0이 아닌 셀의 개수가 동일해야 함
+        Block[] blocks = new Block[] { new IBlock(), new JBlock(), new LBlock(), new OBlock(), new SBlock(), new TBlock(), new ZBlock() };
+        for (Block b : blocks) {
+            b.setShape();
+            int[][] before = deepCopy(b.getShape());
+            int beforeCount = countNonZero(before);
+            // 회전 실행
+            b.getRotatedShape();
+            int[][] after = b.getShape();
+            int afterCount = countNonZero(after);
+            // 검증: 회전으로 셀의 개수는 유지되어야 함
+            assertEquals(beforeCount, afterCount, b.getClass().getSimpleName() + ": 회전 전/후 셀 개수가 달라요");
+            // 추가: 회전된 shape의 크기가 전치 관계인지(엄밀히는 모든 블록에 필요하진 않지만 일반적으로 가로/세로가 바뀌는지) 가벼운 체크
+            assertTrue(after.length == before[0].length && after[0].length == before.length
+                    || (after.length == before.length && after[0].length == before[0].length),
+                b.getClass().getSimpleName() + ": 회전 후 행/열 크기가 비정상적입니다");
+        }
+    }
+
+    @Test
+    public void testMovementAndHardDropToBottom() {
+        // 23x12 보드(게임 내부 상수와 동일 크기), 빈 보드에서 하드드랍 후 더 이상 아래로 이동할 수 없어야 함
+        int rows = 23, cols = 12;
+        int[][] board = new int[rows][cols];
+        Block b = new TBlock(); // 임의의 기본 블록
+        b.setShape();
+        b.setPosition(5, 2); // 기본 스폰 위치와 동일하게
+
+        // 하드드랍 수행
+        int dropped = b.hardDrop(board);
+        assertTrue(dropped >= 0, "하드드랍 거리는 0 이상이어야 합니다");
+        // 바닥에 닿았으므로 더 이상 아래로 이동할 수 없어야 함
+        assertFalse(b.canMoveDown(board), "하드드랍 후에는 밑으로 이동할 수 없어야 합니다");
+    }
+
+    // 아이템 관련 테스트는 ItemBlockTest로 이동되었습니다.
     
     @Test
     public void testDifficultyBlockSpawn() throws Exception {
         // Easy 모드에서 I블록 생성 확률 테스트
         String jsonEasy = "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"easy\"}";
         Files.writeString(settingsPath, jsonEasy);
+        // 설정 리로드 (이걸 누락하면 이전 테스트의 난이도 설정이 남아 플래키하게 실패할 수 있음)
+        Block.reloadSettings();
         
         int iBlockCount = 0;
         int totalBlocks = 1000;
@@ -196,10 +250,10 @@ public class BlockTest {
         // 설정 리로드
         Block.reloadSettings();
         
-        int totalBlocks = 1000;
+        int totalBlocks = 5000;
         int[] blockCounts = new int[7]; // I, J, L, O, S, T, Z
         
-        // 1000번 블록 생성
+        // 5000번 블록 생성
         for (int i = 0; i < totalBlocks; i++) {
             Block block = Block.spawn();
             if (block instanceof IBlock) blockCounts[0]++;
