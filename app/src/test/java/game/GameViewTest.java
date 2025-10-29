@@ -123,7 +123,7 @@ public class GameViewTest {
     void testGameModelSetting() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             // GameModel 생성 (GameView를 매개변수로 전달)
-            GameModel testModel = new GameModel(gameView);
+            GameModel testModel = new GameModel(gameView, false); // Normal mode
             
             // 게임 모델 설정 테스트
             assertDoesNotThrow(() -> {

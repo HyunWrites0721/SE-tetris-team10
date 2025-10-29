@@ -61,7 +61,7 @@ public class GameStartTest {
         SwingUtilities.invokeLater(() -> {
             try {
                 // GameStart 생성자 호출
-                GameStart gameStart = new GameStart();
+                GameStart gameStart = new GameStart(false); // Normal mode
                 assertNotNull(gameStart, "GameStart 객체가 생성되어야 함");
                 
                 // FrameBoard가 생성되었는지 확인
@@ -101,7 +101,7 @@ public class GameStartTest {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                new GameStart();
+                new GameStart(false); // Normal mode
                 
                 // 짧은 대기 후 가시성 확인
                 SwingUtilities.invokeLater(() -> {
@@ -144,7 +144,7 @@ public class GameStartTest {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                new GameStart();
+                new GameStart(false); // Normal mode
                 
                 // 짧은 대기 후 타이머 상태 확인
                 SwingUtilities.invokeLater(() -> {
@@ -234,9 +234,9 @@ public class GameStartTest {
         SwingUtilities.invokeLater(() -> {
             try {
                 // 여러 번 GameStart 생성
-                new GameStart();
-                new GameStart();
-                new GameStart();
+                new GameStart(false); // Normal mode
+                new GameStart(false); // Normal mode
+                new GameStart(false); // Normal mode
                 
                 // 짧은 대기 후 FrameBoard 개수 확인
                 SwingUtilities.invokeLater(() -> {
@@ -280,7 +280,7 @@ public class GameStartTest {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                new GameStart();
+                new GameStart(false); // Normal mode
                 
                 // 타이머가 시작될 시간을 주기 위해 약간 대기
                 Thread.sleep(50);
@@ -329,7 +329,7 @@ public class GameStartTest {
         SwingUtilities.invokeLater(() -> {
             try {
                 // GameStart 호출이 예외를 던지지 않는지 확인
-                GameStart gameStart = new GameStart();
+                GameStart gameStart = new GameStart(false); // Normal mode
                 assertNotNull(gameStart);
                 
                 // 정적 메서드도 예외를 던지지 않는지 확인
@@ -361,7 +361,7 @@ public class GameStartTest {
             try {
                 assertTrue(SwingUtilities.isEventDispatchThread(), "EDT에서 실행되어야 함");
                 
-                GameStart gameStart = new GameStart();
+                GameStart gameStart = new GameStart(false); // Normal mode
                 assertNotNull(gameStart);
                 
                 edtSafeRef[0] = true;
@@ -392,7 +392,7 @@ public class GameStartTest {
         SwingUtilities.invokeLater(() -> {
             try {
                 // GameStart로 게임 시작
-                new GameStart();
+                new GameStart(false); // Normal mode
                 
                 // FrameBoard 찾기
                 FrameBoard frameBoard = null;

@@ -141,7 +141,17 @@ public abstract class Block {
         // 블록의 shape을 초기화
         newBlock.setShape();
         // 초기 위치 설정
-        newBlock.setPosition(5, 2);
+        switch(selectedIndex) {
+         case 0:  // IBlock (5×5)
+            newBlock.setPosition(3, 0);
+            break;
+        case 3:  // OBlock (2×2)
+            newBlock.setPosition(5, 2);
+            break;
+        case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
+            newBlock.setPosition(4, 2);
+            break;
+        }
 
         return newBlock;
     }

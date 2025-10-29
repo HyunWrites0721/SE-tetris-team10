@@ -180,9 +180,9 @@ public class SettingControllerTest {
 	@Test
 	void scoreboardReset_clearsScoresAndFile() throws Exception {
 		// 현재 HighScore.json이 비어있지 않음을 보장 (점수 추가)
-		HighScoreModel.getInstance().addScore("AAA", 999);
+		HighScoreModel.getInstance().addScore("AAA", 999, "Medium", false);
 		String before = Files.readString(highScorePath);
-		assertTrue(before.contains("scores"), "HighScore.json이 존재해야 합니다");
+		assertTrue(before.contains("normalScores") || before.contains("itemScores"), "HighScore.json이 존재해야 합니다");
 
 	SettingModel model = new SettingModel();
 	SettingView view = new SettingView("스코어보드 초기화", model);
@@ -197,6 +197,7 @@ public class SettingControllerTest {
 		assertEquals(expected, after, "스코어보드 초기화 후 HighScore.json은 기본값과 같아야 합니다");
 
 		// 메모리 상 리스트도 비어 있어야 함
-		assertTrue(HighScoreModel.getInstance().getTopScores().isEmpty(), "초기화 후 TopScores는 비어 있어야 합니다");
+		assertTrue(HighScoreModel.getInstance().getTopScores(false).isEmpty(), "초기화 후 Normal Mode TopScores는 비어 있어야 합니다");
+		assertTrue(HighScoreModel.getInstance().getTopScores(true).isEmpty(), "초기화 후 Item Mode TopScores는 비어 있어야 합니다");
 	}
 }

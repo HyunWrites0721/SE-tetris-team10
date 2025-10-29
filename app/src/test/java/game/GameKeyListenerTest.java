@@ -26,7 +26,7 @@ public class GameKeyListenerTest {
     void setUp() throws Exception {
         // EDT에서 실제 컴포넌트들 생성
         SwingUtilities.invokeAndWait(() -> {
-            frameBoard = new FrameBoard();
+            frameBoard = new FrameBoard(false); // Normal mode
             frameBoard.setVisible(false); // 테스트 중에는 화면에 표시하지 않음
             gameBoard = frameBoard.getGameBoard();
             gameModel = frameBoard.getGameModel();

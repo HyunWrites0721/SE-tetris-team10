@@ -25,7 +25,7 @@ public class PauseBoardTest {
         
         SwingUtilities.invokeLater(() -> {
             try {
-                frameBoard = new FrameBoard();
+                frameBoard = new FrameBoard(false); // Normal mode
                 pauseBoard = new PauseBoard(frameBoard);
                 frameBoard.add(pauseBoard);
             } finally {

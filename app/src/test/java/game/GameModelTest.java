@@ -18,7 +18,7 @@ public class GameModelTest {
         try {
             SwingUtilities.invokeAndWait(() -> {
                 gameView = new GameView();
-                gameModel = new GameModel(gameView);
+                gameModel = new GameModel(gameView, false); // Normal mode로 테스트
             });
         } catch (Exception e) {
             e.printStackTrace();
