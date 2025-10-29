@@ -1,7 +1,16 @@
 package game;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+
+import javax.swing.JPanel;
 
 public class ScoreBoard extends JPanel {
     private int scoreWidth;

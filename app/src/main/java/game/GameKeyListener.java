@@ -112,7 +112,7 @@ public class GameKeyListener extends KeyAdapter  {
                 break;
                 
             case KeyEvent.VK_SPACE:
-                if (blockText != null) {
+                if (!frameBoard.isPaused && blockText != null) {
                     blockText.HardDrop();
                     // 하드드롭 후 스폰된 블록을 즉시 반영
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());

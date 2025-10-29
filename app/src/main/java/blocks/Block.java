@@ -3,6 +3,12 @@ package blocks;
 import java.awt.Color;
 import java.lang.Math;
 
+
+import blocks.item.AllClearBlock;
+import blocks.item.BoxClearBlock;
+import blocks.item.OneLineClearBlock;
+import blocks.item.ScoreDoubleBlock;
+import blocks.item.WeightBlock;
 import game.GameModel;
 import game.GameView;
 
@@ -179,6 +185,55 @@ public abstract class Block {
         return newBlock;
     }
     
+    public static Block spawnItem(Block b) {
+        int itemRandom = (int)(Math.random() * 5);
+        int[][] shape = b.getShape();
+        Block newBlock;
+        switch (1) {
+            case 0:
+                newBlock = new AllClearBlock();
+                break;
+            case 1:
+                newBlock = new BoxClearBlock();
+                break;
+            case 2:
+                newBlock = new OneLineClearBlock(shape);
+                // Inherit the color from the base block so NEXT preview matches currentBlock
+                newBlock.setExactColor(b.getColor());
+                break;
+            case 3:
+                newBlock = new ScoreDoubleBlock(shape);
+                newBlock.setExactColor(b.getColor());
+                break;
+            case 4:
+                newBlock = new WeightBlock();
+                break;
+
+            default:
+                newBlock = new AllClearBlock(); // 기본값으로 AllClearBlock 반환
+                break;
+        }
+        newBlock.setShape();
+        switch (itemRandom) {
+            case 0:
+                newBlock.setPosition(5,2);
+                break;
+            case 1:
+                newBlock.setPosition(4,2);
+                break;
+            case 4:
+                newBlock.setPosition(3,2);
+                break;
+            case 2: case 3:
+                newBlock.setPosition(b.getX(), b.getY());
+                break;
+        }
+        return newBlock;
+
+    }
+
+    //newBlock.setPosition(BOARD_WIDTH/2 - 2, 0); // 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
+    
     
     public void hardDrop(int[][] board) {
         int dropDistance = 0;  // dropDistance는 블록이 아래로 몇칸이나 떨어질 수 있는가를 의미
@@ -343,4 +398,8 @@ public abstract class Block {
     	initColor(setBlindColor_1, colorIndex);
     }
     public Color getColor() { return color; }
+
+    // Allow item wrappers to inherit the exact visual color from a base block
+    public void setExactColor(Color c) { this.color = c; }
+
 }

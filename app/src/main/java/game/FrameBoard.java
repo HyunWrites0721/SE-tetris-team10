@@ -2,13 +2,24 @@ package game;
 import javax.swing.*;
 import settings.HighScoreModel;
 import start.StartFrame;
+import javax.swing.JFrame;
+import javax.swing.JLayeredPane;
+
+// Note: Do not depend on StartFrame initialization. Use safeScreenRatio() to fallback when needed.
 
 
 public class FrameBoard extends JFrame {
 
     // 프레임 크기 설정 (모든 창의 기본 크기를 600x600으로 통일하고 StartFrame의 screenRatio를 곱함)
-    private  int FRAME_WIDTH = (int)(600 * StartFrame.screenRatio);
-    private  int FRAME_HEIGHT = (int)(600 * StartFrame.screenRatio);
+    private  int FRAME_WIDTH = (int)(600 * safeScreenRatio());
+    private  int FRAME_HEIGHT = (int)(600 * safeScreenRatio());
+
+    // StartFrame을 통하지 않고 실행될 때 screenRatio가 0.0일 수 있으므로 기본값(1.2) 보정
+    private static double safeScreenRatio() {
+        double r = start.StartFrame.screenRatio;
+        if (Double.isNaN(r) || Double.isInfinite(r) || r <= 0.0) return 1.2;
+        return r;
+    }
     
     public void updateFrameSize(double scale) {
         // 기본 크기 600x600을 기준으로 하되, 내부 요소들의 실제 크기를 고려
@@ -108,6 +119,7 @@ public class FrameBoard extends JFrame {
 
 
     public FrameBoard() {
+    System.out.println("[DEBUG] FrameBoard: constructor enter");
     setTitle("Tetris");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setResizable(false);
@@ -127,7 +139,7 @@ public class FrameBoard extends JFrame {
 
     // StartFrame의 screenRatio에 맞게 GameView의 스케일 적용 (초기 프레임 크기 반영)
     try {
-        gameBoard.convertScale(StartFrame.screenRatio);
+        gameBoard.convertScale(safeScreenRatio());
     } catch (Exception ignored) {}
 
     // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
@@ -156,7 +168,7 @@ public class FrameBoard extends JFrame {
     // 초기 최고 점수 설정
     scoreBoard.setHighScore(highScoreModel.getHighScore());
     // GameView의 좌표 계산 방식을 따라 ScoreBoard 위치 설정 (StartFrame.screenRatio 반영)
-    int cellSizeInit = (int)(30 * StartFrame.screenRatio);
+    int cellSizeInit = (int)(30 * safeScreenRatio());
     int boardWidth = 10 * cellSizeInit;  // COLS * CELL_SIZE
     int x = (FRAME_WIDTH - boardWidth) / 3;
     // Next 패널과 동일한 x 위치, y는 Next 패널 바로 아래
@@ -170,6 +182,7 @@ public class FrameBoard extends JFrame {
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
     setLocationRelativeTo(null);
     setVisible(true);
+    System.out.println("[DEBUG] FrameBoard: setVisible(true) called");
 
     // 키 리스너 추가
     addKeyListener(new GameKeyListener(this, gameBoard, gameModel, gameTimer));
@@ -179,6 +192,8 @@ public class FrameBoard extends JFrame {
 
     // ESC로 일시정지/재개 토글: 오버레이 표시 + 타이머 정지/재시작
     public void paused() {
+        // 내부에서 토글하여 외부에서 isPaused를 직접 변경하지 않도록 함
+        isPaused = !isPaused;
         pauseBoard.setVisible(isPaused);
         pauseBoard.setOpaque(isPaused);
          if (isPaused) {
@@ -242,6 +257,11 @@ public class FrameBoard extends JFrame {
         scoreSaved = false;  // 점수 저장 플래그 리셋
         scoreBoard.setScore(0);
         scoreBoard.setHighScore(highScoreModel.getHighScore());
+
+        // 아이템 관련 상태 초기화
+
+        gameModel.itemGenerateCount = 0;
+        gameModel.lineClearCount = 0;
         
         gameModel.itemGenerateCount = 0;
         gameModel.lineClearCount = 0;

@@ -187,6 +187,135 @@ public class GameModel extends JPanel {
         // checkLines();  // 줄이 다 찼는지 확인
     }
  
+    // AllClear(값 2) 애니메이션: 보드 전체를 잠깐 검게 플래시한 뒤 내부 영역을 비운다.
+    private void startAllClearAnimation() {
+        if (allClearAnimating) return;
+        allClearAnimating = true;
+        allClearFlashBlack = true;
+        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+
+        if (allClearTimer != null) {
+            allClearTimer.stop();
+        }
+        allClearTimer = new Timer(160, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                allClearTimer.stop();
+                allClearTimer = null;
+                allClearFlashBlack = false;
+
+                // 실제 보드 초기화 (벽은 유지)
+                boardInit();
+
+                allClearAnimating = false;
+                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+            }
+        });
+        allClearTimer.setRepeats(false);
+        allClearTimer.start();
+    }
+
+    // BoxClear(값 3) 애니메이션: 5x5 영역을 검게 플래시한 뒤 지우고 중력 적용
+    private void startBoxClearAnimation(java.util.List<int[]> centers) {
+        if (centers == null || centers.isEmpty()) return;
+        if (boxClearAnimating) return;
+        boxFlashCenters.clear();
+        // 방어적 복사
+        for (int[] rc : centers) {
+            boxFlashCenters.add(new int[]{rc[0], rc[1]});
+        }
+        boxClearAnimating = true;
+        boxFlashBlack = true;
+        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+
+        if (lineClearTimer != null) {
+            // 다른 라인 클리어 타이머가 있다면 정지 (겹치기 방지)
+            lineClearTimer.stop();
+            lineClearTimer = null;
+        }
+
+        Timer boxTimer = new Timer(140, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ((Timer)e.getSource()).stop();
+                boxFlashBlack = false;
+
+                // 실제로 각 중심을 기준으로 5x5 영역 클리어
+                for (int[] rc : boxFlashCenters) {
+                    clearBox5x5(rc[0], rc[1]);
+                }
+                // 폭발 후 남은 블록이 아래로 떨어지도록 중력 적용
+                applyGravity();
+
+                boxFlashCenters.clear();
+                boxClearAnimating = false;
+                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+
+                // 아이템 처리 후 생긴 풀라인이 있으면 일반 라인클리어도 수행
+                lineClear();
+            }
+        });
+        boxTimer.setRepeats(false);
+        boxTimer.start();
+    }
+
+    // 아이템(값 4)에 의해 선택된 행들을 블랙 플래시로 표시한 뒤 실제로 지우고 위를 한 칸씩 내리는 애니메이션
+    private void startItemRowFlashAndClear(java.util.List<Integer> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        // 이미 다른 라인 클리어 애니메이션 중이면 대기(스킵)
+        if (lineClearAnimating) return;
+
+        flashingRows.clear();
+        flashingRows.addAll(rows);
+        lineClearAnimating = true;
+        flashBlack = true;
+        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+
+        if (lineClearTimer != null) {
+            lineClearTimer.stop();
+        }
+        lineClearTimer = new Timer(120, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                lineClearTimer.stop();
+                lineClearTimer = null;
+                flashBlack = false;
+
+                // 실제로 각 행을 삭제하고 위를 한 칸씩 내리기 (라인 클리어처럼)
+                // 내릴 때 인덱스 꼬임을 방지하기 위해 아래쪽부터 처리
+                java.util.List<Integer> sorted = new java.util.ArrayList<>(flashingRows);
+                sorted.sort(java.util.Collections.reverseOrder());
+                for (int r : sorted) {
+                    // 점수 더블 여부: 이 줄에 '5'가 포함되어 있으면 두 배 처리
+                    boolean containsFive = false;
+                    for (int c = INNER_LEFT; c <= INNER_RIGHT; c++) {
+                        if (boardArray[r][c] == 5) { containsFive = true; break; }
+                    }
+                    if (containsFive) { lineClearScore(); lineClearScore(); } else { lineClearScore(); }
+                    clearRowForce(r);
+                    lineClearCount++;
+                }
+
+                flashingRows.clear();
+                lineClearAnimating = false;
+                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+
+                // 아이템 처리 후, 새로 생성된 풀라인이 있으면 일반 라인클리어도 수행(자체 블링크)
+                lineClear();
+            }
+        });
+        lineClearTimer.setRepeats(false);
+        lineClearTimer.start();
+    }
+
+    // 점수 시스템은 다른 팀원이 구현할 예정이므로 여기서는 호출 훅만 제공
+    // 일반 라인 클리어 시 1회 호출, '5' 포함 라인 클리어 시 2회 호출로 더블 처리
+    protected void lineClearScore() {
+        // no-op placeholder. Real scoring will be implemented elsewhere.
+    }
+
+
+
 
     // AllClear(값 2) 애니메이션: 보드 전체를 잠깐 검게 플래시한 뒤 내부 영역을 비운다.
     private void startAllClearAnimation() {
