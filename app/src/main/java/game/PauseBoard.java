@@ -1,10 +1,17 @@
 package game;
 
-import java.awt.*;
-import java.awt.event.KeyListener;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.KeyEvent;
-import javax.swing.*;
-import javax.swing.border.Border;
+import java.awt.event.KeyListener;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 public class PauseBoard extends JPanel implements KeyListener {
 
@@ -146,7 +153,7 @@ public class PauseBoard extends JPanel implements KeyListener {
             // PauseBoard만 숨기고 게임 화면으로 복귀
             PauseBoard.this.setVisible(false);
             setOpaque(false);
-            frameBoard.isPaused = false;
+            // 프레임보드에 토글 위임 (현재 일시정지 상태에서 호출되므로 재개됨)
             frameBoard.paused();
 
         });
@@ -165,7 +172,6 @@ public class PauseBoard extends JPanel implements KeyListener {
         restartButton.addActionListener(e -> {
             if (frameBoard != null) {
                 this.setVisible(false);
-                frameBoard.isPaused = false;
                 frameBoard.gameInit();
             }
         });

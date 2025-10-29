@@ -25,14 +25,8 @@ public class GameKeyListener extends KeyAdapter  {
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_ESCAPE:
-                if (frameBoard.isPaused) {
-                    break;
-                }
-                else {
-                    frameBoard.isPaused = !frameBoard.isPaused;
-                    frameBoard.paused();
-                }
-                
+                // 일시정지/재개는 FrameBoard가 내부에서 토글하도록 위임
+                frameBoard.paused();
                 break;
                 
             case KeyEvent.VK_1:
@@ -52,7 +46,7 @@ public class GameKeyListener extends KeyAdapter  {
                 break;
             
             case KeyEvent.VK_UP:
-                if (blockText != null) {
+                if (!frameBoard.isPaused && blockText != null) {
                     blockText.Rotate90();
                     // 회전한 블록을 즉시 View에 반영
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
@@ -61,7 +55,7 @@ public class GameKeyListener extends KeyAdapter  {
                 break;
                 
             case KeyEvent.VK_SPACE:
-                if (blockText != null) {
+                if (!frameBoard.isPaused && blockText != null) {
                     blockText.HardDrop();
                     // 하드드롭 후 스폰된 블록을 즉시 반영
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());

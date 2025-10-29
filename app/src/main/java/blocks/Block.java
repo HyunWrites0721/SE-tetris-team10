@@ -1,13 +1,20 @@
 package blocks;
 
 import java.awt.Color;
-import java.lang.Math;
+
+import blocks.item.AllClearBlock;
+import blocks.item.BoxClearBlock;
+import blocks.item.OneLineClearBlock;
+import blocks.item.ScoreDoubleBlock;
+import blocks.item.WeightBlock;
+import game.GameModel;
 import game.GameView;
 
 public abstract class Block {
     protected int [][] shape;
     private int x, y;
     public GameView gameBoard;
+    public GameModel gameModel;
     private Color color;
     private Color[][] Colorset;
     private static settings.SettingModel settingModel;
@@ -62,19 +69,66 @@ public abstract class Block {
         }
         // 블록 생성 시 기본 모양을 초기화해 둔다 (렌더링/회전에 필요)
         newBlock.setShape();
-      switch(random) {
-         case 0:  // IBlock (5×5)
-            newBlock.setPosition(3, 0);
-            break;
-        case 3:  // OBlock (2×2)
-            newBlock.setPosition(5, 2);
-            break;
-        case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
-            newBlock.setPosition(4, 2);
-            break;
+        switch(random) {
+             case 0:  // IBlock (5×5)
+                newBlock.setPosition(3, 0);
+                break;
+            case 3: // OBlock (2×2)
+                newBlock.setPosition(5, 2);
+                break;
+            case 1: case 2: case 4: case 5: case 6:  // 나머지 블록 (3×3)
+                newBlock.setPosition(4, 2);
+                break;
         }
-    return newBlock;
-    }   
+        return newBlock;
+    }
+    
+    public static Block spawnItem(Block b) {
+        int itemRandom = (int)(Math.random() * 5);
+        int[][] shape = b.getShape();
+        Block newBlock;
+        switch (1) {
+            case 0:
+                newBlock = new AllClearBlock();
+                break;
+            case 1:
+                newBlock = new BoxClearBlock();
+                break;
+            case 2:
+                newBlock = new OneLineClearBlock(shape);
+                // Inherit the color from the base block so NEXT preview matches currentBlock
+                newBlock.setExactColor(b.getColor());
+                break;
+            case 3:
+                newBlock = new ScoreDoubleBlock(shape);
+                newBlock.setExactColor(b.getColor());
+                break;
+            case 4:
+                newBlock = new WeightBlock();
+                break;
+
+            default:
+                newBlock = new AllClearBlock(); // 기본값으로 AllClearBlock 반환
+                break;
+        }
+        newBlock.setShape();
+        switch (itemRandom) {
+            case 0:
+                newBlock.setPosition(5,2);
+                break;
+            case 1:
+                newBlock.setPosition(4,2);
+                break;
+            case 4:
+                newBlock.setPosition(3,2);
+                break;
+            case 2: case 3:
+                newBlock.setPosition(b.getX(), b.getY());
+                break;
+        }
+        return newBlock;
+
+    }
 
     //newBlock.setPosition(BOARD_WIDTH/2 - 2, 0); // 보드의 (3,0) 위치에 각 블록의 좌상단 부터 블록 생성
     
@@ -117,7 +171,7 @@ public abstract class Block {
     public boolean checkCollision(int[][] board) {
         for (int row = 0; row < shape.length; row++) {
             for (int col = 0; col < shape[row].length; col++) {
-                if (shape[row][col] == 1) {   // 블록이 1일때만 위치를 보드 좌표로 변환해서 충돌검사
+                if (shape[row][col] != 0) {   // 블록이 1일때만 위치를 보드 좌표로 변환해서 충돌검사
                     int boardRow = y + row;    
                     int boardCol = x + col;		
                     // 블록을 보드 좌표로 변환 (x,y)는 현재 블록의 보드 상 위치 (좌상단 기준)
@@ -135,7 +189,7 @@ public abstract class Block {
                     
                     
                     // 다른 블록과 충돌하는지 검사
-                    if (boardRow >= 0 && board[boardRow][boardCol] == 1)  // 보드 안에 블럭이 들어와있다 && 블록이 쌓인것이 있다.
+                    if (boardRow >= 0 && board[boardRow][boardCol] != 0)  // 보드 안에 블럭이 들어와있다 && 블록이 쌓인것이 있다.
                         return true;
                         /// 이걸로 블록이 쌓이고 맨 위 까지 닿았을때 충돌 감지가 될까?
                 }
@@ -225,18 +279,25 @@ public abstract class Block {
     
     protected void initColor(int setBlindColor_1, int colorIndex) {
         Colorset = new Color[2][];
-        Colorset[0] = new Color[] {Color.green, Color.red, Color.blue, Color.orange, Color.yellow, Color.magenta, Color.pink};
+        Colorset[0] = new Color[] {Color.green, Color.red, Color.blue, Color.orange, Color.yellow, 
+                                    Color.magenta, Color.pink, Color.black, Color.white};
         Colorset[1] = new Color[]{ new Color(0,158,115),   // green → bluish green
                                     new Color(213,94,0),    // red → vermilion
                                     new Color(0,114,178),   // blue
                                     new Color(230,159,0),   // orange
                                     new Color(240,228,66),  // yellow
                                     new Color(204,121,167), // magenta
-                                    new Color(204,121,167) };  // pink → same tone
+                                    new Color(204,121,167),  // pink → same tone
+                                    new Color(0,0,0),       // black
+                                    new Color(255,255,255)};// white
         this.color = Colorset[setBlindColor_1] [colorIndex];
     } 
     public void setColor(int setBlindColor_1,  int colorIndex) {
     	initColor(setBlindColor_1, colorIndex);
     }
     public Color getColor() { return color; }
+
+    // Allow item wrappers to inherit the exact visual color from a base block
+    public void setExactColor(Color c) { this.color = c; }
+
 }
