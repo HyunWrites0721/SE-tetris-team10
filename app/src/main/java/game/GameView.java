@@ -1,9 +1,14 @@
 package game;
 
-import java.awt.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 
 import javax.swing.JPanel;
-
 
 import blocks.Block;
 
@@ -71,10 +76,11 @@ public class GameView extends JPanel {
         // 최소 셀 크기 보장 (너무 작아지지 않도록)
         CELL_SIZE = Math.max(CELL_SIZE, 15);
         
-        // 나머지 크기들도 screenRatio에 맞춰 조정
-        MARGIN = Math.max(1, CELL_SIZE / 15);
-        NEXT_MARGIN = MARGIN;
-        FONT_SIZE = (int)(BASE_FONT_SIZE * start.StartFrame.screenRatio);
+    // 나머지 크기들도 screenRatio에 맞춰 조정 (screenRatio 미설정 대비 안전값 적용)
+    MARGIN = Math.max(1, CELL_SIZE / 15);
+    NEXT_MARGIN = MARGIN;
+    double ratio = (start.StartFrame.screenRatio > 0) ? start.StartFrame.screenRatio : 1.2;
+    FONT_SIZE = Math.max(12, (int)(BASE_FONT_SIZE * ratio));
         STROKE_WIDTH = Math.max(1, CELL_SIZE / 10);
         
         // 상위 프레임의 크기도 함께 조절
@@ -98,15 +104,6 @@ public class GameView extends JPanel {
 
         int nextWidth = NEXT_COLS * CELL_SIZE;
         int nextHeight = NEXT_ROWS * CELL_SIZE;
-
-        // "NEXT" 텍스트 그리기
-        g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE));
-        g.setColor(Color.BLACK);
-        String nextText = "NEXT";
-        FontMetrics fm = g.getFontMetrics();
-        int textX = x + boardWidth + (nextWidth - fm.stringWidth(nextText)) / 2;
-        int textY = y + (NEXT_MARGIN * CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
-        g.drawString(nextText, textX, textY);
 
         Graphics2D g2d = (Graphics2D) g.create();
         g2d.setStroke(new BasicStroke(STROKE_WIDTH * 0.67f)); // 격자용 얇은 선
@@ -160,15 +157,24 @@ public class GameView extends JPanel {
         g2d.drawLine(x + boardWidth, y, x + boardWidth, y + boardHeight); // 우측
         g2d.drawLine(x, y + boardHeight, x + boardWidth, y + boardHeight); // 하단
 
-        // 넥스트 테두리
-        g2d.drawRect(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE, nextWidth, nextHeight);
-        g2d.drawRect(x + boardWidth, NEXT_MARGIN * CELL_SIZE, nextWidth, NEXT_MARGIN * CELL_SIZE);
+    // 넥스트 테두리
+    g2d.drawRect(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE, nextWidth, nextHeight);
+    // NEXT 텍스트 영역 테두리 (NEXT 영역 상단 헤더)
+    g2d.drawRect(x + boardWidth, y, nextWidth, NEXT_MARGIN * CELL_SIZE);
+
+    // "NEXT" 텍스트를 모든 배경/격자 위에 그리기 (덮이지 않도록 순서 조정)
+    g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE));
+    g.setColor(Color.BLACK);
+    String nextText = "NEXT";
+    FontMetrics fm = g.getFontMetrics();
+    int textX = x + boardWidth + (nextWidth - fm.stringWidth(nextText)) / 2;
+    int textY = y + (NEXT_MARGIN * CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
+    g.drawString(nextText, textX, textY);
 
         // Next 블록 그리기
         if (nextBlock != null) {
             int[][] shape = nextBlock.getShape();
             Color color = nextBlock.getColor();
-            g2d.setColor(color);
             
             // Next 영역의 중앙에 블록 그리기
             int blockWidth = shape[0].length * CELL_SIZE;
@@ -178,10 +184,19 @@ public class GameView extends JPanel {
             
             for (int row = 0; row < shape.length; row++) {
                 for (int col = 0; col < shape[row].length; col++) {
-                    if (shape[row][col] == 1) {
-                        g2d.fillRect(startX + col * CELL_SIZE, 
-                                   startY + row * CELL_SIZE, 
-                                   CELL_SIZE, CELL_SIZE);
+                    int v = shape[row][col];
+                    if (v != 0) {
+                        int cx = startX + col * CELL_SIZE;
+                        int cy = startY + row * CELL_SIZE;
+                        // 원래 블록 색으로 채운다
+                        g2d.setColor(color);
+                        g2d.fillRect(cx, cy, CELL_SIZE, CELL_SIZE);
+                        // v==4 인 경우 텍스트 'L'을 오버레이
+                        if (v == 4) {
+                            drawLText(g2d, cx, cy, CELL_SIZE);
+                        } else if (v == 5) {
+                            drawTwoText(g2d, cx, cy, CELL_SIZE);
+                        }
                     }
                 }
             }
@@ -200,6 +215,44 @@ public class GameView extends JPanel {
                 drawBlock(g2d, fallingBlock);
             }
 
+        // 아이템 애니메이션 오버레이를 마지막에 그림 (블록 위에 덮어쓰기)
+        if (gameModel != null) {
+            // AllClear: 보드 전체를 검게 플래시
+            if (gameModel.isAllClearAnimating() && gameModel.isAllClearFlashBlack()) {
+                Graphics2D overlay = (Graphics2D) g2d.create();
+                try {
+                    overlay.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f));
+                    overlay.setColor(Color.BLACK);
+                    overlay.fillRect(x, y, boardWidth, boardHeight);
+                } finally {
+                    overlay.dispose();
+                }
+            }
+
+            // BoxClear: 각 5x5 폭발 영역을 검게 플래시
+            if (gameModel.isBoxClearAnimating() && gameModel.isBoxFlashBlack()) {
+                int rows = gameModel.getBoard().length;     // 23
+                int cols = gameModel.getBoard()[0].length;  // 12
+                int innerTop = 2;
+                int innerBottom = rows - 2;
+                int innerLeft = 1;
+                int innerRight = cols - 2;
+
+                g2d.setColor(Color.BLACK);
+                for (int row = innerTop; row <= innerBottom; row++) {
+                    for (int col = innerLeft; col <= innerRight; col++) {
+                        if (gameModel.isCellInBoxFlash(row, col)) {
+                            int visibleCol = col - innerLeft; // 0..9
+                            int visibleRow = row - innerTop;  // 0..19
+                            int drawX = x + visibleCol * CELL_SIZE;
+                            int drawY = y + visibleRow * CELL_SIZE;
+                            g2d.fillRect(drawX, drawY, CELL_SIZE, CELL_SIZE);
+                        }
+                    }
+                }
+            }
+        }
+
         g2d.dispose();
     }
 
@@ -210,14 +263,25 @@ public class GameView extends JPanel {
         Color color = block.getColor();
         int[][] shape = block.getShape();
 
-        g.setColor(color);
         for (int row = 0; row < shape.length; row++) {
             for (int col = 0; col < shape[row].length; col++) {
-                if (shape[row][col] != 0) {
+                int v = shape[row][col];
+                if (v != 0) {
                     int drawX = x + (positionX - 1 + col) * CELL_SIZE;
                     int drawY = y + (positionY - 2 + row) * CELL_SIZE;
 
+                    // 원래 블록 색으로 채운다
+                    g.setColor(color);
                     g.fillRect(drawX, drawY, CELL_SIZE, CELL_SIZE);
+                    // v==4 인 경우 텍스트 'L', v==5 인 경우 텍스트 '2'를 오버레이
+                    if (g instanceof Graphics2D) {
+                        Graphics2D g2 = (Graphics2D) g;
+                        if (v == 4) {
+                            drawLText(g2, drawX, drawY, CELL_SIZE);
+                        } else if (v == 5) {
+                            drawTwoText(g2, drawX, drawY, CELL_SIZE);
+                        }
+                    }
                 }
             }
         }
@@ -242,25 +306,71 @@ public class GameView extends JPanel {
 
         for (int row = innerTop; row <= innerBottom; row++) {
             for (int col = innerLeft; col <= innerRight; col++) {
-                if (boardArray[row][col] != 0) {
-                    int rgb = (colorBoard != null) ? colorBoard[row][col] : 0;
-                    if (rgb == 0) {
-                        // 색 정보가 없으면 기본 회색
-                        g.setColor(new Color(100, 100, 100));
-                    } else {
-                        g.setColor(new Color(rgb, true));
-                    }
-                    int visibleCol = col - innerLeft; // 0..9
-                    int visibleRow = row - innerTop;  // 0..19
-                    int drawX = x + visibleCol * CELL_SIZE;
-                    int drawY = y + visibleRow * CELL_SIZE;
+                int v = boardArray[row][col];
+                if (v == 0) continue;
+
+                int visibleCol = col - innerLeft; // 0..9
+                int visibleRow = row - innerTop;  // 0..19
+                int drawX = x + visibleCol * CELL_SIZE;
+                int drawY = y + visibleRow * CELL_SIZE;
+
+                // 라인 클리어 플래시(검은색) 표시: 해당 행이 플래시 대상이고 현재 블랙 단계라면 검은색으로 채우고 다음 셀로
+                if (gameModel != null && gameModel.isLineClearAnimating() && gameModel.isFlashBlack() && gameModel.isRowFlashing(row)) {
+                    g.setColor(Color.BLACK);
                     g.fillRect(drawX, drawY, CELL_SIZE, CELL_SIZE);
+                    continue;
+                }
+
+                int rgb = (colorBoard != null) ? colorBoard[row][col] : 0;
+                if (rgb == 0) {
+                    // 색 정보가 없으면 기본 회색
+                    g.setColor(new Color(100, 100, 100));
+                } else {
+                    g.setColor(new Color(rgb, true));
+                }
+                g.fillRect(drawX, drawY, CELL_SIZE, CELL_SIZE);
+                // v==4 인 경우 텍스트 'L', v==5 인 경우 텍스트 '2'를 오버레이
+                if (g instanceof Graphics2D) {
+                    Graphics2D g2 = (Graphics2D) g;
+                    if (v == 4) {
+                        drawLText(g2, drawX, drawY, CELL_SIZE);
+                    } else if (v == 5) {
+                        drawTwoText(g2, drawX, drawY, CELL_SIZE);
+                    }
                 }
             }
         }
     }
 
 
+    // 보조: OneLineClearBlock의 특수 셀(v==4)에 L마크 오버레이를 그린다 (두께 약 2px)
+    // 왼쪽 변(세로) + 아래 변(가로)을 채운 사각형으로 표시
+    // 보조: v==4 셀에 원래 색을 유지한 채 중앙에 'L' 텍스트를 표시
+    private void drawLText(Graphics2D g2d, int cellX, int cellY, int cellSize) {
+        drawItemText(g2d, "L", cellX, cellY, cellSize);
+    }
 
+    // 보조: v==5 셀에 중앙에 '2' 텍스트를 표시
+    private void drawTwoText(Graphics2D g2d, int cellX, int cellY, int cellSize) {
+        drawItemText(g2d, "2", cellX, cellY, cellSize);
+    }
+
+    // 공통: 셀 중앙에 굵은 텍스트를 표시
+    private void drawItemText(Graphics2D g2d, String s, int cellX, int cellY, int cellSize) {
+        Color prevColor = g2d.getColor();
+        Font prevFont = g2d.getFont();
+        try {
+            int fs = Math.max(12, (int)(cellSize * 0.75));
+            g2d.setFont(new Font("Arial", Font.BOLD, fs));
+            g2d.setColor(Color.BLACK);
+            FontMetrics fm = g2d.getFontMetrics();
+            int tx = cellX + (cellSize - fm.stringWidth(s)) / 2;
+            int ty = cellY + (cellSize - fm.getHeight()) / 2 + fm.getAscent();
+            g2d.drawString(s, tx, ty);
+        } finally {
+            g2d.setColor(prevColor);
+            g2d.setFont(prevFont);
+        }
+    }
 
 }
