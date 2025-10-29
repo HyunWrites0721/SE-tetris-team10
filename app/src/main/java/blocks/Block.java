@@ -154,7 +154,7 @@ public abstract class Block {
         int itemRandom = (int)(Math.random() * 5);
         int[][] shape = b.getShape();
         Block newBlock;
-        switch (1) {
+        switch (itemRandom) {
             case 0:
                 newBlock = new AllClearBlock();
                 break;
