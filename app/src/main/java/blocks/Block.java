@@ -1,8 +1,6 @@
 package blocks;
 
 import java.awt.Color;
-import java.lang.Math;
-
 
 import blocks.item.AllClearBlock;
 import blocks.item.BoxClearBlock;
@@ -154,7 +152,7 @@ public abstract class Block {
         int itemRandom = (int)(Math.random() * 5);
         int[][] shape = b.getShape();
         Block newBlock;
-        switch (1) {
+        switch (itemRandom) {
             case 0:
                 newBlock = new AllClearBlock();
                 break;
