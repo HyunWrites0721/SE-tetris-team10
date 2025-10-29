@@ -1,4 +1,7 @@
 package game;
+import javax.swing.*;
+import settings.HighScoreModel;
+import start.StartFrame;
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 
@@ -81,6 +84,7 @@ public class FrameBoard extends JFrame {
     // pause 상태 변수
     public boolean isPaused = false;
     public boolean isGameOver = false;
+    private boolean scoreSaved = false;  // 점수 저장 여부 플래그 추가
 
     // 게임 보드와 일시정지 보드, 블록 텍스트
     private final GameView gameBoard;
@@ -88,12 +92,18 @@ public class FrameBoard extends JFrame {
     private final GameModel gameModel;
     private final GameOverBoard gameOverBoard;
     private final ScoreBoard scoreBoard;
+    private final HighScoreModel highScoreModel;
     private GameTimer gameTimer;
     private int score = 0;  // 점수 변수 추가
 
     public void increaseScore(int points) {
         score += points;
         scoreBoard.setScore(score);
+        
+        // 현재 점수가 최고 점수를 넘으면 실시간 업데이트
+        if (score > highScoreModel.getHighScore()) {
+            scoreBoard.setHighScore(score);
+        }
     }
 
     public GameView getGameBoard() {
@@ -113,6 +123,12 @@ public class FrameBoard extends JFrame {
     setTitle("Tetris");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setResizable(false);
+    
+    // High Score 모델 초기화 (싱글톤)
+    highScoreModel = HighScoreModel.getInstance();
+    
+    // 게임 시작 시 블록 생성 설정 로드
+    blocks.Block.reloadSettings();
 
     JLayeredPane layeredPane = getLayeredPane();
 
@@ -149,6 +165,8 @@ public class FrameBoard extends JFrame {
     layeredPane.add(gameOverBoard, JLayeredPane.MODAL_LAYER);
 
     scoreBoard = new ScoreBoard();
+    // 초기 최고 점수 설정
+    scoreBoard.setHighScore(highScoreModel.getHighScore());
     // GameView의 좌표 계산 방식을 따라 ScoreBoard 위치 설정 (StartFrame.screenRatio 반영)
     int cellSizeInit = (int)(30 * safeScreenRatio());
     int boardWidth = 10 * cellSizeInit;  // COLS * CELL_SIZE
@@ -157,7 +175,7 @@ public class FrameBoard extends JFrame {
     scoreBoard.setBounds(x + boardWidth,  // Next 패널과 동일한 x 좌표
                         8 * cellSizeInit,  // Next 패널 아래 (NEXT_MARGIN * 2 + NEXT_ROWS = 2 + 4 + 2 = 8)
                         6 * cellSizeInit,  // Next 패널과 동일한 너비 (NEXT_COLS * CELL_SIZE)
-                        4 * cellSizeInit); // 높이 4칸
+                        6 * cellSizeInit); // 높이를 6칸으로 증가 (HIGH SCORE + SCORE)
     layeredPane.add(scoreBoard, JLayeredPane.PALETTE_LAYER);
 
 
@@ -203,12 +221,26 @@ public class FrameBoard extends JFrame {
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
         gameTimer.stop();
+        
+        // 점수가 이미 저장되었으면 다시 저장하지 않음 (중복 방지)
+        if (!scoreSaved && score > 0) {
+            highScoreModel.addScore("Player", score);
+            scoreSaved = true;  // 저장 완료 플래그 설정
+            System.out.println("점수 저장 완료: " + score);
+            
+            // 저장 후 최고 점수가 갱신되었으면 ScoreBoard 업데이트
+            scoreBoard.setHighScore(highScoreModel.getHighScore());
+        }
+        
         // 게임오버 화면이 표시될 때 포커스 설정
         gameOverBoard.setFocusable(true);
         gameOverBoard.requestFocusInWindow();
     }
 
     public void gameInit() {
+        // 게임 재시작 시 블록 생성 설정 리로드
+        blocks.Block.reloadSettings();
+        
         // 보드/색상 초기화
         gameModel.boardInit();
         // 블록 상태 초기화 및 뷰 동기화
@@ -220,15 +252,20 @@ public class FrameBoard extends JFrame {
         if (pauseBoard != null) pauseBoard.setVisible(false);
         // 일시정지 해제 및 타이머 재시작
 
-         // 점수 초기화
+         // 점수 초기화 (최고 점수는 유지)
         score = 0;
+        scoreSaved = false;  // 점수 저장 플래그 리셋
         scoreBoard.setScore(0);
+        scoreBoard.setHighScore(highScoreModel.getHighScore());
 
         // 아이템 관련 상태 초기화
 
         gameModel.itemGenerateCount = 0;
         gameModel.lineClearCount = 0;
         
+        gameModel.itemGenerateCount = 0;
+        gameModel.lineClearCount = 0;
+
         isPaused = false;
          if (gameTimer != null) gameTimer.start();
     }
