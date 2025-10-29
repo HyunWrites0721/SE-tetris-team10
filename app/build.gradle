@@ -9,6 +9,7 @@ plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     id 'application'
     id 'jacoco'
+    id 'edu.sc.seis.launch4j' version '3.0.5'
 }
 
 repositories {
@@ -84,4 +85,23 @@ jar {
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+}
+
+// Launch4j를 사용한 Windows EXE 파일 생성 설정
+launch4j {
+    mainClassName = 'App'
+    icon = "${projectDir}/src/main/resources/icons/tetris.ico" // 테트리스 아이콘
+    outfile = 'Tetris.exe'
+    productName = 'Tetris Game'
+    fileDescription = 'Tetris Game by SE-tetris-team10'
+    version = '1.0.0.0'
+    textVersion = '1.0'
+    copyright = '2025 SE-tetris-team10'
+    companyName = 'SE-tetris-team10'
+    jreMinVersion = '17'
+    windowTitle = 'Tetris'
+    messagesStartupError = 'An error occurred while starting Tetris'
+    messagesJreNotFoundError = 'Java 17 or higher is required to run this application'
+    messagesJreVersionError = 'Java 17 or higher is required'
+    messagesLauncherError = 'The registry refers to a nonexistent Java Runtime Environment'
 }

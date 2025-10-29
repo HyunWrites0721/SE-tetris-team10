@@ -132,19 +132,11 @@ public class GameTimer {
     // SettingSave.json에서 난이도 설정을 읽어오는 메서드
     private void loadDifficultyFromSettings() {
         try {
-            // 설정 파일 경로 설정
-            String currentDir = System.getProperty("user.dir");
-            java.io.File appDir = new java.io.File(currentDir);
-            java.nio.file.Path settingPath;
-            
-            if (appDir.getName().equals("app")) {
-                settingPath = java.nio.file.Paths.get(currentDir, "src/main/java/settings/data/SettingSave.json");
-            } else {
-                settingPath = java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data/SettingSave.json");
-            }
+            // 설정 파일 경로 가져오기 (ConfigManager 사용)
+            String settingPath = settings.ConfigManager.getSettingsPath();
             
             // JSON 파일 읽기
-            String json = java.nio.file.Files.readString(settingPath);
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingPath));
             com.google.gson.Gson gson = new com.google.gson.Gson();
             
             // JSON을 Map으로 파싱

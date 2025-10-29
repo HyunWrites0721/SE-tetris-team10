@@ -29,7 +29,7 @@ public class SettingFrame extends JFrame {
 
         // 상단 제목
         JLabel titleLabel = new JLabel("게임 설정", SwingConstants.CENTER);
-        titleLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, (int)(36*screenRatio)));
+        titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(36*screenRatio)));
         add(titleLabel, BorderLayout.NORTH);
 
         // 우측 메뉴 패널 (GridBagLayout으로 중앙 정렬)
@@ -48,6 +48,7 @@ public class SettingFrame extends JFrame {
         Dimension btnSize = new Dimension((int)(200*screenRatio), (int)(50*screenRatio));
         for (int i = 0; i < menuNames.length; i++) {
             JButton btn = new JButton(menuNames[i]);
+            btn.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(14*screenRatio)));
             btn.setMinimumSize(btnSize);
             btn.setPreferredSize(btnSize);
             btn.setMaximumSize(btnSize);

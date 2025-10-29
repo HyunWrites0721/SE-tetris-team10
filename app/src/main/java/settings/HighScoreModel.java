@@ -1,7 +1,6 @@
 package settings;
 
 import com.google.gson.Gson;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,28 +48,6 @@ public class HighScoreModel {
         List<ScoreEntry> itemScores;
     }
     
-    // 설정 파일의 절대 경로를 반환하는 헬퍼 메서드
-    private static java.nio.file.Path getHighScoreFilePath() {
-        String currentDir = System.getProperty("user.dir");
-        File appDir = new File(currentDir);
-        if (appDir.getName().equals("app")) {
-            return java.nio.file.Paths.get(currentDir, "src/main/java/settings/data/HighScore.json");
-        } else {
-            return java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data/HighScore.json");
-        }
-    }
-    
-    // Default 파일의 절대 경로를 반환하는 헬퍼 메서드
-    private static java.nio.file.Path getDefaultFilePath() {
-        String currentDir = System.getProperty("user.dir");
-        File appDir = new File(currentDir);
-        if (appDir.getName().equals("app")) {
-            return java.nio.file.Paths.get(currentDir, "src/main/java/settings/data/HighScoreDefault.json");
-        } else {
-            return java.nio.file.Paths.get(currentDir, "app/src/main/java/settings/data/HighScoreDefault.json");
-        }
-    }
-    
     // 싱글톤 인스턴스 반환
     public static HighScoreModel getInstance() {
         if (instance == null) {
@@ -87,8 +64,8 @@ public class HighScoreModel {
     // JSON 파일에서 점수 불러오기
     private void loadScores() {
         try {
-            java.nio.file.Path path = getHighScoreFilePath();
-            String json = java.nio.file.Files.readString(path);
+            String highScorePath = ConfigManager.getHighScorePath();
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(highScorePath));
             Gson gson = new Gson();
             HighScoreData data = gson.fromJson(json, HighScoreData.class);
             
@@ -108,14 +85,14 @@ public class HighScoreModel {
     // JSON 파일에 점수 저장
     private void saveScores() {
         try {
-            java.nio.file.Path path = getHighScoreFilePath();
+            String highScorePath = ConfigManager.getHighScorePath();
             HighScoreData data = new HighScoreData();
             data.normalScores = this.normalScores;
             data.itemScores = this.itemScores;
             
             Gson gson = new Gson();
             String json = gson.toJson(data);
-            java.nio.file.Files.writeString(path, json);
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(highScorePath), json);
         } catch (Exception e) {
             System.err.println("점수 저장 실패: " + e.getMessage());
             e.printStackTrace();
@@ -190,11 +167,11 @@ public class HighScoreModel {
     public void resetScores() {
         try {
             // Default 파일의 내용을 읽어서 HighScore.json에 복사
-            java.nio.file.Path defaultPath = getDefaultFilePath();
-            java.nio.file.Path highScorePath = getHighScoreFilePath();
+            String defaultPath = ConfigManager.getDefaultHighScorePath();
+            String highScorePath = ConfigManager.getHighScorePath();
             
-            String defaultContent = java.nio.file.Files.readString(defaultPath);
-            java.nio.file.Files.writeString(highScorePath, defaultContent);
+            String defaultContent = java.nio.file.Files.readString(java.nio.file.Paths.get(defaultPath));
+            java.nio.file.Files.writeString(java.nio.file.Paths.get(highScorePath), defaultContent);
             
             // 메모리의 점수 리스트도 초기화
             normalScores = new ArrayList<>();

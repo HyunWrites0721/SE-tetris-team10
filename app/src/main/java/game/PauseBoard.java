@@ -142,14 +142,14 @@ public class PauseBoard extends JPanel implements KeyListener {
         String mode = frameBoard.itemMode ? "아이템 모드" : "일반 모드";
         String difficulty = getDifficultyString();
         infoLabel = new JLabel(mode + " [" + difficulty + "]");
-        infoLabel.setFont(new Font("Arial", Font.PLAIN, (int)(16 * start.StartFrame.screenRatio)));
+        infoLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(16 * start.StartFrame.screenRatio)));
         infoLabel.setForeground(Color.DARK_GRAY);
         infoLabel.setHorizontalAlignment(JLabel.CENTER);
         topPanel.add(infoLabel, BorderLayout.CENTER);
         
         // Add score label
         scoreLabel = new JLabel("점수: " + frameBoard.getGameBoard().getScore());
-        scoreLabel.setFont(new Font("Arial", Font.BOLD, (int)(20 * start.StartFrame.screenRatio)));
+        scoreLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(20 * start.StartFrame.screenRatio)));
         scoreLabel.setForeground(Color.BLACK);
         scoreLabel.setHorizontalAlignment(JLabel.CENTER);
         topPanel.add(scoreLabel, BorderLayout.SOUTH);
