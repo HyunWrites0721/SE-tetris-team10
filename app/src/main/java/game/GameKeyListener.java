@@ -74,7 +74,7 @@ public class GameKeyListener extends KeyAdapter  {
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_ESCAPE:
-                if (frameBoard.isPaused) {
+                if (frameBoard.isPaused) { // 
                     break;
                 }
                 else {

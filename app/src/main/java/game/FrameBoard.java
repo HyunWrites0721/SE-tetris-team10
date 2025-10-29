@@ -243,6 +243,9 @@ public class FrameBoard extends JFrame {
         scoreBoard.setScore(0);
         scoreBoard.setHighScore(highScoreModel.getHighScore());
         
+        gameModel.itemGenerateCount = 0;
+        gameModel.lineClearCount = 0;
+
         isPaused = false;
          if (gameTimer != null) gameTimer.start();
     }
