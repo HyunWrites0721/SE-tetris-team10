@@ -113,8 +113,11 @@ public class GameKeyListener extends KeyAdapter  {
                 
             case KeyEvent.VK_SPACE:
                 if (!frameBoard.isPaused && blockText != null) {
-                    blockText.HardDrop();
-                    // 하드드롭 후 스폰된 블록을 즉시 반영
+                    int dropDistance = blockText.HardDrop();
+                    int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 속도 레벨 배율 (1~6배)
+                    int lineClearScore = blockText.getLastLineClearScore();  // 마지막 라인 클리어 점수 가져오기
+                    // 하드드롭 점수에만 배율 적용, 라인클리어 점수는 이미 계산되어 더해진 상태
+                    frameBoard.increaseScore(dropDistance * 2 * speedMultiplier + lineClearScore);
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
                     gameBoard.repaint();
                 }

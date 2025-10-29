@@ -25,6 +25,14 @@ public class GameView extends JPanel {
     public int NEXT_COLS = 6;  // NEXT 영역 너비를 6칸으로 통일
     public int NEXT_MARGIN = 2;
     
+    // SCORE 패널 추가
+    public int SCORE_ROWS = 4;  // SCORE 영역 높이
+    public int SCORE_COLS = 6;  // SCORE 영역 너비 (NEXT와 동일)
+    
+    // HIGHSCORE 패널 추가
+    public int HIGHSCORE_ROWS = 4;  // HIGHSCORE 영역 높이
+    public int HIGHSCORE_COLS = 6;  // HIGHSCORE 영역 너비 (NEXT와 동일)
+    
     // 최대 프레임 크기 (600x600 기준)
     private static final int MAX_FRAME_WIDTH = 600;
     private static final int MAX_FRAME_HEIGHT = 600;
@@ -34,12 +42,26 @@ public class GameView extends JPanel {
     public int STROKE_WIDTH = 3;
 
     private int x,y;
+    private int score = 0;  // 점수 저장 변수
+    private int highScore = 0;  // 최고 점수 저장 변수
 
     // 현재 화면에 렌더링할 떨어지는 블록
     private Block fallingBlock;
     private Block nextBlock;  // 다음 블록 저장
     private GameModel gameModel;
     private FrameBoard frameBoard;
+
+    // 점수 설정 메서드
+    public void setScore(int score) {
+        this.score = score;
+        repaint();
+    }
+
+    // 최고 점수 설정 메서드
+    public void setHighScore(int highScore) {
+        this.highScore = highScore;
+        repaint();
+    }
 
     // 타이머/모델에서 현재 블록을 전달받아 저장하고 즉시 리페인트
     public void setFallingBlock(Block block) {
@@ -76,11 +98,11 @@ public class GameView extends JPanel {
         // 최소 셀 크기 보장 (너무 작아지지 않도록)
         CELL_SIZE = Math.max(CELL_SIZE, 15);
         
-    // 나머지 크기들도 screenRatio에 맞춰 조정 (screenRatio 미설정 대비 안전값 적용)
-    MARGIN = Math.max(1, CELL_SIZE / 15);
-    NEXT_MARGIN = MARGIN;
-    double ratio = (start.StartFrame.screenRatio > 0) ? start.StartFrame.screenRatio : 1.2;
-    FONT_SIZE = Math.max(12, (int)(BASE_FONT_SIZE * ratio));
+        // 나머지 크기들도 screenRatio에 맞춰 조정 (screenRatio 미설정 대비 안전값 적용)
+        MARGIN = Math.max(1, CELL_SIZE / 15);
+        NEXT_MARGIN = MARGIN;
+        double ratio = (start.StartFrame.screenRatio > 0) ? start.StartFrame.screenRatio : 1.2;
+        FONT_SIZE = Math.max(12, (int)(BASE_FONT_SIZE * ratio));
         STROKE_WIDTH = Math.max(1, CELL_SIZE / 10);
         
         // 상위 프레임의 크기도 함께 조절
@@ -104,6 +126,14 @@ public class GameView extends JPanel {
 
         int nextWidth = NEXT_COLS * CELL_SIZE;
         int nextHeight = NEXT_ROWS * CELL_SIZE;
+        
+        // SCORE 패널 크기
+        int scoreWidth = SCORE_COLS * CELL_SIZE;
+        int scoreHeight = SCORE_ROWS * CELL_SIZE;
+        
+        // HIGHSCORE 패널 크기
+        int highScoreWidth = HIGHSCORE_COLS * CELL_SIZE;
+        int highScoreHeight = HIGHSCORE_ROWS * CELL_SIZE;
 
         Graphics2D g2d = (Graphics2D) g.create();
         g2d.setStroke(new BasicStroke(STROKE_WIDTH * 0.67f)); // 격자용 얇은 선
@@ -128,6 +158,24 @@ public class GameView extends JPanel {
                 g2d.fillRect(x + col * CELL_SIZE, y + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
         }
+        
+        // SCORE 배경 그리기
+        int scoreStartY = y + NEXT_MARGIN * CELL_SIZE + nextHeight + CELL_SIZE;
+        for (int row = 0; row < SCORE_ROWS; row++) {
+            for (int col = 0; col < SCORE_COLS; col++) {
+                g2d.setColor(new Color(255, 248, 235));
+                g2d.fillRect(x + boardWidth + col * CELL_SIZE, scoreStartY + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
+        
+        // HIGHSCORE 배경 그리기
+        int highScoreStartY = scoreStartY + scoreHeight + CELL_SIZE;
+        for (int row = 0; row < HIGHSCORE_ROWS; row++) {
+            for (int col = 0; col < HIGHSCORE_COLS; col++) {
+                g2d.setColor(new Color(255, 248, 235));
+                g2d.fillRect(x + boardWidth + col * CELL_SIZE, highScoreStartY + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
 
         // 격자 무늬 그리기
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, beta));
@@ -147,6 +195,22 @@ public class GameView extends JPanel {
             }
         }
 
+        // SCORE 격자 무늬 그리기
+        for (int row = 0; row < SCORE_ROWS; row++) {
+            for (int col = 0; col < SCORE_COLS; col++) {
+                g2d.setColor(new Color(0, 0, 0, 100));
+                g2d.drawRect(x + boardWidth + col * CELL_SIZE, scoreStartY + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
+
+        // HIGHSCORE 격자 무늬 그리기
+        for (int row = 0; row < HIGHSCORE_ROWS; row++) {
+            for (int col = 0; col < HIGHSCORE_COLS; col++) {
+                g2d.setColor(new Color(0, 0, 0, 100));
+                g2d.drawRect(x + boardWidth + col * CELL_SIZE, highScoreStartY + row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
+
         // 테두리 설정
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
         g2d.setStroke(new BasicStroke(STROKE_WIDTH));
@@ -157,19 +221,52 @@ public class GameView extends JPanel {
         g2d.drawLine(x + boardWidth, y, x + boardWidth, y + boardHeight); // 우측
         g2d.drawLine(x, y + boardHeight, x + boardWidth, y + boardHeight); // 하단
 
-    // 넥스트 테두리
-    g2d.drawRect(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE, nextWidth, nextHeight);
-    // NEXT 텍스트 영역 테두리 (NEXT 영역 상단 헤더)
-    g2d.drawRect(x + boardWidth, y, nextWidth, NEXT_MARGIN * CELL_SIZE);
+        // 통합된 NEXT + SCORE + HIGHSCORE 테두리 (하나로 이어진 형태)
+        int totalRightPanelHeight = NEXT_MARGIN * CELL_SIZE + nextHeight + CELL_SIZE + scoreHeight + CELL_SIZE + highScoreHeight;
+        
+        // 전체 우측 패널의 외곽 테두리
+        g2d.drawRect(x + boardWidth, y, nextWidth, totalRightPanelHeight);
+        
+        // NEXT 헤더 구분선
+        g2d.drawLine(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE, 
+                    x + boardWidth + nextWidth, y + NEXT_MARGIN * CELL_SIZE);
+        
+        // NEXT와 SCORE 사이 구분선
+        g2d.drawLine(x + boardWidth, y + NEXT_MARGIN * CELL_SIZE + nextHeight, 
+                    x + boardWidth + nextWidth, y + NEXT_MARGIN * CELL_SIZE + nextHeight);
+        
+        // SCORE 헤더와 점수 영역 사이 구분선
+        g2d.drawLine(x + boardWidth, scoreStartY, 
+                    x + boardWidth + scoreWidth, scoreStartY);
+        
+        // SCORE와 HIGHSCORE 사이 구분선
+        g2d.drawLine(x + boardWidth, scoreStartY + scoreHeight, 
+                    x + boardWidth + scoreWidth, scoreStartY + scoreHeight);
+        
+        // HIGHSCORE 헤더와 점수 영역 사이 구분선
+        g2d.drawLine(x + boardWidth, highScoreStartY, 
+                    x + boardWidth + highScoreWidth, highScoreStartY);
 
-    // "NEXT" 텍스트를 모든 배경/격자 위에 그리기 (덮이지 않도록 순서 조정)
-    g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE));
-    g.setColor(Color.BLACK);
-    String nextText = "NEXT";
-    FontMetrics fm = g.getFontMetrics();
-    int textX = x + boardWidth + (nextWidth - fm.stringWidth(nextText)) / 2;
-    int textY = y + (NEXT_MARGIN * CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
-    g.drawString(nextText, textX, textY);
+        // "NEXT" 텍스트를 모든 배경/격자 위에 그리기 (덮이지 않도록 순서 조정)
+        g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE));
+        g.setColor(Color.BLACK);
+        String nextText = "NEXT";
+        FontMetrics fm = g.getFontMetrics();
+        int textX = x + boardWidth + (nextWidth - fm.stringWidth(nextText)) / 2;
+        int textY = y + (NEXT_MARGIN * CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
+        g.drawString(nextText, textX, textY);
+
+        // "SCORE" 텍스트 그리기
+        String scoreText = "SCORE";
+        int scoreTextX = x + boardWidth + (scoreWidth - fm.stringWidth(scoreText)) / 2;
+        int scoreTextY = y + NEXT_MARGIN * CELL_SIZE + nextHeight + (CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
+        g.drawString(scoreText, scoreTextX, scoreTextY);
+
+        // "HIGHSCORE" 텍스트 그리기
+        String highScoreText = "HIGHSCORE";
+        int highScoreTextX = x + boardWidth + (highScoreWidth - fm.stringWidth(highScoreText)) / 2;
+        int highScoreTextY = scoreStartY + scoreHeight + (CELL_SIZE - fm.getHeight()) / 2 + fm.getAscent();
+        g.drawString(highScoreText, highScoreTextX, highScoreTextY);
 
         // Next 블록 그리기
         if (nextBlock != null) {
@@ -201,6 +298,21 @@ public class GameView extends JPanel {
                 }
             }
         }
+
+        // 점수 표시
+        g2d.setColor(Color.BLACK);
+        g2d.setFont(new Font("Arial", Font.BOLD, (int)(FONT_SIZE * 0.8)));
+        String scoreString = String.valueOf(score);
+        FontMetrics scoreFm = g2d.getFontMetrics();
+        int scoreNumX = x + boardWidth + (scoreWidth - scoreFm.stringWidth(scoreString)) / 2;
+        int scoreNumY = scoreStartY + (scoreHeight - scoreFm.getHeight()) / 2 + scoreFm.getAscent();
+        g2d.drawString(scoreString, scoreNumX, scoreNumY);
+
+        // 최고 점수 표시
+        String highScoreString = String.valueOf(highScore);
+        int highScoreNumX = x + boardWidth + (highScoreWidth - scoreFm.stringWidth(highScoreString)) / 2;
+        int highScoreNumY = highScoreStartY + (highScoreHeight - scoreFm.getHeight()) / 2 + scoreFm.getAscent();
+        g2d.drawString(highScoreString, highScoreNumX, highScoreNumY);
 
     
 

@@ -51,6 +51,11 @@ public class GameModel extends JPanel {
     // 쌓인 블록의 색상을 보관 (ARGB). 0이면 비어있음
     private int[][] colorBoard;
 
+    // 점수 시스템 관련 변수들
+    private int totalLinesCleared = 0;  // 총 클리어한 라인 수
+    private int currentLevel = 1;       // 현재 레벨
+    private int lastLineClearScore = 0; // 마지막으로 얻은 라인 클리어 점수
+    private int blocksSpawned = 0;      // 생성된 블록 개수 추가
 
     public int[][] boardArray = new int[ROWS][COLS];
 
@@ -121,22 +126,24 @@ public class GameModel extends JPanel {
     
 
     // 하드 드롭
-    public void HardDrop() {
+    public int HardDrop() {
         if (currentBlock != null) {  // 현재 블록이 있는지 확인
             // 무게추(WeightBlock)는 일반 하드드랍 대신 드릴 애니메이션을 실행하고 소멸
             if (currentBlock instanceof blocks.item.WeightBlock) {
                 applyWeightEffectAndDespawn();
-                return;
+                return 0;
             }
             // 일반 블록은 기존 하드드랍 로직 수행
-            currentBlock.hardDrop(board);
+            int dropDistance = currentBlock.hardDrop(board);
             placePiece();  // 블록을 보드에 고정
             spawnNewBlock();  // 그리고 다음 블록을 생성
+            return dropDistance;  // 드롭 거리 반환
         }
+        return 0;   // 현재 블록이 없으면 0 반환
     }
 
     // 블록을 보드에 고정시키는 역할
-    protected void placePiece() {
+    protected int placePiece() {
         int[][] shape = currentBlock.getShape();
         int x = currentBlock.getX();
         int y = currentBlock.getY();
@@ -167,12 +174,12 @@ public class GameModel extends JPanel {
         // '2'가 포함된 블록이면 전체 보드 AllClear 애니메이션 후 초기화
         if (hasTwo) {
             startAllClearAnimation();
-            return;
+            return 0;
         }
         // '3'이 포함된 경우: 각 중심을 기준으로 5x5 영역 클리어 (벽은 유지)
         if (!boxCenters.isEmpty()) {
             startBoxClearAnimation(boxCenters);
-            return;
+            return 0;
         }
         // '4'가 포함된 경우: 해당 row를 라인클리어처럼 한 줄 아래로 당기되, 블랙 깜빡임을 먼저 적용
         if (!rowsWithFour.isEmpty()) {
@@ -180,11 +187,19 @@ public class GameModel extends JPanel {
             rows.sort(java.util.Collections.reverseOrder()); // 여러 줄일 때도 안정적으로 처리
             // 아이템 라인 클리어용 깜빡임 + 실제 삭제/시프트를 수행하고 종료
             startItemRowFlashAndClear(rows);
-            return;
+            return 0;
         }
-        // 하드드롭에서도 즉시 라인 클리어 실행 (기존에는 누락되어 줄이 안 지워짐)
-        lineClear();
+        // 하드드롭에서도 즉시 라인 클리어 실행
+        int linesCleared = lineClear();
+        lastLineClearScore = 0;  // 기본값으로 초기화
+        if (linesCleared > 0) {
+            // 점수 계산을 레벨업보다 먼저 실행 (현재 레벨로 계산)
+            lastLineClearScore = calculateLineClearScore(linesCleared);
+            totalLinesCleared += linesCleared;
+            levelUp();  // 레벨 업데이트는 점수 계산 후에
+        }
         // checkLines();  // 줄이 다 찼는지 확인
+        return lastLineClearScore;  // 라인 클리어 점수 반환
     }
  
     // AllClear(값 2) 애니메이션: 보드 전체를 잠깐 검게 플래시한 뒤 내부 영역을 비운다.
@@ -314,139 +329,6 @@ public class GameModel extends JPanel {
         // no-op placeholder. Real scoring will be implemented elsewhere.
     }
 
-
-
-
-    // AllClear(값 2) 애니메이션: 보드 전체를 잠깐 검게 플래시한 뒤 내부 영역을 비운다.
-    private void startAllClearAnimation() {
-        if (allClearAnimating) return;
-        allClearAnimating = true;
-        allClearFlashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-
-        if (allClearTimer != null) {
-            allClearTimer.stop();
-        }
-        allClearTimer = new Timer(160, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                allClearTimer.stop();
-                allClearTimer = null;
-                allClearFlashBlack = false;
-
-                // 실제 보드 초기화 (벽은 유지)
-                boardInit();
-
-                allClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-            }
-        });
-        allClearTimer.setRepeats(false);
-        allClearTimer.start();
-    }
-
-    // BoxClear(값 3) 애니메이션: 5x5 영역을 검게 플래시한 뒤 지우고 중력 적용
-    private void startBoxClearAnimation(java.util.List<int[]> centers) {
-        if (centers == null || centers.isEmpty()) return;
-        if (boxClearAnimating) return;
-        boxFlashCenters.clear();
-        // 방어적 복사
-        for (int[] rc : centers) {
-            boxFlashCenters.add(new int[]{rc[0], rc[1]});
-        }
-        boxClearAnimating = true;
-        boxFlashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-
-        if (lineClearTimer != null) {
-            // 다른 라인 클리어 타이머가 있다면 정지 (겹치기 방지)
-            lineClearTimer.stop();
-            lineClearTimer = null;
-        }
-
-        Timer boxTimer = new Timer(140, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                ((Timer)e.getSource()).stop();
-                boxFlashBlack = false;
-
-                // 실제로 각 중심을 기준으로 5x5 영역 클리어
-                for (int[] rc : boxFlashCenters) {
-                    clearBox5x5(rc[0], rc[1]);
-                }
-                // 폭발 후 남은 블록이 아래로 떨어지도록 중력 적용
-                applyGravity();
-
-                boxFlashCenters.clear();
-                boxClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-
-                // 아이템 처리 후 생긴 풀라인이 있으면 일반 라인클리어도 수행
-                lineClear();
-            }
-        });
-        boxTimer.setRepeats(false);
-        boxTimer.start();
-    }
-
-    // 아이템(값 4)에 의해 선택된 행들을 블랙 플래시로 표시한 뒤 실제로 지우고 위를 한 칸씩 내리는 애니메이션
-    private void startItemRowFlashAndClear(java.util.List<Integer> rows) {
-        if (rows == null || rows.isEmpty()) return;
-        // 이미 다른 라인 클리어 애니메이션 중이면 대기(스킵)
-        if (lineClearAnimating) return;
-
-        flashingRows.clear();
-        flashingRows.addAll(rows);
-        lineClearAnimating = true;
-        flashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-
-        if (lineClearTimer != null) {
-            lineClearTimer.stop();
-        }
-        lineClearTimer = new Timer(120, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                lineClearTimer.stop();
-                lineClearTimer = null;
-                flashBlack = false;
-
-                // 실제로 각 행을 삭제하고 위를 한 칸씩 내리기 (라인 클리어처럼)
-                // 내릴 때 인덱스 꼬임을 방지하기 위해 아래쪽부터 처리
-                java.util.List<Integer> sorted = new java.util.ArrayList<>(flashingRows);
-                sorted.sort(java.util.Collections.reverseOrder());
-                for (int r : sorted) {
-                    // 점수 더블 여부: 이 줄에 '5'가 포함되어 있으면 두 배 처리
-                    boolean containsFive = false;
-                    for (int c = INNER_LEFT; c <= INNER_RIGHT; c++) {
-                        if (boardArray[r][c] == 5) { containsFive = true; break; }
-                    }
-                    if (containsFive) { lineClearScore(); lineClearScore(); } else { lineClearScore(); }
-                    clearRowForce(r);
-                    lineClearCount++;
-                }
-
-                flashingRows.clear();
-                lineClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
-
-                // 아이템 처리 후, 새로 생성된 풀라인이 있으면 일반 라인클리어도 수행(자체 블링크)
-                lineClear();
-            }
-        });
-        lineClearTimer.setRepeats(false);
-        lineClearTimer.start();
-    }
-
-    // 점수 시스템은 다른 팀원이 구현할 예정이므로 여기서는 호출 훅만 제공
-    // 일반 라인 클리어 시 1회 호출, '5' 포함 라인 클리어 시 2회 호출로 더블 처리
-    protected void lineClearScore() {
-        // no-op placeholder. Real scoring will be implemented elsewhere.
-    }
-
-
-
-
     protected void spawnNewBlock(){
         if (nextBlock == null) {  
             nextBlock = Block.spawn();
@@ -460,6 +342,11 @@ public class GameModel extends JPanel {
         else{
         nextBlock = Block.spawn(); // 새로운 nextBlock 생성
         }
+        blocksSpawned++;  // 생성된 블록 개수 증가
+        
+        // 속도 업데이트 확인
+        checkSpeedIncrease();
+        
         if (gameBoard != null) {
             gameBoard.setNextBlock(nextBlock); // GameView에 다음 블록 정보 전달
         }
@@ -531,6 +418,10 @@ public class GameModel extends JPanel {
         this.nextBlock = Block.spawn();
         this.currentBlock = this.nextBlock;
         this.nextBlock = Block.spawn();
+        this.totalLinesCleared = 0;  // 총 클리어한 라인 수 초기화
+        this.currentLevel = 1;       // 레벨 초기화
+        this.lastLineClearScore = 0; // 라인 클리어 점수 초기화
+        this.blocksSpawned = 0;      // 생성된 블록 개수 초기화
     }
 
     protected boolean canMoveto(int targetRow, int targetCol, int[][] shape){
@@ -592,9 +483,9 @@ public class GameModel extends JPanel {
 
     // Checks all visible rows and clears any full lines (Tetris behavior).
     // Visible inner rows are from INNER_TOP .. INNER_BOTTOM (inclusive).
-    public void lineClear() {
+    public int lineClear() {
         // 이미 애니메이션 중이면 중복 실행 방지
-        if (lineClearAnimating) return;
+        if (lineClearAnimating) return 0;
 
         // 먼저 가득 찬 줄들을 수집
         java.util.List<Integer> fullRows = new java.util.ArrayList<>();
@@ -605,7 +496,7 @@ public class GameModel extends JPanel {
             }
             if (full) fullRows.add(row);
         }
-        if (fullRows.isEmpty()) return; // 지울 줄 없음
+        if (fullRows.isEmpty()) return 0; // 지울 줄 없음
 
         // 한 번 검은색으로 깜빡이기 위한 상태 세팅
         flashingRows.clear();
@@ -634,6 +525,8 @@ public class GameModel extends JPanel {
         });
         lineClearTimer.setRepeats(false);
         lineClearTimer.start();
+        
+        return fullRows.size(); // 클리어된 라인 수 반환
     }
 
     // 기존 즉시 라인 클리어 로직을 메서드로 분리
@@ -805,6 +698,100 @@ public class GameModel extends JPanel {
         }
         return false;
  
+    }
+
+    // 레벨업 메서드
+    public int levelUp() {
+        // 총 클리어한 라인 수에 따라 레벨 계산 (0~9: 레벨1, 10~19: 레벨2, ..., 90~99: 레벨10)
+        int newLevel = Math.min((totalLinesCleared / 2) + 1, 10);  // 최대 10레벨
+        
+        if (newLevel != currentLevel) {
+            currentLevel = newLevel;
+             System.out.println("Level Up! New Level: " + currentLevel);
+            
+            // 레벨이 올라갔을 때 추가 로직이 필요하면 여기에 구현
+            // 예: 블록 떨어지는 속도 증가, 점수 보너스 등
+        }
+        
+        return currentLevel;
+    }
+
+    // 라인 클리어에 따른 점수 계산
+    public int calculateLineClearScore(int linesCleared) {
+        int baseScore = 0;
+        switch (linesCleared) {
+            case 1:
+                baseScore = 100;  // 싱글
+                break;
+            case 2:
+                baseScore = 300;  // 더블
+                break;
+            case 3:
+                baseScore = 500;  // 트리플
+                break;
+            case 4:
+                baseScore = 800;  // 테트리스 (4줄)
+                break;
+            default:
+                baseScore = 0;
+                break;
+        }
+        return baseScore * currentLevel;  // 현재 레벨과 곱하기
+    }
+
+    // 속도 증가 조건 확인 및 GameTimer에 알림
+    private void checkSpeedIncrease() {
+        // 블록 생성 개수 조건: 10, 20, 30, 40, 50, 60개 이상
+        // 줄 삭제 개수 조건: 5, 10, 15, 20, 25, 30줄 이상
+        
+        // 블록 개수 기준으로 속도 레벨 계산
+        int blockSpeedLevel = (blocksSpawned / 2);  // 20개마다 1레벨
+        
+        // 줄 삭제 기준으로 속도 레벨 계산 
+        int lineSpeedLevel = (totalLinesCleared / 5);  // 5줄마다 1레벨
+        
+        // 둘 중 더 높은 레벨 사용 (최대 5레벨까지, 0(init)~5단계 이므로 총 6단계)
+        int speedLevel = Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
+        
+        // GameTimer에 속도 업데이트 요청
+        if (gameTimer != null) {
+            gameTimer.updateSpeed(speedLevel);
+            System.out.println("Speed Level: " + speedLevel + " (Blocks: " + blocksSpawned + ", Lines: " + totalLinesCleared + ")");
+        }
+    }
+
+    // Getter 메서드들
+    public int getCurrentLevel() {
+        return currentLevel;
+    }
+
+    public int getTotalLinesCleared() {
+        return totalLinesCleared;
+    }
+
+    public int getLastLineClearScore() {
+        return lastLineClearScore;
+    }
+
+    public int getBlocksSpawned() {
+        return blocksSpawned;
+    }
+
+    // 현재 속도 레벨 반환 (점수산정용도)
+    public int getCurrentSpeedLevel() {
+        // 블록 개수 기준으로 속도 레벨 계산
+        int blockSpeedLevel = (blocksSpawned / 2 ) ;  // 20개마다 1레벨
+        
+        // 줄 삭제 기준으로 속도 레벨 계산 
+        int lineSpeedLevel = (totalLinesCleared / 5 ) ;  // 5줄마다 1레벨
+
+        // 둘 중 더 높은 레벨 사용 (최대 6레벨까지, 0-based이므로 6단계)
+        return Math.min(Math.max(blockSpeedLevel, lineSpeedLevel), 6);
+    }
+
+    // GameTimer 참조 설정
+    public void setGameTimer(GameTimer gameTimer) {
+        this.gameTimer = gameTimer;
     }
     
 
