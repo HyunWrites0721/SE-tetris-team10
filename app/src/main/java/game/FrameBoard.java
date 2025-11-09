@@ -119,7 +119,7 @@ public class FrameBoard extends JFrame {
     JLayeredPane layeredPane = getLayeredPane();
 
     // 게임 보드와 일시정지 보드, 블록 텍스트를 레이어드 추가
-    gameBoard = new GameView();
+    gameBoard = new GameView(itemMode);  // itemMode 전달
     gameBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     layeredPane.add(gameBoard, JLayeredPane.DEFAULT_LAYER);
 
@@ -128,10 +128,10 @@ public class FrameBoard extends JFrame {
         gameBoard.convertScale(safeScreenRatio());
     } catch (Exception ignored) {}
 
-    // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
+    // GameModel 생성 (더 이상 JPanel이 아니므로 레이어에 추가하지 않음)
     gameModel = new GameModel(gameBoard, itemMode);
-    gameModel.setBounds(gameBoard.getBounds());
-    layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);
+    // gameModel.setBounds(gameBoard.getBounds());  // JPanel이 아니므로 불필요
+    // layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);  // JPanel이 아니므로 불가능
 
     // GameView가 보드와 쌓인 블록을 그릴 수 있도록 모델 바인딩
     gameBoard.setGameModel(gameModel);

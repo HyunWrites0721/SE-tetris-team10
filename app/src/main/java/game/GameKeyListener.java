@@ -102,7 +102,7 @@ public class GameKeyListener extends KeyAdapter  {
                     blockText.Rotate90();
                     // 회전한 블록을 즉시 View에 반영
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    gameBoard.repaint();
+                    blockText.syncToState(); // GameState 동기화 및 렌더링
                 }
                 break;
                 
@@ -114,7 +114,7 @@ public class GameKeyListener extends KeyAdapter  {
                     // 하드드롭 점수에만 배율 적용, 라인클리어 점수는 이미 계산되어 더해진 상태
                     frameBoard.increaseScore(dropDistance * 2 * speedMultiplier + lineClearScore);
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    gameBoard.repaint();
+                    blockText.syncToState(); // GameState 동기화 및 렌더링
                 }
                 break;
             
@@ -124,7 +124,7 @@ public class GameKeyListener extends KeyAdapter  {
                 if (isValidKey(e.getKeyCode(), "LEFT") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
                     blockText.getCurrentBlock().moveLeft(blockText.getBoard());
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    gameBoard.repaint();
+                    blockText.syncToState(); // GameState 동기화 및 렌더링
                 }
                 break;
 
@@ -134,7 +134,7 @@ public class GameKeyListener extends KeyAdapter  {
                 if (isValidKey(e.getKeyCode(), "RIGHT") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
                     blockText.getCurrentBlock().moveRight(blockText.getBoard());
                     gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    gameBoard.repaint();
+                    blockText.syncToState(); // GameState 동기화 및 렌더링
                 }
                 break;
 
@@ -148,7 +148,7 @@ public class GameKeyListener extends KeyAdapter  {
                         int softDropScore = 1 * speedMultiplier;
                         frameBoard.increaseScore(softDropScore);
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                        gameBoard.repaint();
+                        blockText.syncToState(); // GameState 동기화 및 렌더링
                     }
                 }
                 break;
