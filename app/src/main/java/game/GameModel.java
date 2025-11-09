@@ -2,19 +2,28 @@ package game;
 
 import java.awt.Color;
 
-import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import blocks.Block;
+import game.core.GameEngine;
+import game.core.GameState;
 
-public class GameModel extends JPanel {
+/**
+ * 게임 로직을 담당하는 Model 클래스
+ * JPanel 상속 제거 - 순수 비즈니스 로직만 담당
+ */
+public class GameModel {
 
     private final GameView gameBoard;
     private final int ROWS = 23;
     private final int COLS = 12;
     private final boolean itemMode; // 아이템 모드 플래그
+    
+    // 새로운 아키텍처: GameEngine과 GameState
+    private GameEngine gameEngine;
+    private GameState currentState;
 
     private final int INNER_TOP = 2;
     private final int INNER_BOTTOM = ROWS - 2;
@@ -81,8 +90,9 @@ public class GameModel extends JPanel {
     public GameModel(GameView gameBoard, boolean itemMode) {
         this.gameBoard = gameBoard;
         this.itemMode = itemMode;
-    setOpaque(false);
-    setVisible(true);
+    // JPanel 관련 메서드 제거 (더 이상 JPanel이 아님)
+    // setOpaque(false);
+    // setVisible(true);
         // 생성 시 왼쪽, 오른쪽, 아랫벽을 true로 초기화
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLS; j++) {
@@ -95,7 +105,7 @@ public class GameModel extends JPanel {
         }
         // 색상 보드 초기화
         colorBoard = new int[ROWS][COLS];
-        repaint();
+        // repaint() 제거 (더 이상 JPanel이 아님)
     // make external board reference point to internal array so other code using `board` works
     this.board = this.boardArray;
     // spawn the initial block safely (avoid calling overridable methods from constructor)
@@ -105,6 +115,24 @@ public class GameModel extends JPanel {
     if (gameBoard != null) {
         gameBoard.setNextBlock(nextBlock);
     }
+    
+    // 새로운 아키텍처: GameEngine과 GameState 초기화
+    this.gameEngine = new GameEngine(0); // 초기 시드 0
+    this.currentState = new GameState.Builder(
+        boardArray,
+        colorBoard,
+        currentBlock,
+        nextBlock,
+        itemMode
+    )
+    .score(0)
+    .totalLinesCleared(totalLinesCleared)
+    .currentLevel(currentLevel)
+    .lineClearCount(lineClearCount)
+    .itemGenerateCount(itemGenerateCount)
+    .blocksSpawned(blocksSpawned)
+    .lastLineClearScore(lastLineClearScore)
+    .build();
 
     }
 
@@ -116,10 +144,95 @@ public class GameModel extends JPanel {
         return board;
     }
     
+    /**
+     * 새로운 아키텍처: GameState getter
+     */
+    public GameState getCurrentState() {
+        return currentState;
+    }
+    
+    /**
+     * 새로운 아키텍처: GameEngine getter
+     */
+    public GameEngine getGameEngine() {
+        return gameEngine;
+    }
+    
+    /**
+     * 새로운 아키텍처: GameState 업데이트
+     * 상태를 업데이트하고 기존 필드들도 동기화
+     */
+    public void updateState(GameState newState) {
+        this.currentState = newState;
+        
+        // 기존 필드들과 동기화 (호환성 유지)
+        this.currentBlock = newState.getCurrentBlock();
+        this.nextBlock = newState.getNextBlock();
+        this.totalLinesCleared = newState.getTotalLinesCleared();
+        this.currentLevel = newState.getCurrentLevel();
+        this.lineClearCount = newState.getLineClearCount();
+        this.itemGenerateCount = newState.getItemGenerateCount();
+        this.blocksSpawned = newState.getBlocksSpawned();
+        this.lastLineClearScore = newState.getLastLineClearScore();
+        
+        // 보드 배열 동기화
+        int[][] newBoard = newState.getBoardArray();
+        int[][] newColorBoard = newState.getColorBoard();
+        for (int i = 0; i < ROWS; i++) {
+            for (int j = 0; j < COLS; j++) {
+                boardArray[i][j] = newBoard[i][j];
+                colorBoard[i][j] = newColorBoard[i][j];
+            }
+        }
+        
+        // GameView 업데이트
+        if (gameBoard != null) {
+            gameBoard.setNextBlock(nextBlock);
+            gameBoard.render(newState); // 새로운 방식으로 렌더링
+        }
+    }
+    
+    /**
+     * 새로운 아키텍처: 현재 GameModel 상태를 GameState에 동기화
+     * 기존 로직 사용 후 상태를 GameState로 반영
+     */
+    public void syncToState() {
+        this.currentState = new GameState.Builder(
+            boardArray,
+            colorBoard,
+            currentBlock,
+            nextBlock,
+            itemMode
+        )
+        .score(0) // 점수는 FrameBoard에서 관리
+        .totalLinesCleared(totalLinesCleared)
+        .currentLevel(currentLevel)
+        .lineClearCount(lineClearCount)
+        .itemGenerateCount(itemGenerateCount)
+        .blocksSpawned(blocksSpawned)
+        .lastLineClearScore(lastLineClearScore)
+        // 애니메이션 상태 동기화
+        .lineClearAnimating(lineClearAnimating)
+        .flashBlack(flashBlack)
+        .flashingRows(flashingRows)
+        .allClearAnimating(allClearAnimating)
+        .allClearFlashBlack(allClearFlashBlack)
+        .boxClearAnimating(boxClearAnimating)
+        .boxFlashBlack(boxFlashBlack)
+        .boxFlashCenters(boxFlashCenters)
+        .weightAnimating(weightAnimating)
+        .build();
+        
+        // GameView에 새로운 방식으로 렌더링
+        if (gameBoard != null) {
+            gameBoard.render(currentState);
+        }
+    }
+    
     public void setBlockText(int row, int col) {
         if (isValidPosition(row, col)) {
             boardArray[row][col] = 1;
-            repaint();
+            if (gameBoard != null) gameBoard.repaintBlock();
         }
     }
 
@@ -136,8 +249,7 @@ public class GameModel extends JPanel {
             }
         }
 
-
-        repaint();
+        if (gameBoard != null) gameBoard.repaintBlock();
     }
     
 
@@ -223,7 +335,7 @@ public class GameModel extends JPanel {
         if (allClearAnimating) return;
         allClearAnimating = true;
         allClearFlashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+        if (gameBoard != null) gameBoard.repaintBlock();
 
         // AllClear 점수 계산: 500점 * 속도 가중치 * 난이도 가중치
         int speedMultiplier = getCurrentSpeedLevel() + 1;
@@ -245,7 +357,7 @@ public class GameModel extends JPanel {
                 boardInit();
 
                 allClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+                if (gameBoard != null) gameBoard.repaintBlock();
             }
         });
         allClearTimer.setRepeats(false);
@@ -268,7 +380,7 @@ public class GameModel extends JPanel {
         
         boxClearAnimating = true;
         boxFlashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+        if (gameBoard != null) gameBoard.repaintBlock();
 
         if (lineClearTimer != null) {
             // 다른 라인 클리어 타이머가 있다면 정지 (겹치기 방지)
@@ -291,7 +403,7 @@ public class GameModel extends JPanel {
 
                 boxFlashCenters.clear();
                 boxClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+                if (gameBoard != null) gameBoard.repaintBlock();
 
                 // 아이템 처리 후 생긴 풀라인이 있으면 일반 라인클리어도 수행
                 lineClear();
@@ -311,7 +423,7 @@ public class GameModel extends JPanel {
         flashingRows.addAll(rows);
         lineClearAnimating = true;
         flashBlack = true;
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+        if (gameBoard != null) gameBoard.repaintBlock();
 
         if (lineClearTimer != null) {
             lineClearTimer.stop();
@@ -340,7 +452,7 @@ public class GameModel extends JPanel {
 
                 flashingRows.clear();
                 lineClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+                if (gameBoard != null) gameBoard.repaintBlock();
 
                 // 아이템 처리 후, 새로 생성된 풀라인이 있으면 일반 라인클리어도 수행(자체 블링크)
                 lineClear();
@@ -437,8 +549,6 @@ public class GameModel extends JPanel {
         }
         if (gameBoard != null) {
             gameBoard.repaintBlock();
-        } else {
-            repaint();
         }
     }
 
@@ -495,16 +605,13 @@ public class GameModel extends JPanel {
         // if(isGameOver() == true) return;
         if(canRotate() == true){
             currentBlock.getRotatedShape();
-            repaint();
+            if (gameBoard != null) gameBoard.repaintBlock();
         }
     }
 
     public boolean isValidPosition(int row, int col) {
         if (boardArray[row][col] != 0) {
             return false;
-        }
-        else if (boardArray[row][col] == 0) {
-            return true;
         }
         return row >= 0 && row < ROWS-1 && col >= 1 && col < COLS-1;
     }
@@ -532,7 +639,7 @@ public class GameModel extends JPanel {
         flashingRows.addAll(fullRows);
         lineClearAnimating = true;
         flashBlack = true; // 첫 프레임: 검은색
-        if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+        if (gameBoard != null) gameBoard.repaintBlock();
 
         // 짧은 지연 후 실제 클리어 수행 (검은색 표시가 보이도록)
         if (lineClearTimer != null) {
@@ -549,7 +656,7 @@ public class GameModel extends JPanel {
                 // 상태 해제
                 flashingRows.clear();
                 lineClearAnimating = false;
-                if (gameBoard != null) gameBoard.repaintBlock(); else repaint();
+                if (gameBoard != null) gameBoard.repaintBlock();
             }
         });
         lineClearTimer.setRepeats(false);
@@ -681,8 +788,6 @@ public class GameModel extends JPanel {
                     if (gameBoard != null) {
                         gameBoard.setFallingBlock(currentBlock);
                         gameBoard.repaintBlock();
-                    } else {
-                        repaint();
                     }
                     return;
                 }
@@ -708,8 +813,6 @@ public class GameModel extends JPanel {
                 if (gameBoard != null) {
                     gameBoard.setFallingBlock(currentBlock);
                     gameBoard.repaintBlock();
-                } else {
-                    repaint();
                 }
             }
         });

@@ -57,6 +57,7 @@ public class GameTimer {
                         int autoDropScore = (int) Math.round(1 * speedMultiplier * difficultyMultiplier);
                         frameBoard.increaseScore(autoDropScore); // 자동으로 떨어질 때마다 점수 * 속도 배율 * 난이도 가중치
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
+                        blockText.syncToState(); // GameState 동기화 및 렌더링
                     } else {
                         // WeightBlock이면 특수 낙하 처리 (바닥까지 뚫고 내려가며 지움, 바닥에서 소멸)
                         boolean wasWeight = (blockText.getCurrentBlock() instanceof WeightBlock);
@@ -79,8 +80,8 @@ public class GameTimer {
                             blockText.spawnNewBlock();
                         }
                         gameBoard.setFallingBlock(blockText.getCurrentBlock());
+                        blockText.syncToState(); // GameState 동기화 및 렌더링
                     }
-                    gameBoard.repaint();
                 }
             }
         });
