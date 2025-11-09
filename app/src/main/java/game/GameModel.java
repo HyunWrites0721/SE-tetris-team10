@@ -48,7 +48,7 @@ public class GameModel extends JPanel {
     public Block nextBlock;
     public int itemGenerateCount = 0;
     public int lineClearCount = 0;
-    public int divisor = 10;
+    public int divisor = 1; //10
     // 쌓인 블록의 색상을 보관 (ARGB). 0이면 비어있음
     private int[][] colorBoard;
 
