@@ -1,9 +1,11 @@
 package game;
-import settings.HighScoreModel;
+import java.awt.Font;
+
 import javax.swing.JFrame;
 import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
-import java.awt.Font;
+
+import settings.HighScoreModel;
 
 // Note: Do not depend on StartFrame initialization. Use safeScreenRatio() to fallback when needed.
 
@@ -128,10 +130,10 @@ public class FrameBoard extends JFrame {
         gameBoard.convertScale(safeScreenRatio());
     } catch (Exception ignored) {}
 
-    // GameModel 생성 (더 이상 JPanel이 아니므로 레이어에 추가하지 않음)
+    // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
     gameModel = new GameModel(gameBoard, itemMode);
-    // gameModel.setBounds(gameBoard.getBounds());  // JPanel이 아니므로 불필요
-    // layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);  // JPanel이 아니므로 불가능
+    // gameModel.setBounds(gameBoard.getBounds());
+    // layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);
 
     // GameView가 보드와 쌓인 블록을 그릴 수 있도록 모델 바인딩
     gameBoard.setGameModel(gameModel);
