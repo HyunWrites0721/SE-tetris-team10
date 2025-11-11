@@ -6,6 +6,8 @@ import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 
 import settings.HighScoreModel;
+import game.events.*;
+import game.listeners.*;
 
 // Note: Do not depend on StartFrame initialization. Use safeScreenRatio() to fallback when needed.
 
@@ -75,6 +77,10 @@ public class FrameBoard extends JFrame {
     private final HighScoreModel highScoreModel;
     private GameTimer gameTimer;
     private int score = 0;  // 점수 변수 추가
+    
+    // 이벤트 시스템
+    private EventBus eventBus;
+    private ScoreBoard scoreBoard; // 이벤트 리스너용 ScoreBoard
 
     public void increaseScore(int points) {
         score += points;
@@ -101,6 +107,73 @@ public class FrameBoard extends JFrame {
     public GameTimer getGameTimer() {
         return gameTimer;
     }
+    
+    /**
+     * 이벤트 리스너들을 등록합니다
+     */
+    private void registerEventListeners() {
+        // UI 업데이트 리스너 (높은 우선순위 - 즉시 시각적 피드백)
+        eventBus.subscribe(GameEvent.class, new UIUpdateListener(gameBoard), 1);
+        
+        // 점수판 업데이트 리스너 (중간 우선순위)
+        eventBus.subscribe(GameEvent.class, new ScoreBoardListener(scoreBoard), 10);
+        
+        // 게임 로직 리스너 (중간 우선순위)
+        eventBus.subscribe(GameEvent.class, new GameLogicListener(), 20);
+        
+        // 네트워크 전송 리스너 (낮은 우선순위 - 성능 영향 최소화)
+        eventBus.subscribe(GameEvent.class, new NetworkListener(false, "Player1"), 100);
+        
+        // 특정 이벤트별 추가 처리
+        eventBus.subscribe(LineClearedEvent.class, this::handleLineClearedForFrameBoard, 5);
+        eventBus.subscribe(GameOverEvent.class, this::handleGameOverForFrameBoard, 5);
+        eventBus.subscribe(LevelUpEvent.class, this::handleLevelUpForFrameBoard, 5);
+        
+        System.out.println("EventBus: All event listeners registered successfully");
+    }
+    
+    /**
+     * FrameBoard용 라인 클리어 이벤트 처리
+     */
+    private void handleLineClearedForFrameBoard(LineClearedEvent event) {
+        // 점수 업데이트
+        increaseScore(event.getScore());
+        
+        System.out.println("FrameBoard: Line cleared - Score: " + event.getScore() + 
+                         ", Lines: " + event.getClearedLines().length);
+    }
+    
+    /**
+     * FrameBoard용 게임 오버 이벤트 처리
+     */
+    private void handleGameOverForFrameBoard(GameOverEvent event) {
+        this.isGameOver = true;
+        
+        // 점수 저장
+        if (!scoreSaved) {
+            int finalScore = event.getFinalScore();
+            // HighScoreModel의 addScore 메서드 사용
+            boolean isTopScore = highScoreModel.addScore("Player", finalScore, "normal", itemMode);
+            if (isTopScore) {
+                System.out.println("FrameBoard: New high score achieved!");
+            }
+            scoreSaved = true;
+            System.out.println("FrameBoard: Game over - Final score saved: " + finalScore);
+        }
+        
+        // 타이머 정지
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+    }
+    
+    /**
+     * FrameBoard용 레벨업 이벤트 처리
+     */
+    private void handleLevelUpForFrameBoard(LevelUpEvent event) {
+        // 게임 속도 조정이나 다른 레벨 관련 로직
+        System.out.println("FrameBoard: Level up to " + event.getNewLevel());
+    }
 
 
     public FrameBoard(boolean itemMode) {
@@ -117,6 +190,10 @@ public class FrameBoard extends JFrame {
     
     // 게임 시작 시 블록 생성 설정 로드
     blocks.Block.reloadSettings();
+    
+    // EventBus 초기화 (싱글플레이어는 동기, 멀티플레이어는 비동기)
+    this.eventBus = new EventBus(false); // 기본은 동기 모드
+    this.scoreBoard = new ScoreBoard(); // 이벤트 리스너용 ScoreBoard
 
     JLayeredPane layeredPane = getLayeredPane();
 
@@ -138,6 +215,13 @@ public class FrameBoard extends JFrame {
     // GameView가 보드와 쌓인 블록을 그릴 수 있도록 모델 바인딩
     gameBoard.setGameModel(gameModel);
     gameBoard.setFallingBlock(gameModel.getCurrentBlock());
+    
+    // EventBus를 GameModel에 설정
+    gameModel.setEventBus(eventBus);
+    gameModel.setPlayerId(1); // 기본 플레이어 ID
+    
+    // 이벤트 리스너들 등록
+    registerEventListeners();
     
     // 초기 점수와 최고 점수 설정
     gameBoard.setScore(0);
