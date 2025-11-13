@@ -2,10 +2,14 @@ package game.core;
 
 import blocks.Block;
 import blocks.item.WeightBlock;
+import game.events.EventBus;
+import game.events.TickEvent;
+import game.events.EventListener;
 
 /**
  * 게임의 순수 로직만 담당하는 엔진 클래스
  * UI 의존성이 전혀 없으며, GameState를 입력받아 새로운 GameState를 반환
+ * EventBus를 통해 게임 이벤트를 처리
  */
 public class GameEngine {
     
@@ -20,9 +24,46 @@ public class GameEngine {
     private static final double[] DIFFICULTY_MULTIPLIERS = {1.0, 1.1, 0.9};
     
     private final int difficulty;
+    private final EventBus eventBus;
     
     public GameEngine(int difficulty) {
+        this(difficulty, null);
+    }
+    
+    public GameEngine(int difficulty, EventBus eventBus) {
         this.difficulty = difficulty;
+        this.eventBus = eventBus;
+        
+        // 이벤트 리스너 등록
+        if (eventBus != null) {
+            setupEventListeners();
+        }
+    }
+    
+    /**
+     * 이벤트 리스너 설정
+     */
+    private void setupEventListeners() {
+        // 틱 이벤트 리스너 등록 - 게임 엔진이 틱을 받아서 로직 처리
+        eventBus.subscribe(TickEvent.class, new EventListener<TickEvent>() {
+            @Override
+            public void onEvent(TickEvent event) {
+                // 게임 엔진에서 틱 이벤트 처리 로직
+                handleTickEvent(event);
+            }
+        }, 1); // GameTimer 다음 우선순위로 처리
+    }
+    
+    /**
+     * 틱 이벤트 처리
+     * @param event 틱 이벤트
+     */
+    protected void handleTickEvent(TickEvent event) {
+        // 게임 엔진에서 틱별로 처리해야 할 로직이 있다면 여기에 구현
+        // 예: 레벨업 체크, 통계 업데이트 등
+        System.out.println("GameEngine received tick: Level=" + event.getCurrentLevel() + 
+                          ", Speed=" + event.getSpeedLevel() + 
+                          ", Delta=" + event.getDeltaTime() + "ms");
     }
     
     /**

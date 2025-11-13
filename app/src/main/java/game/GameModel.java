@@ -9,6 +9,7 @@ import java.awt.event.ActionListener;
 import blocks.Block;
 import game.core.GameEngine;
 import game.core.GameState;
+import game.events.*;
 
 /**
  * 게임 로직을 담당하는 Model 클래스
@@ -20,6 +21,10 @@ public class GameModel {
     private final int ROWS = 23;
     private final int COLS = 12;
     private final boolean itemMode; // 아이템 모드 플래그
+    
+    // 이벤트 시스템
+    private EventBus eventBus;
+    private int playerId = 1; // 기본 플레이어 ID
     
     // 새로운 아키텍처: GameEngine과 GameState
     private GameEngine gameEngine;
@@ -142,6 +147,27 @@ public class GameModel {
 
     public int[][] getBoard(){  // 게임보드 getter
         return board;
+    }
+    
+    /**
+     * EventBus를 설정합니다
+     */
+    public void setEventBus(EventBus eventBus) {
+        this.eventBus = eventBus;
+    }
+    
+    /**
+     * 플레이어 ID를 설정합니다
+     */
+    public void setPlayerId(int playerId) {
+        this.playerId = playerId;
+    }
+    
+    /**
+     * 플레이어 ID를 반환합니다
+     */
+    public int getPlayerId() {
+        return playerId;
     }
     
     /**
@@ -277,9 +303,14 @@ public class GameModel {
         int y = currentBlock.getY();
         Color color = currentBlock.getColor();
         int rgb = (color != null ? color.getRGB() : new Color(100,100,100).getRGB());
-    boolean hasTwo = false;
-    java.util.ArrayList<int[]> boxCenters = new java.util.ArrayList<>(); // (row,col) for value 3
-    java.util.HashSet<Integer> rowsWithFour = new java.util.HashSet<>(); // rows containing value 4
+        boolean hasTwo = false;
+        java.util.ArrayList<int[]> boxCenters = new java.util.ArrayList<>(); // (row,col) for value 3
+        java.util.HashSet<Integer> rowsWithFour = new java.util.HashSet<>(); // rows containing value 4
+
+        // 블록 배치 이벤트 발행
+        if (eventBus != null) {
+            eventBus.publish(new BlockPlacedEvent(x, y, currentBlock.getClass().getSimpleName().hashCode(), playerId));
+        }
 
         for (int row = 0 ; row < shape.length ; row++){
             for (int col = 0 ; col < shape[row].length ; col++){
@@ -324,7 +355,23 @@ public class GameModel {
             // 점수 계산을 레벨업보다 먼저 실행 (현재 레벨로 계산)
             lastLineClearScore = calculateLineClearScore(linesCleared);
             totalLinesCleared += linesCleared;
+            
+            // 라인 클리어 이벤트 발행
+            if (eventBus != null) {
+                int[] clearedLineArray = new int[linesCleared];
+                for (int i = 0; i < linesCleared; i++) {
+                    clearedLineArray[i] = i; // 실제 라인 번호는 lineClear()에서 처리됨
+                }
+                eventBus.publish(new LineClearedEvent(clearedLineArray, lastLineClearScore, playerId));
+            }
+            
+            int oldLevel = currentLevel;
             levelUp();  // 레벨 업데이트는 점수 계산 후에
+            
+            // 레벨업 이벤트 발행
+            if (currentLevel > oldLevel && eventBus != null) {
+                eventBus.publish(new LevelUpEvent(currentLevel, playerId));
+            }
         }
         // checkLines();  // 줄이 다 찼는지 확인
         return lastLineClearScore;  // 라인 클리어 점수 반환
@@ -707,7 +754,6 @@ public class GameModel {
         if (anyCleared) {
             // ScoreDoubleBlock 점수 계산:
             // 일반 줄 점수 + (ScoreDouble 줄 점수 * 2)
-            int totalLines = normalLines + doubleScoreLines;
             int normalScore = calculateLineClearScore(normalLines);
             int doubleScore = calculateLineClearScore(doubleScoreLines) * 2;
             lastLineClearScore = normalScore + doubleScore;
@@ -940,6 +986,50 @@ public class GameModel {
     // GameTimer 참조 설정
     public void setGameTimer(GameTimer gameTimer) {
         this.gameTimer = gameTimer;
+    }
+    
+    /**
+     * 아이템을 활성화하고 이벤트를 발행합니다
+     */
+    public void activateItem(String itemType) {
+        applyItemEffect(itemType);
+        
+        if (eventBus != null) {
+            eventBus.publish(new ItemActivatedEvent(itemType, playerId));
+        }
+    }
+    
+    /**
+     * 아이템 효과를 적용합니다
+     */
+    private void applyItemEffect(String itemType) {
+        switch (itemType) {
+            case "CLEAR_LINE":
+                // 한 줄 삭제 로직 (기존 라인클리어 로직 활용)
+                performImmediateLineClear();
+                break;
+            case "SLOW_DOWN":
+                // 속도 감소 로직 (GameTimer를 통해 처리)
+                if (gameTimer != null) {
+                    // 일시적으로 속도 감소 (구현 필요)
+                }
+                break;
+            case "DOUBLE_SCORE":
+                // 점수 두 배 효과 (다음 라인클리어 시 적용)
+                // 구현은 점수 계산 로직에서 처리
+                break;
+            default:
+                System.out.println("Unknown item type: " + itemType);
+        }
+    }
+    
+    /**
+     * 게임 오버 이벤트를 발행합니다
+     */
+    public void triggerGameOver(int finalScore) {
+        if (eventBus != null) {
+            eventBus.publish(new GameOverEvent(finalScore, playerId));
+        }
     }
     
 
