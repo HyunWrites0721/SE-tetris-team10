@@ -9,7 +9,7 @@ import java.awt.event.ActionListener;
 import blocks.Block;
 import game.core.GameEngine;
 import game.core.GameState;
-import game.events.*;
+import game.events.EventBus;
 
 /**
  * 게임 로직을 담당하는 Model 클래스
@@ -25,7 +25,7 @@ public class GameModel {
     // 이벤트 시스템
     private EventBus eventBus;
     private int playerId = 1; // 기본 플레이어 ID
-    
+
     // 새로운 아키텍처: GameEngine과 GameState
     private GameEngine gameEngine;
     private GameState currentState;
@@ -62,7 +62,11 @@ public class GameModel {
     public Block nextBlock;
     public int itemGenerateCount = 0;
     public int lineClearCount = 0;
-    public int divisor = 1; //10
+    public int divisor = 3; //10
+    // When a clear actually occurs (after animation), mark that an item should be generated
+    // at the next spawn. This avoids timing issues where the line-clear increment happens
+    // inside a timer callback after spawnNewBlock() has already been called.
+    private boolean itemPending = false;
     // 쌓인 블록의 색상을 보관 (ARGB). 0이면 비어있음
     private int[][] colorBoard;
 
@@ -150,32 +154,23 @@ public class GameModel {
     }
     
     /**
-     * EventBus를 설정합니다
-     */
-    public void setEventBus(EventBus eventBus) {
-        this.eventBus = eventBus;
-    }
-    
-    /**
-     * 플레이어 ID를 설정합니다
-     */
-    public void setPlayerId(int playerId) {
-        this.playerId = playerId;
-    }
-    
-    /**
-     * 플레이어 ID를 반환합니다
-     */
-    public int getPlayerId() {
-        return playerId;
-    }
-    
-    /**
      * 새로운 아키텍처: GameState getter
      */
     public GameState getCurrentState() {
         return currentState;
     }
+
+    /** EventBus 설정 (호환성용) */
+    public void setEventBus(EventBus eventBus) {
+        this.eventBus = eventBus;
+    }
+
+    /** 플레이어 ID 설정 (호환성용) */
+    public void setPlayerId(int id) {
+        this.playerId = id;
+    }
+
+    public int getPlayerId() { return playerId; }
     
     /**
      * 새로운 아키텍처: GameEngine getter
@@ -303,14 +298,9 @@ public class GameModel {
         int y = currentBlock.getY();
         Color color = currentBlock.getColor();
         int rgb = (color != null ? color.getRGB() : new Color(100,100,100).getRGB());
-        boolean hasTwo = false;
-        java.util.ArrayList<int[]> boxCenters = new java.util.ArrayList<>(); // (row,col) for value 3
-        java.util.HashSet<Integer> rowsWithFour = new java.util.HashSet<>(); // rows containing value 4
-
-        // 블록 배치 이벤트 발행
-        if (eventBus != null) {
-            eventBus.publish(new BlockPlacedEvent(x, y, currentBlock.getClass().getSimpleName().hashCode(), playerId));
-        }
+    boolean hasTwo = false;
+    java.util.ArrayList<int[]> boxCenters = new java.util.ArrayList<>(); // (row,col) for value 3
+    java.util.HashSet<Integer> rowsWithFour = new java.util.HashSet<>(); // rows containing value 4
 
         for (int row = 0 ; row < shape.length ; row++){
             for (int col = 0 ; col < shape[row].length ; col++){
@@ -355,23 +345,7 @@ public class GameModel {
             // 점수 계산을 레벨업보다 먼저 실행 (현재 레벨로 계산)
             lastLineClearScore = calculateLineClearScore(linesCleared);
             totalLinesCleared += linesCleared;
-            
-            // 라인 클리어 이벤트 발행
-            if (eventBus != null) {
-                int[] clearedLineArray = new int[linesCleared];
-                for (int i = 0; i < linesCleared; i++) {
-                    clearedLineArray[i] = i; // 실제 라인 번호는 lineClear()에서 처리됨
-                }
-                eventBus.publish(new LineClearedEvent(clearedLineArray, lastLineClearScore, playerId));
-            }
-            
-            int oldLevel = currentLevel;
             levelUp();  // 레벨 업데이트는 점수 계산 후에
-            
-            // 레벨업 이벤트 발행
-            if (currentLevel > oldLevel && eventBus != null) {
-                eventBus.publish(new LevelUpEvent(currentLevel, playerId));
-            }
         }
         // checkLines();  // 줄이 다 찼는지 확인
         return lastLineClearScore;  // 라인 클리어 점수 반환
@@ -497,6 +471,12 @@ public class GameModel {
                     lineClearCount++;
                 }
 
+                // If item mode is enabled, check whether the cumulative cleared-line
+                // threshold has been reached and mark an item pending if so.
+                if (itemMode && (lineClearCount / divisor > itemGenerateCount)) {
+                    itemPending = true;
+                }
+
                 flashingRows.clear();
                 lineClearAnimating = false;
                 if (gameBoard != null) gameBoard.repaintBlock();
@@ -521,13 +501,19 @@ public class GameModel {
         }
         currentBlock = nextBlock;  // 생성한 nextBlock을 currentBlock으로 설정
         
-        // 아이템 모드일 때만 아이템 블록 생성
-        if (itemMode && lineClearCount/divisor > itemGenerateCount) {
+        // 아이템 모드일 때는, 우선 itemPending 플래그를 확인하여
+        // (애니메이션으로 인한 지연 때문에) 확실히 아이템을 생성하도록 함.
+        if (itemMode && this.itemPending) {
+            nextBlock = Block.spawn();
+            nextBlock = Block.spawnItem(nextBlock);
+            itemGenerateCount++;
+            this.itemPending = false;
+        } else if (itemMode && lineClearCount/divisor > itemGenerateCount) {
+            // 레거시 조건(라인 카운트 기준)도 유지
             nextBlock = Block.spawn(); // 아이템 블록 생성
             nextBlock = Block.spawnItem(nextBlock);
             itemGenerateCount++;
-        }
-        else {
+        } else {
             nextBlock = Block.spawn(); // 새로운 nextBlock 생성
         }
         blocksSpawned++;  // 생성된 블록 개수 증가
@@ -754,9 +740,18 @@ public class GameModel {
         if (anyCleared) {
             // ScoreDoubleBlock 점수 계산:
             // 일반 줄 점수 + (ScoreDouble 줄 점수 * 2)
+            int totalLines = normalLines + doubleScoreLines;
             int normalScore = calculateLineClearScore(normalLines);
             int doubleScore = calculateLineClearScore(doubleScoreLines) * 2;
             lastLineClearScore = normalScore + doubleScore;
+            // 실제 클리어가 발생했을 때(item mode일 경우) 다음 스폰에서 아이템을 생성하도록 표시
+            if (itemMode && totalLines > 0) {
+                // Only mark pending when the cumulative cleared-lines threshold
+                // (lineClearCount / divisor) exceeds the number of already generated items.
+                if (lineClearCount / divisor > itemGenerateCount) {
+                    this.itemPending = true;
+                }
+            }
         }
     }
 
@@ -839,15 +834,26 @@ public class GameModel {
                 }
 
                 // 다음 위치(한 칸 아래)의 경로를 0으로 지움 (벽은 보존)
+                // Clear both the cells at the current position and the target (one row below)
+                // so that any existing blocks are removed immediately as the weight passes.
                 for (int r = 0; r < shape.length; r++) {
                     for (int c = 0; c < shape[r].length; c++) {
                         if (shape[r][c] == 0) continue;
                         int nx = x + c;
-                        int ny = y + r + 1;
-                        if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
-                            if (!(ny == ROWS - 1 || nx == 0 || nx == COLS - 1)) {
-                                boardArray[ny][nx] = 0;
-                                colorBoard[ny][nx] = 0;
+                        int currNy = y + r;
+                        int nextNy = y + r + 1;
+                        // clear current cell if it's inside and not a wall/bottom
+                        if (currNy >= 0 && currNy < ROWS && nx >= 0 && nx < COLS) {
+                            if (!(currNy == ROWS - 1 || nx == 0 || nx == COLS - 1)) {
+                                boardArray[currNy][nx] = 0;
+                                colorBoard[currNy][nx] = 0;
+                            }
+                        }
+                        // clear next cell as well
+                        if (nextNy >= 0 && nextNy < ROWS && nx >= 0 && nx < COLS) {
+                            if (!(nextNy == ROWS - 1 || nx == 0 || nx == COLS - 1)) {
+                                boardArray[nextNy][nx] = 0;
+                                colorBoard[nextNy][nx] = 0;
                             }
                         }
                     }
@@ -855,7 +861,9 @@ public class GameModel {
                 // 한 칸 하강 (충돌 무시)
                 currentBlock.setPosition(x, y + 1);
 
-                // 화면 갱신
+                // 화면/상태 갱신: synchronize GameModel -> GameState so
+                // state-based rendering reflects the cleared cells immediately.
+                syncToState();
                 if (gameBoard != null) {
                     gameBoard.setFallingBlock(currentBlock);
                     gameBoard.repaintBlock();
@@ -986,50 +994,6 @@ public class GameModel {
     // GameTimer 참조 설정
     public void setGameTimer(GameTimer gameTimer) {
         this.gameTimer = gameTimer;
-    }
-    
-    /**
-     * 아이템을 활성화하고 이벤트를 발행합니다
-     */
-    public void activateItem(String itemType) {
-        applyItemEffect(itemType);
-        
-        if (eventBus != null) {
-            eventBus.publish(new ItemActivatedEvent(itemType, playerId));
-        }
-    }
-    
-    /**
-     * 아이템 효과를 적용합니다
-     */
-    private void applyItemEffect(String itemType) {
-        switch (itemType) {
-            case "CLEAR_LINE":
-                // 한 줄 삭제 로직 (기존 라인클리어 로직 활용)
-                performImmediateLineClear();
-                break;
-            case "SLOW_DOWN":
-                // 속도 감소 로직 (GameTimer를 통해 처리)
-                if (gameTimer != null) {
-                    // 일시적으로 속도 감소 (구현 필요)
-                }
-                break;
-            case "DOUBLE_SCORE":
-                // 점수 두 배 효과 (다음 라인클리어 시 적용)
-                // 구현은 점수 계산 로직에서 처리
-                break;
-            default:
-                System.out.println("Unknown item type: " + itemType);
-        }
-    }
-    
-    /**
-     * 게임 오버 이벤트를 발행합니다
-     */
-    public void triggerGameOver(int finalScore) {
-        if (eventBus != null) {
-            eventBus.publish(new GameOverEvent(finalScore, playerId));
-        }
     }
     
 

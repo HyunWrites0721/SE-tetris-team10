@@ -1,11 +1,17 @@
 package game;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import static org.junit.jupiter.api.Assertions.*;
 import javax.swing.SwingUtilities;
+
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import blocks.Block;
 
@@ -17,7 +23,7 @@ public class GameModelTest {
     void setUp() {
         try {
             SwingUtilities.invokeAndWait(() -> {
-                gameView = new GameView();
+                gameView = new GameView(false);
                 gameModel = new GameModel(gameView, false); // Normal mode로 테스트
             });
         } catch (Exception e) {

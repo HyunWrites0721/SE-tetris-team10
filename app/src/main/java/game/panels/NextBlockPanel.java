@@ -96,13 +96,28 @@ public class NextBlockPanel extends JPanel {
             g2d.setColor(color);
             for (int row = 0; row < shape.length; row++) {
                 for (int col = 0; col < shape[row].length; col++) {
-                    if (shape[row][col] == 1) {
+                    if (shape[row][col] != 0) {
                         g2d.fillRect(
                             startX + col * cellSize,
                             startY + row * cellSize,
                             cellSize,
                             cellSize
                         );
+                        // Draw overlay for special item cells: 4 -> 'L', 5 -> '2'
+                        if (shape[row][col] == 4 || shape[row][col] == 5) {
+                            String overlay = shape[row][col] == 4 ? "L" : "2";
+                            Color textColor = getContrastingColor(color);
+                            g2d.setColor(textColor);
+                            int fontSizeLocal = Math.max(12, cellSize * 2 / 3);
+                            g2d.setFont(new Font("Arial", Font.BOLD, fontSizeLocal));
+                            FontMetrics fm2 = g2d.getFontMetrics();
+                            int textW = fm2.stringWidth(overlay);
+                            int textH = fm2.getAscent();
+                            int tx = startX + col * cellSize + (cellSize - textW) / 2;
+                            int ty = startY + row * cellSize + (cellSize + textH) / 2 - 3;
+                            g2d.drawString(overlay, tx, ty);
+                            g2d.setColor(color);
+                        }
                     }
                 }
             }
@@ -111,5 +126,11 @@ public class NextBlockPanel extends JPanel {
         // 테두리
         g2d.setColor(Color.BLACK);
         g2d.drawRect(0, 0, width - 1, height - 1);
+    }
+
+    private Color getContrastingColor(Color bg) {
+        if (bg == null) return Color.BLACK;
+        double luminance = (0.2126 * bg.getRed() + 0.7152 * bg.getGreen() + 0.0722 * bg.getBlue()) / 255.0;
+        return luminance > 0.6 ? Color.BLACK : Color.WHITE;
     }
 }

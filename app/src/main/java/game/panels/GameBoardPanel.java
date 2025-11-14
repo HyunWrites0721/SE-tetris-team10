@@ -178,6 +178,23 @@ public class GameBoardPanel extends JPanel {
                         cellSize,
                         cellSize
                     );
+                    // Draw overlay text for special item values
+                    if (board[row][col] == 4 || board[row][col] == 5) {
+                        String text = board[row][col] == 4 ? "L" : "2";
+                        Color textColor = getContrastingColor(blockColor);
+                        g2d.setColor(textColor);
+                        int fontSize = Math.max(12, cellSize * 2 / 3);
+                        g2d.setFont(g2d.getFont().deriveFont((float)fontSize));
+                        int tx = (col - 1) * cellSize;
+                        int ty = (row - 2) * cellSize;
+                        // center text
+                        java.awt.FontMetrics fm = g2d.getFontMetrics();
+                        int textWidth = fm.stringWidth(text);
+                        int textHeight = fm.getAscent();
+                        int cx = tx + (cellSize - textWidth) / 2;
+                        int cy = ty + (cellSize + textHeight) / 2 - 3;
+                        g2d.drawString(text, cx, cy);
+                    }
                 }
             }
         }
@@ -189,17 +206,59 @@ public class GameBoardPanel extends JPanel {
     private void drawBlock(Graphics2D g2d, Block block) {
         int[][] shape = block.getShape();
         Color color = block.getColor();
-        
-        g2d.setColor(color);
-        for (int row = 0; row < shape.length; row++) {
-            for (int col = 0; col < shape[row].length; col++) {
-                if (shape[row][col] == 1) {
-                    int drawX = (block.getX() + col - 1) * cellSize;
-                    int drawY = (block.getY() + row - 2) * cellSize;
-                    g2d.fillRect(drawX, drawY, cellSize, cellSize);
+        // For WeightBlock, ensure the cells it passes are visually cleared
+        // in real time by drawing background rectangles over the underlying
+        // board before drawing the weight. This avoids relying on board state
+        // being updated in perfect sync with the animation.
+        boolean isWeight = block instanceof blocks.item.WeightBlock;
+
+        // If it's a weight block, first paint background over the covered cells
+        if (isWeight) {
+            Color bg = new Color(240, 240, 255);
+            g2d.setColor(bg);
+            for (int row = 0; row < shape.length; row++) {
+                for (int col = 0; col < shape[row].length; col++) {
+                    if (shape[row][col] != 0) {
+                        int drawX = (block.getX() + col - 1) * cellSize;
+                        int drawY = (block.getY() + row - 2) * cellSize;
+                        g2d.fillRect(drawX, drawY, cellSize, cellSize);
+                    }
                 }
             }
         }
+
+        g2d.setColor(color);
+        for (int row = 0; row < shape.length; row++) {
+            for (int col = 0; col < shape[row].length; col++) {
+                int cellVal = shape[row][col];
+                if (cellVal != 0) {
+                    int drawX = (block.getX() + col - 1) * cellSize;
+                    int drawY = (block.getY() + row - 2) * cellSize;
+                    g2d.fillRect(drawX, drawY, cellSize, cellSize);
+                    // overlay text for OneLine(4) and ScoreDouble(5)
+                    if (cellVal == 4 || cellVal == 5) {
+                        String text = cellVal == 4 ? "L" : "2";
+                        Color textColor = getContrastingColor(color);
+                        g2d.setColor(textColor);
+                        int fontSize = Math.max(12, cellSize * 2 / 3);
+                        g2d.setFont(g2d.getFont().deriveFont((float)fontSize));
+                        java.awt.FontMetrics fm = g2d.getFontMetrics();
+                        int textWidth = fm.stringWidth(text);
+                        int textHeight = fm.getAscent();
+                        int cx = drawX + (cellSize - textWidth) / 2;
+                        int cy = drawY + (cellSize + textHeight) / 2 - 3;
+                        g2d.drawString(text, cx, cy);
+                        g2d.setColor(color);
+                    }
+                }
+            }
+        }
+    }
+
+    private Color getContrastingColor(Color bg) {
+        if (bg == null) return Color.BLACK;
+        double luminance = (0.2126 * bg.getRed() + 0.7152 * bg.getGreen() + 0.0722 * bg.getBlue()) / 255.0;
+        return luminance > 0.6 ? Color.BLACK : Color.WHITE;
     }
     
     /**

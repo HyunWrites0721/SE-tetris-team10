@@ -10,11 +10,12 @@ import blocks.item.WeightBlock;
 import game.GameModel;
 import game.GameView;
 
-public abstract class Block {
+public abstract class Block implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     protected int [][] shape;
     private int x, y;
-    public GameView gameBoard;
-    public GameModel gameModel;
+    public transient GameView gameBoard;
+    public transient GameModel gameModel;
     private Color color;
     private Color[][] Colorset;
     private static settings.SettingModel settingModel;
@@ -374,5 +375,14 @@ public abstract class Block {
 
     // Allow item wrappers to inherit the exact visual color from a base block
     public void setExactColor(Color c) { this.color = c; }
+
+    /**
+     * After deserialization you should rebind UI/model references using this method.
+     * Example: Block b = (Block)in.readObject(); b.bind(gameView, gameModel);
+     */
+    public void bind(GameView board, GameModel model) {
+        this.gameBoard = board;
+        this.gameModel = model;
+    }
 
 }

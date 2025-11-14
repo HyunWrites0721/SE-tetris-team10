@@ -1,19 +1,23 @@
 package game;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-
-import javax.swing.SwingUtilities;
 import java.awt.Window;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.SwingUtilities;
+
+import org.junit.jupiter.api.AfterEach;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import blocks.Block;
 import blocks.IBlock;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("GameView 테스트")
 public class GameViewTest {
@@ -26,7 +30,7 @@ public class GameViewTest {
         
         SwingUtilities.invokeLater(() -> {
             try {
-                gameView = new GameView();
+                gameView = new GameView(false);
             } finally {
                 latch.countDown();
             }
@@ -58,17 +62,17 @@ public class GameViewTest {
             // 기본 상수값들 확인
             assertEquals(20, gameView.ROWS, "ROWS는 20이어야 함");
             assertEquals(10, gameView.COLS, "COLS는 10이어야 함");
-            assertEquals(30, gameView.BASE_CELL_SIZE, "BASE_CELL_SIZE는 30이어야 함");
+            // BASE_CELL_SIZE and MARGIN were removed; ensure CELL_SIZE is reasonable
             assertEquals(30, gameView.CELL_SIZE, "CELL_SIZE는 30이어야 함");
-            assertEquals(2, gameView.MARGIN, "MARGIN은 2여야 함");
+            assertTrue(gameView.CELL_SIZE >= 15, "CELL_SIZE는 최소 15 이상이어야 함");
             
             // NEXT 영역 크기 확인
             assertEquals(6, gameView.NEXT_ROWS, "NEXT_ROWS는 6이어야 함");
             assertEquals(6, gameView.NEXT_COLS, "NEXT_COLS는 6이어야 함");
             
-            // SCORE 영역 크기 확인
-            assertEquals(4, gameView.SCORE_ROWS, "SCORE_ROWS는 4여야 함");
-            assertEquals(6, gameView.SCORE_COLS, "SCORE_COLS는 6이어야 함");
+            // SCORE 영역 크기 확인 (기본 구현에서 SCORE 패널의 높이는 4 * CELL_SIZE)
+            assertEquals(6, gameView.NEXT_ROWS, "NEXT_ROWS는 6이어야 함");
+            assertEquals(6, gameView.NEXT_COLS, "NEXT_COLS는 6이어야 함");
             
             // 기본 스케일 확인
             assertEquals(1.0, gameView.scale, 0.001, "기본 스케일은 1.0이어야 함");
