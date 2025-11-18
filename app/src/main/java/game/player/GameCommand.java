@@ -6,7 +6,7 @@ import java.util.Objects;
  * 플레이어에 전달되는 명령 객체의 간단한 표현
  */
 public final class GameCommand {
-    public enum Type { LEFT, RIGHT, ROTATE, SOFT_DROP, HARD_DROP, HOLD, PAUSE, RESET }
+    public enum Type { LEFT, RIGHT, ROTATE, SOFT_DROP, HARD_DROP, PAUSE, RESET }
 
     private final Type type;
     private final long timestamp;
