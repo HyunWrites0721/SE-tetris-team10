@@ -34,9 +34,16 @@ public class GameView extends JPanel {
     private HighScorePanel highScorePanel;
     
     private FrameBoard frameBoard;
+    private boolean showHighScore = true;  // HighScore 패널 표시 여부
     
-    // 생성자
+    // 생성자 (기본: HighScore 표시)
     public GameView(boolean item) {
+        this(item, true);
+    }
+    
+    // 생성자 (HighScore 표시 여부 선택 가능)
+    public GameView(boolean item, boolean showHighScore) {
+        this.showHighScore = showHighScore;
         setLayout(null); // 절대 위치 지정
         setOpaque(true);
         setBackground(new java.awt.Color(240, 240, 240));
@@ -45,7 +52,10 @@ public class GameView extends JPanel {
         gameBoardPanel = new GameBoardPanel();
         nextBlockPanel = new NextBlockPanel();
         scorePanel = new ScorePanel();
-        highScorePanel = new HighScorePanel();
+        
+        if (showHighScore) {
+            highScorePanel = new HighScorePanel();
+        }
         
         // 레이아웃 설정
         layoutPanels();
@@ -54,7 +64,10 @@ public class GameView extends JPanel {
         add(gameBoardPanel);
         add(nextBlockPanel);
         add(scorePanel);
-        add(highScorePanel);
+        
+        if (showHighScore && highScorePanel != null) {
+            add(highScorePanel);
+        }
         
         // 크기 변경 시 중앙 정렬 유지
         addComponentListener(new ComponentAdapter() {
@@ -103,11 +116,13 @@ public class GameView extends JPanel {
         scorePanel.setBounds(offsetX + boardWidth, offsetY + scoreY, rightPanelWidth, scoreHeight);
         scorePanel.setCellSize(CELL_SIZE);
         
-        // HIGHSCORE 패널 (SCORE 아래) - 중앙 정렬 적용
-        int highScoreHeight = 4 * CELL_SIZE;
-        int highScoreY = scoreY + scoreHeight;
-        highScorePanel.setBounds(offsetX + boardWidth, offsetY + highScoreY, rightPanelWidth, highScoreHeight);
-        highScorePanel.setCellSize(CELL_SIZE);
+        // HIGHSCORE 패널 (SCORE 아래) - 중앙 정렬 적용 (옵션)
+        if (showHighScore && highScorePanel != null) {
+            int highScoreHeight = 4 * CELL_SIZE;
+            int highScoreY = scoreY + scoreHeight;
+            highScorePanel.setBounds(offsetX + boardWidth, offsetY + highScoreY, rightPanelWidth, highScoreHeight);
+            highScorePanel.setCellSize(CELL_SIZE);
+        }
         
         // 전체 크기 설정
         setPreferredSize(new Dimension(totalWidth, totalHeight));
@@ -139,8 +154,11 @@ public class GameView extends JPanel {
         nextBlockPanel.setFontSize(fontSize);
         scorePanel.setCellSize(CELL_SIZE);
         scorePanel.setFontSize(fontSize);
-        highScorePanel.setCellSize(CELL_SIZE);
-        highScorePanel.setFontSize(fontSize);
+        
+        if (showHighScore && highScorePanel != null) {
+            highScorePanel.setCellSize(CELL_SIZE);
+            highScorePanel.setFontSize(fontSize);
+        }
         
         // 레이아웃 다시 설정
         layoutPanels();
@@ -201,7 +219,9 @@ public class GameView extends JPanel {
      * 최고 점수 설정
      */
     public void setHighScore(int highScore) {
-        highScorePanel.setHighScore(highScore);
+        if (showHighScore && highScorePanel != null) {
+            highScorePanel.setHighScore(highScore);
+        }
     }
     
     /**

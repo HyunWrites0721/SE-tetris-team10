@@ -8,6 +8,7 @@ import game.events.EventBus;
 import game.events.TickEvent;
 import game.events.GameOverEvent;
 import game.events.LineClearedEvent;
+import game.events.ScoreUpdateEvent;
 import game.events.EventListener;
 import game.loop.GameLoop;
 import game.loop.LocalGameLoop;
@@ -41,6 +42,8 @@ public class GameController {
     private boolean isPaused = false;
     private boolean isRunning = false;
     private boolean isGameOver = false;
+    private int[][] lastBlockPattern = null;  // 마지막 블록의 패턴 (대전 모드 공격용)
+    private int lastBlockX = -1;  // 마지막 블록의 X 위치 (대전 모드 공격용)
     
     // 설정
     private final boolean itemMode;
@@ -48,6 +51,14 @@ public class GameController {
     
     // 난이도별 점수 가중치
     private static final double[] DIFFICULTY_MULTIPLIERS = {1.0, 1.1, 0.9};
+    
+    /**
+     * 마지막 블록 패턴 정보 반환 (대전 모드 공격용)
+     * @return [0]: 블록 패턴 배열, [1][0]: 블록 X 위치
+     */
+    public Object[] getLastBlockInfo() {
+        return new Object[] { lastBlockPattern, lastBlockX };
+    }
     
     /**
      * GameController 생성자
@@ -195,10 +206,18 @@ public class GameController {
         int[][] board = currentState.getBoardArray();
         int[][] colorBoard = currentState.getColorBoard();
         
+        // 블록 패턴과 위치를 저장 (대전 모드 공격용)
+        int[][] shape = currentBlock.getShape();
+        lastBlockPattern = new int[shape.length][];
+        for (int i = 0; i < shape.length; i++) {
+            lastBlockPattern[i] = shape[i].clone();
+        }
+        lastBlockX = currentBlock.getX();
+        
         // 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
         
-        System.out.println("Block placed at y=" + currentBlock.getY() + ", specialType=" + specialType);
+        System.out.println("Block placed at x=" + lastBlockX + ", y=" + currentBlock.getY() + ", specialType=" + specialType);
         
         // 블록이 고정된 상태를 임시로 업데이트 (currentBlock을 null로)
         GameState placedState = new GameState.Builder(
@@ -555,6 +574,9 @@ public class GameController {
         if (score > savedHighScore) {
             view.setHighScore(score);
         }
+        
+        // 점수 업데이트 이벤트 발행 (대전 모드 등에서 사용)
+        eventBus.publish(new ScoreUpdateEvent(score));
     }
     
     /**
@@ -580,6 +602,84 @@ public class GameController {
             }
         }
         return fullLines;
+    }
+    
+    /**
+     * 공격 줄 추가 (대전 모드용)
+     * 보드 아래쪽에 줄을 추가하고, 블록 패턴 모양대로 빈 칸을 만듦
+     * @param lines 추가할 줄 수
+     * @param blockPattern 블록의 패턴 (shape)
+     * @param blockX 블록의 X 위치
+     */
+    public void addAttackLines(int lines, int[][] blockPattern, int blockX) {
+        if (lines <= 0) return;
+        
+        int[][] board = currentState.getBoardArray();
+        int[][] colorBoard = currentState.getColorBoard();
+        int ROWS = board.length;
+        int COLS = board[0].length;
+        int INNER_LEFT = 1;
+        int INNER_RIGHT = COLS - 2;
+        int INNER_TOP = 2;
+        int INNER_BOTTOM = ROWS - 2;
+        
+        // 기존 블록들을 위로 올림
+        for (int i = INNER_TOP; i <= INNER_BOTTOM - lines; i++) {
+            for (int j = INNER_LEFT; j <= INNER_RIGHT; j++) {
+                board[i][j] = board[i + lines][j];
+                colorBoard[i][j] = colorBoard[i + lines][j];
+            }
+        }
+        
+        // 아래쪽에 새 줄 추가 (블록 패턴 모양으로 빈 칸 생성)
+        for (int i = INNER_BOTTOM - lines + 1; i <= INNER_BOTTOM; i++) {
+            for (int j = INNER_LEFT; j <= INNER_RIGHT; j++) {
+                // 기본적으로 모두 채움
+                board[i][j] = 1;
+                colorBoard[i][j] = 8;  // 회색 (공격 줄 색상)
+            }
+        }
+        
+        // 블록 패턴이 있으면 그 모양대로 구멍 뚫기
+        if (blockPattern != null && blockPattern.length > 0) {
+            int patternHeight = Math.min(blockPattern.length, lines);
+            
+            for (int i = 0; i < patternHeight; i++) {
+                int boardRow = INNER_BOTTOM - i;  // 아래에서부터 채움
+                
+                for (int j = 0; j < blockPattern[i].length; j++) {
+                    int boardCol = blockX + j;
+                    
+                    // 보드 범위 체크
+                    if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT && 
+                        blockPattern[i][j] == 1) {
+                        // 블록이 있던 자리를 빈 칸으로
+                        board[boardRow][boardCol] = 0;
+                        colorBoard[boardRow][boardCol] = 0;
+                    }
+                }
+            }
+        }
+        
+        // 상태 업데이트
+        currentState = new GameState.Builder(
+            board,
+            colorBoard,
+            currentState.getCurrentBlock(),
+            currentState.getNextBlock(),
+            currentState.isItemMode()
+        )
+            .score(currentState.getScore())
+            .totalLinesCleared(currentState.getTotalLinesCleared())
+            .currentLevel(currentState.getCurrentLevel())
+            .lineClearCount(currentState.getLineClearCount())
+            .itemGenerateCount(currentState.getItemGenerateCount())
+            .blocksSpawned(currentState.getBlocksSpawned())
+            .lastLineClearScore(currentState.getLastLineClearScore())
+            .build();
+        
+        // 화면 업데이트
+        view.render(currentState);
     }
     
     /**

@@ -2,6 +2,7 @@ package start;
 
 import javax.swing.*;
 
+import versus.VersusMenuFrame;
 import settings.SettingFrame;
 import game.GameStart;
 
@@ -69,7 +70,7 @@ public class StartFrame extends JFrame {
         menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
         menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));             //메뉴 위아래 여백
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));// 메뉴 패널 가로 사이즈 200으로 맞춤, 세로 자동
-        String[] menuNames = {"일반 모드 시작", "아이템 모드 시작", "설정", "스코어보드", "게임 종료"};
+        String[] menuNames = {"일반 모드 시작", "아이템 모드 시작", "대전 모드", "설정", "스코어보드", "게임 종료"};
         menuButtons = new JButton[menuNames.length];
         for (int i = 0; i < menuNames.length; i++) {
             JButton btn = new JButton(menuNames[i]);
@@ -135,17 +136,22 @@ public class StartFrame extends JFrame {
             new GameStart(true); // 아이템 모드 ON
             dispose();
         }
-        else if (index == 2) { 
+        else if (index == 2) {
+            // 대전 모드 메뉴로 이동
+            new VersusMenuFrame();
+            dispose();
+        }
+        else if (index == 3) { 
             // 설정 메뉴로 이동
             new SettingFrame(); //설정 창 띄우기
             dispose(); // 현재 창 닫기 (또는 setVisible(false))
         } 
-        else if (index == 3) {
+        else if (index == 4) {
             // 스코어보드 화면으로 이동
             new ScoreBoardFrame();
             dispose();
         } 
-        else if (index == 4) {
+        else if (index == 5) {
             //게임 종료
             System.exit(0);
         }
