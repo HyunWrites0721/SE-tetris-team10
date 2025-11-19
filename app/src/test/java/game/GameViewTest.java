@@ -123,21 +123,6 @@ public class GameViewTest {
     }
 
     @Test
-    @DisplayName("게임 모델 설정 테스트")
-    void testGameModelSetting() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            // GameModel 생성 (GameView를 매개변수로 전달)
-            GameModel testModel = new GameModel(gameView, false); // Normal mode
-            
-            // 게임 모델 설정 테스트
-            assertDoesNotThrow(() -> {
-                gameView.setGameModel(testModel);
-                gameView.setGameModel(null); // null 모델도 허용하는지 확인
-            }, "게임 모델 설정이 예외 없이 실행되어야 함");
-        });
-    }
-
-    @Test
     @DisplayName("스케일 변환 테스트")
     void testScaleConversion() throws Exception {
         SwingUtilities.invokeAndWait(() -> {

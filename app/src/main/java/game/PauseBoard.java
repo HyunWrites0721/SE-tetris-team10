@@ -258,17 +258,14 @@ public class PauseBoard extends JPanel implements KeyListener {
     }
     
     private String getDifficultyString() {
-        // GameTimer의 난이도 정보를 가져오기
-        if (frameBoard.getGameTimer() != null) {
-            int difficulty = frameBoard.getGameTimer().difficulty;
-            switch(difficulty) {
-                case 0: return "Easy";
-                case 1: return "Normal";
-                case 2: return "Hard";
-                default: return "Normal";
-            }
+        // FrameBoard의 난이도 정보를 가져오기
+        int difficulty = frameBoard.getDifficulty();
+        switch(difficulty) {
+            case 0: return "Easy";
+            case 1: return "Normal";
+            case 2: return "Hard";
+            default: return "Normal";
         }
-        return "Normal";
     }
     
     // PauseBoard가 표시될 때 점수를 업데이트하는 메서드

@@ -10,6 +10,8 @@ import java.awt.event.KeyEvent;
 import java.awt.Component;
 import java.awt.Color;
 
+import game.core.GameController;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("GameOverBoard 테스트")
@@ -17,6 +19,7 @@ public class GameOverBoardTest {
 
     private GameOverBoard gameOverBoard;
     private FrameBoard frameBoard;
+    private GameController gameController;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -24,6 +27,7 @@ public class GameOverBoardTest {
         SwingUtilities.invokeAndWait(() -> {
             frameBoard = new FrameBoard(false); // Normal mode
             frameBoard.setVisible(false); // 테스트 중에는 화면에 표시하지 않음
+            gameController = frameBoard.getGameController();
             gameOverBoard = new GameOverBoard(frameBoard);
         });
         
@@ -35,8 +39,8 @@ public class GameOverBoardTest {
     void tearDown() throws Exception {
         if (frameBoard != null) {
             SwingUtilities.invokeAndWait(() -> {
-                if (frameBoard.getGameTimer() != null) {
-                    frameBoard.getGameTimer().stop();
+                if (gameController != null && gameController.isRunning()) {
+                    gameController.stop();
                 }
                 frameBoard.dispose();
             });

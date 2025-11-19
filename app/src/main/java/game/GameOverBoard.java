@@ -257,16 +257,13 @@ public class GameOverBoard extends JPanel implements KeyListener {
     }
     
     private String getDifficultyString() {
-        if (frameBoard.getGameTimer() != null) {
-            int difficulty = frameBoard.getGameTimer().difficulty;
-            switch(difficulty) {
-                case 0: return "Easy";
-                case 1: return "Normal";
-                case 2: return "Hard";
-                default: return "Normal";
-            }
+        int difficulty = frameBoard.getDifficulty();
+        switch(difficulty) {
+            case 0: return "Easy";
+            case 1: return "Normal";
+            case 2: return "Hard";
+            default: return "Normal";
         }
-        return "Normal";
     }
     
     // GameOverBoard가 표시될 때 점수 및 정보를 업데이트하는 메서드

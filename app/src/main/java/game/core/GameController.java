@@ -1,12 +1,17 @@
 package game.core;
 
+import java.util.ArrayList;
+import java.util.List;
 import blocks.Block;
 import game.GameView;
 import game.events.EventBus;
 import game.events.TickEvent;
+import game.events.GameOverEvent;
+import game.events.LineClearedEvent;
 import game.events.EventListener;
 import game.loop.GameLoop;
 import game.loop.LocalGameLoop;
+import settings.HighScoreModel;
 
 /**
  * 게임의 메인 컨트롤러
@@ -101,8 +106,7 @@ public class GameController {
         for (int j = 0; j < COLS; j++) {
             emptyBoard[0][j] = 1;  // 위쪽 벽
             emptyBoard[1][j] = 1;  // 위쪽 벽 2줄
-            emptyBoard[ROWS - 1][j] = 1;  // 바닥
-            emptyBoard[ROWS - 2][j] = 1;  // 바닥 2줄
+            emptyBoard[ROWS - 1][j] = 1;  // 바닥만 1줄
         }
         
         return new GameState.Builder(emptyBoard, emptyColorBoard, null, null, itemMode)
@@ -170,10 +174,9 @@ public class GameController {
             
             // 자동 낙하 점수 추가
             int autoDropScore = engine.calculateAutoDropScore(event.getSpeedLevel());
-            score += autoDropScore;
+            addScore(autoDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
             
             // 뷰 업데이트
-            view.setScore(score);
             view.setFallingBlock(currentBlock);
             view.render(currentState);
         } else {
@@ -195,26 +198,35 @@ public class GameController {
         // 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
         
+        System.out.println("Block placed at y=" + currentBlock.getY() + ", specialType=" + specialType);
+        
+        // 블록이 고정된 상태를 임시로 업데이트 (currentBlock을 null로)
+        GameState placedState = new GameState.Builder(
+            board,
+            colorBoard,
+            null,  // 블록 고정 후에는 currentBlock이 없음
+            currentState.getNextBlock(),
+            currentState.isItemMode()
+        )
+            .score(score)
+            .totalLinesCleared(currentState.getTotalLinesCleared())
+            .currentLevel(currentState.getCurrentLevel())
+            .lineClearCount(currentState.getLineClearCount())
+            .itemGenerateCount(currentState.getItemGenerateCount())
+            .blocksSpawned(currentState.getBlocksSpawned())
+            .lastLineClearScore(currentState.getLastLineClearScore())
+            .build();
+        
+        // 고정된 블록을 화면에 표시
+        System.out.println("Rendering placed state...");
+        currentState = placedState;  // ✅ currentState 업데이트!
+        view.render(placedState);
+        System.out.println("Placed state rendered");
+        
         // 특수 블록 처리 (ItemBlockHandler에 위임)
         if (specialType != 0) {
             // AllClear(2), BoxClear(3), OneLineClear(4) 처리
-            GameState tempState = new GameState.Builder(
-                board,
-                colorBoard,
-                null,
-                currentState.getNextBlock(),
-                currentState.isItemMode()
-            )
-                .score(score)
-                .totalLinesCleared(currentState.getTotalLinesCleared())
-                .currentLevel(currentState.getCurrentLevel())
-                .lineClearCount(currentState.getLineClearCount())
-                .itemGenerateCount(currentState.getItemGenerateCount())
-                .blocksSpawned(currentState.getBlocksSpawned())
-                .lastLineClearScore(currentState.getLastLineClearScore())
-                .build();
-            
-            itemBlockHandler.handleSpecialBlock(specialType, tempState, (newState) -> {
+            itemBlockHandler.handleSpecialBlock(specialType, placedState, (newState) -> {
                 // 특수 블록 처리 완료 후
                 currentState = newState;
                 score = newState.getScore();
@@ -231,37 +243,63 @@ public class GameController {
             return;  // 애니메이션 진행 중, 콜백에서 처리
         }
         
-        // 일반 블록: 라인 클리어
-        int linesCleared = engine.performLineClear(board, colorBoard);
+        // 일반 블록: 라인 클리어 전에 삭제할 줄 찾기
+        List<Integer> fullLines = findFullLines(board);
         
-        if (linesCleared > 0) {
-            // 점수 계산
-            int lineClearScore = engine.calculateLineClearScore(linesCleared, currentState.getCurrentLevel());
-            score += lineClearScore;
-            
-            // 상태 업데이트
-            int totalLines = currentState.getTotalLinesCleared() + linesCleared;
-            int newLevel = engine.calculateLevel(totalLines);
-            
-            currentState = new GameState.Builder(
-                board,
-                colorBoard,
-                null,  // 새 블록 생성 전이므로 null
-                currentState.getNextBlock(),
-                currentState.isItemMode()
-            )
-                .score(score)
-                .totalLinesCleared(totalLines)
-                .currentLevel(newLevel)
-                .lineClearCount(currentState.getLineClearCount() + linesCleared)
-                .itemGenerateCount(currentState.getItemGenerateCount())
-                .blocksSpawned(currentState.getBlocksSpawned())
-                .build();
-            
-            // BlockSpawner에 라인 클리어 알림
-            blockSpawner.addLineClearCount(linesCleared);
+        if (fullLines.size() > 0) {
+            // 애니메이션 시작
+            animationManager.startLineClearAnimation(fullLines, () -> {
+                // 애니메이션 완료 후 실제 라인 클리어 수행
+                int[][] clearedBoard = currentState.getBoardArray();
+                int[][] clearedColorBoard = currentState.getColorBoard();
+                int linesCleared = engine.performLineClear(clearedBoard, clearedColorBoard);
+                
+                // 점수 계산
+                int lineClearScore = engine.calculateLineClearScore(linesCleared, currentState.getCurrentLevel());
+                int newScore = currentState.getScore() + lineClearScore;
+                
+                // 상태 업데이트
+                int totalLines = currentState.getTotalLinesCleared() + linesCleared;
+                int newLevel = engine.calculateLevel(totalLines);
+                
+                GameState newState = new GameState.Builder(
+                    clearedBoard,
+                    clearedColorBoard,
+                    null,  // 새 블록 생성 전이므로 null
+                    currentState.getNextBlock(),
+                    currentState.isItemMode()
+                )
+                    .score(newScore)
+                    .totalLinesCleared(totalLines)
+                    .currentLevel(newLevel)
+                    .lineClearCount(currentState.getLineClearCount() + linesCleared)
+                    .itemGenerateCount(currentState.getItemGenerateCount())
+                    .blocksSpawned(currentState.getBlocksSpawned())
+                    .build();
+                
+                currentState = newState;
+                score = newScore;
+                
+                // BlockSpawner에 라인 클리어 알림
+                blockSpawner.addLineClearCount(linesCleared);
+                
+                // LineClearedEvent 발행
+                int[] rows = fullLines.stream().mapToInt(Integer::intValue).toArray();
+                eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore));
+                
+                // 게임 오버 체크
+                if (engine.checkGameOver(clearedBoard)) {
+                    handleGameOver();
+                    return;
+                }
+                
+                // 새 블록 생성
+                spawnNewBlock();
+            });
+            return;  // 애니메이션 진행 중
         }
         
+        // 라인 클리어가 없는 경우
         // 게임 오버 체크
         if (engine.checkGameOver(board)) {
             handleGameOver();
@@ -293,8 +331,12 @@ public class GameController {
     private void handleGameOver() {
         isGameOver = true;
         stop();
+        
+        // GameOverEvent 발생하여 FrameBoard에 알림
+        GameOverEvent event = new GameOverEvent(score, 0);
+        eventBus.publish(event);
+        
         System.out.println("Game Over! Final Score: " + score);
-        // TODO: 게임 오버 이벤트 발생
     }
     
     /**
@@ -318,6 +360,10 @@ public class GameController {
         System.out.println("GameController started");
         isRunning = true;
         isPaused = false;
+        
+        // 첫 블록 생성 (게임 시작 시)
+        spawnNewBlock();
+        
         gameLoop.start();
     }
     
@@ -348,6 +394,32 @@ public class GameController {
     }
     
     /**
+     * 게임 리셋 (재시작)
+     */
+    public void reset() {
+        System.out.println("GameController reset");
+        
+        // 게임 정지
+        stop();
+        
+        // 상태 초기화
+        currentState = createInitialState();
+        score = 0;
+        isGameOver = false;
+        
+        // BlockSpawner 리셋
+        blockSpawner.reset();
+        
+        // 애니메이션 정지
+        animationManager.stopAllAnimations();
+        
+        // 뷰 업데이트
+        view.render(currentState);
+        
+        System.out.println("GameController reset complete");
+    }
+    
+    /**
      * 실행 중 확인
      */
     public boolean isRunning() {
@@ -369,7 +441,6 @@ public class GameController {
     public void moveLeft() {
         if (isPaused || !isRunning) return;
         
-        // TODO: GameEngine.moveLeft() 사용
         currentState = engine.moveLeft(currentState);
         view.render(currentState);
     }
@@ -380,7 +451,6 @@ public class GameController {
     public void moveRight() {
         if (isPaused || !isRunning) return;
         
-        // TODO: GameEngine.moveRight() 사용
         currentState = engine.moveRight(currentState);
         view.render(currentState);
     }
@@ -391,7 +461,6 @@ public class GameController {
     public void moveDown() {
         if (isPaused || !isRunning) return;
         
-        // TODO: GameEngine.moveDown() 사용
         currentState = engine.moveDown(currentState);
         view.render(currentState);
     }
@@ -402,20 +471,33 @@ public class GameController {
     public void rotate() {
         if (isPaused || !isRunning) return;
         
-        // TODO: GameEngine.rotate() 사용
         currentState = engine.rotate(currentState);
         view.render(currentState);
     }
     
     /**
      * 하드 드롭 (즉시 바닥까지)
+     * @return 드롭한 거리
      */
     public int hardDrop() {
         if (isPaused || !isRunning) return 0;
         
-        // TODO: GameEngine.hardDrop() 사용하여 거리 계산
-        // 현재는 임시로 0 반환
-        return 0;
+        Block currentBlock = currentState.getCurrentBlock();
+        if (currentBlock == null) return 0;
+        
+        // 하드 드롭 거리 계산하고 실제로 이동
+        int dropDistance = engine.calculateHardDropDistance(currentState);
+        
+        // 하드 드롭 점수 추가 및 착지 처리
+        if (dropDistance > 0) {
+            int hardDropScore = dropDistance * 2;  // 한 칸당 2점
+            addScore(hardDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
+            
+            // 블록 착지 처리 (이미 hardDrop으로 이동된 상태)
+            handleBlockLanding();
+        }
+        
+        return dropDistance;
     }
     
     // ==================== 속도 및 레벨 관리 ====================
@@ -461,11 +543,43 @@ public class GameController {
     }
     
     /**
-     * 점수 추가
+     * 점수 추가 (HighScore도 함께 체크)
      */
     public void addScore(int points) {
         score += points;
         view.setScore(score);
+        
+        // HighScore 체크 및 업데이트
+        HighScoreModel highScoreModel = HighScoreModel.getInstance();
+        int savedHighScore = highScoreModel.getHighScore(itemMode);
+        if (score > savedHighScore) {
+            view.setHighScore(score);
+        }
+    }
+    
+    /**
+     * 가득 찬 줄 찾기
+     */
+    private List<Integer> findFullLines(int[][] board) {
+        List<Integer> fullLines = new ArrayList<>();
+        int INNER_TOP = 2;
+        int INNER_BOTTOM = board.length - 2;
+        int INNER_LEFT = 1;
+        int INNER_RIGHT = board[0].length - 2;
+        
+        for (int row = INNER_BOTTOM; row >= INNER_TOP; row--) {
+            boolean isFull = true;
+            for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
+                if (board[row][col] == 0) {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull) {
+                fullLines.add(row);
+            }
+        }
+        return fullLines;
     }
     
     /**

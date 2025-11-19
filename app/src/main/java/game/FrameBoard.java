@@ -6,6 +6,7 @@ import javax.swing.JLayeredPane;
 import javax.swing.JOptionPane;
 
 import settings.HighScoreModel;
+import game.core.GameController;
 import game.events.*;
 import game.listeners.*;
 
@@ -71,65 +72,46 @@ public class FrameBoard extends JFrame {
     // 게임 보드와 일시정지 보드, 블록 텍스트
     private final GameView gameBoard;
     private final PauseBoard pauseBoard;
-    private final GameModel gameModel;
+    private final GameController gameController;  // GameModel 대체
     private final GameOverBoard gameOverBoard;
     // ScoreBoard UI 컴포넌트 제거 - HighScore 로직만 유지
     private final HighScoreModel highScoreModel;
-    private GameTimer gameTimer;
     private int score = 0;  // 점수 변수 추가
-    
-    // 이벤트 시스템
-    private EventBus eventBus;
-    private ScoreBoard scoreBoard; // 이벤트 리스너용 ScoreBoard
+    private int difficulty = 0;  // 난이도 (0: normal, 1: hard, 2: easy)
 
     public void increaseScore(int points) {
         score += points;
-        gameBoard.setScore(score);  // GameView에 점수 업데이트
+        gameBoard.setScore(score);  // GameView에 현재 점수 업데이트
         
-        // 현재 점수가 최고 점수를 넘으면 실시간으로 하이스코어 갱신
-        int currentHighScore = highScoreModel.getHighScore(itemMode);
-        if (score > currentHighScore) {
-            // 임시로 현재 점수를 하이스코어로 표시 (실제 저장은 게임 종료 시)
+        // 현재 점수가 저장된 최고 점수를 넘으면 HighScore 패널도 업데이트
+        int savedHighScore = highScoreModel.getHighScore(itemMode);
+        if (score > savedHighScore) {
+            // 현재 점수가 더 높으면 현재 점수를 하이스코어로 표시
             gameBoard.setHighScore(score);
-        } else {
-            // 현재 점수가 최고 점수를 넘지 않으면 기존 최고 점수 표시
-            gameBoard.setHighScore(currentHighScore);
         }
+        // 현재 점수가 저장된 하이스코어보다 낮으면 setHighScore 호출 안 함 (초기값 유지)
     }
 
     public GameView getGameBoard() {
         return gameBoard;
     }
-    public GameModel getGameModel() {
-        return gameModel;
+    
+    public GameController getGameController() {
+        return gameController;
     }
-
-    public GameTimer getGameTimer() {
-        return gameTimer;
+    
+    public int getDifficulty() {
+        return difficulty;
     }
     
     /**
      * 이벤트 리스너들을 등록합니다
+     * @deprecated 이벤트 시스템은 GameController가 관리합니다
      */
+    @Deprecated
     private void registerEventListeners() {
-        // UI 업데이트 리스너 (높은 우선순위 - 즉시 시각적 피드백)
-        eventBus.subscribe(GameEvent.class, new UIUpdateListener(gameBoard), 1);
-        
-        // 점수판 업데이트 리스너 (중간 우선순위)
-        eventBus.subscribe(GameEvent.class, new ScoreBoardListener(scoreBoard), 10);
-        
-        // 게임 로직 리스너 (중간 우선순위)
-        eventBus.subscribe(GameEvent.class, new GameLogicListener(), 20);
-        
-        // 네트워크 전송 리스너 (낮은 우선순위 - 성능 영향 최소화)
-        eventBus.subscribe(GameEvent.class, new NetworkListener(false, "Player1"), 100);
-        
-        // 특정 이벤트별 추가 처리
-        eventBus.subscribe(LineClearedEvent.class, this::handleLineClearedForFrameBoard, 5);
-        eventBus.subscribe(GameOverEvent.class, this::handleGameOverForFrameBoard, 5);
-        eventBus.subscribe(LevelUpEvent.class, this::handleLevelUpForFrameBoard, 5);
-        
-        System.out.println("EventBus: All event listeners registered successfully");
+        // 더 이상 사용되지 않음 - GameController가 이벤트 처리
+        System.out.println("EventBus: Event listeners are now managed by GameController");
     }
     
     /**
@@ -147,24 +129,8 @@ public class FrameBoard extends JFrame {
      * FrameBoard용 게임 오버 이벤트 처리
      */
     private void handleGameOverForFrameBoard(GameOverEvent event) {
-        this.isGameOver = true;
-        
-        // 점수 저장
-        if (!scoreSaved) {
-            int finalScore = event.getFinalScore();
-            // HighScoreModel의 addScore 메서드 사용
-            boolean isTopScore = highScoreModel.addScore("Player", finalScore, "normal", itemMode);
-            if (isTopScore) {
-                System.out.println("FrameBoard: New high score achieved!");
-            }
-            scoreSaved = true;
-            System.out.println("FrameBoard: Game over - Final score saved: " + finalScore);
-        }
-        
-        // 타이머 정지
-        if (gameTimer != null) {
-            gameTimer.stop();
-        }
+        // gameOver() 메서드가 모든 처리를 담당 (이름 입력, 점수 저장 등)
+        gameOver();
     }
     
     /**
@@ -177,9 +143,14 @@ public class FrameBoard extends JFrame {
 
 
     public FrameBoard(boolean itemMode) {
+    this(itemMode, 0); // 기본 난이도 normal
+    }
+    
+    public FrameBoard(boolean itemMode, int difficulty) {
     System.out.println("[DEBUG] FrameBoard: constructor enter");
     this.itemMode = itemMode; // 아이템 모드 설정
-    System.out.println("[DEBUG] Item Mode: " + (itemMode ? "ON" : "OFF"));
+    this.difficulty = difficulty; // 난이도 설정
+    System.out.println("[DEBUG] Item Mode: " + (itemMode ? "ON" : "OFF") + ", Difficulty: " + difficulty);
     
     setTitle("Tetris");
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -190,15 +161,11 @@ public class FrameBoard extends JFrame {
     
     // 게임 시작 시 블록 생성 설정 로드
     blocks.Block.reloadSettings();
-    
-    // EventBus 초기화 (싱글플레이어는 동기, 멀티플레이어는 비동기)
-    this.eventBus = new EventBus(false); // 기본은 동기 모드
-    this.scoreBoard = new ScoreBoard(); // 이벤트 리스너용 ScoreBoard
 
     JLayeredPane layeredPane = getLayeredPane();
 
-    // 게임 보드와 일시정지 보드, 블록 텍스트를 레이어드 추가
-    gameBoard = new GameView(itemMode);  // itemMode 전달
+    // 게임 뷰 생성
+    gameBoard = new GameView(itemMode);
     gameBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
     layeredPane.add(gameBoard, JLayeredPane.DEFAULT_LAYER);
 
@@ -207,29 +174,20 @@ public class FrameBoard extends JFrame {
         gameBoard.convertScale(safeScreenRatio());
     } catch (Exception ignored) {}
 
-    // BlockText를 GameBoard 위에 오버레이 (크기 항상 일치 보장)
-    gameModel = new GameModel(gameBoard, itemMode);
-    // gameModel.setBounds(gameBoard.getBounds());
-    // layeredPane.add(gameModel, JLayeredPane.MODAL_LAYER);
-
-    // GameView가 보드와 쌓인 블록을 그릴 수 있도록 모델 바인딩
-    gameBoard.setGameModel(gameModel);
-    gameBoard.setFallingBlock(gameModel.getCurrentBlock());
+    // GameController 생성 (GameModel + GameTimer 대체)
+    gameController = new GameController(gameBoard, itemMode, difficulty);
     
-    // EventBus를 GameModel에 설정
-    gameModel.setEventBus(eventBus);
-    gameModel.setPlayerId(1); // 기본 플레이어 ID
-    
-    // 이벤트 리스너들 등록
-    registerEventListeners();
+    // GameController의 EventBus에서 게임오버 이벤트 구독
+    gameController.getEventBus().subscribe(GameOverEvent.class, new EventListener<GameOverEvent>() {
+        @Override
+        public void onEvent(GameOverEvent event) {
+            handleGameOverForFrameBoard(event);
+        }
+    }, 0);
     
     // 초기 점수와 최고 점수 설정
     gameBoard.setScore(0);
     gameBoard.setHighScore(highScoreModel.getHighScore(itemMode));
-
-    // 타이머 생성: 1초마다 블록 낙하 및 화면 갱신
-    gameTimer = new GameTimer(gameBoard, gameModel, this);
-    //
     
     pauseBoard = new PauseBoard(this);
     pauseBoard.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
@@ -244,14 +202,13 @@ public class FrameBoard extends JFrame {
     // ScoreBoard UI 컴포넌트 제거 - HighScore 로직은 내부적으로만 유지
     // GameView에서 점수 표시를 처리함
 
-
     setSize(FRAME_WIDTH, FRAME_HEIGHT);
     setLocationRelativeTo(null);
     setVisible(true);
     System.out.println("[DEBUG] FrameBoard: setVisible(true) called");
 
-    // 키 리스너 추가
-    addKeyListener(new GameKeyListener(this, gameBoard, gameModel, gameTimer));
+    // 키 리스너 추가 (GameController 기반으로 리팩토링 완료)
+    addKeyListener(new GameKeyListener(this, gameBoard, gameController));
     setFocusable(true);
     requestFocusInWindow();
     }
@@ -262,7 +219,7 @@ public class FrameBoard extends JFrame {
         pauseBoard.setVisible(isPaused);
         pauseBoard.setOpaque(isPaused);
          if (isPaused) {
-             if (gameTimer != null) gameTimer.stop();
+             gameController.pause();
              // 일시정지 화면이 표시될 때 점수 및 정보 업데이트
              pauseBoard.updateInfo();
              // 일시정지 화면이 표시될 때 포커스 설정
@@ -270,9 +227,7 @@ public class FrameBoard extends JFrame {
              pauseBoard.requestFocusInWindow();
          } else {
              // 타이머 재시작
-             if (gameTimer != null) {
-                 gameTimer.start();
-             }
+             gameController.resume();
              // 게임 재개 시 프레임으로 포커스 반환
              this.requestFocusInWindow();
          }
@@ -280,11 +235,13 @@ public class FrameBoard extends JFrame {
     
 
     public void setBlockText(int row, int col) {
-        gameModel.setBlockText(row, col);
+        // TODO: GameController로 위임 필요
+        System.out.println("setBlockText called - to be implemented in GameController");
     }
 
     public void oneLineClear(int row) {
-        gameModel.lineClear();
+        // TODO: GameController로 위임 필요
+        System.out.println("oneLineClear called - to be implemented in GameController");
     }
     
     public void gameOver() {
@@ -297,29 +254,25 @@ public class FrameBoard extends JFrame {
         gameOverBoard.updateInfo();
         gameOverBoard.setVisible(true);
         gameOverBoard.setOpaque(true);
-        if (gameTimer != null) {
-            gameTimer.stop();
-        }
+        gameController.stop();
         
         // 점수가 이미 저장되었으면 다시 저장하지 않음 (중복 방지)
         if (!scoreSaved && score > 0) {
             // 난이도 문자열 변환 (0: normal, 1: hard, 2: easy)
-            String difficulty = "normal";
-            if (gameTimer != null) {
-                switch (gameTimer.difficulty) {
-                    case 0: difficulty = "normal"; break;
-                    case 1: difficulty = "hard"; break;
-                    case 2: difficulty = "easy"; break;
-                    default: difficulty = "normal"; break;
-                }
+            String difficultyStr = "normal";
+            switch (difficulty) {
+                case 0: difficultyStr = "normal"; break;
+                case 1: difficultyStr = "hard"; break;
+                case 2: difficultyStr = "easy"; break;
+                default: difficultyStr = "normal"; break;
             }
             
             // 사용자 이름 입력받기
             String playerName = promptPlayerName();
             
-            highScoreModel.addScore(playerName, score, difficulty, itemMode);
+            highScoreModel.addScore(playerName, score, difficultyStr, itemMode);
             scoreSaved = true;  // 저장 완료 플래그 설정
-            System.out.println("점수 저장 완료: " + playerName + " - " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficulty + ")");
+            System.out.println("점수 저장 완료: " + playerName + " - " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficultyStr + ")");
             
             // HighScore는 내부적으로만 업데이트 (UI는 제거됨)
         }
@@ -359,17 +312,10 @@ public class FrameBoard extends JFrame {
         // 게임 재시작 시 블록 생성 설정 리로드
         blocks.Block.reloadSettings();
         
-        // 기존 타이머를 완전히 정지하고 제거
-        if (gameTimer != null) {
-            gameTimer.stop();
-            gameTimer = null;  // 타이머 객체를 null로 설정
-        }
+        // GameController 재시작
+        gameController.stop();
+        gameController.reset();
         
-        // 보드/색상 초기화
-        gameModel.boardInit();
-        // 블록 상태 초기화 및 뷰 동기화
-        gameModel.resetBlocks();
-        gameBoard.setFallingBlock(gameModel.getCurrentBlock());
         // 오버레이/상태 초기화
         isGameOver = false;
         if (gameOverBoard != null) gameOverBoard.setVisible(false);
@@ -381,16 +327,11 @@ public class FrameBoard extends JFrame {
         gameBoard.setScore(0);  // 현재 점수 0으로 초기화
         gameBoard.setHighScore(highScoreModel.getHighScore(itemMode));  // 최고 점수 다시 설정
 
-        // 아이템 관련 상태 초기화
-        gameModel.itemGenerateCount = 0;
-        gameModel.lineClearCount = 0;
-
         // 일시정지 상태 해제
         isPaused = false;
 
-        // 새로운 타이머 생성 및 시작
-        gameTimer = new GameTimer(gameBoard, gameModel, this);
-        gameTimer.start();
+        // GameController 시작
+        gameController.start();
     }
 
 }
