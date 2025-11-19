@@ -11,7 +11,6 @@ import java.util.List;
 import javax.swing.JPanel;
 
 import blocks.Block;
-import game.GameModel;
 import game.core.GameState;
 
 /**
@@ -28,9 +27,7 @@ public class GameBoardPanel extends JPanel {
     private int strokeWidth = 3;
     
     // 렌더링할 데이터
-    private GameModel gameModel;
     private GameState currentState;
-    private Block fallingBlock;
     
     public GameBoardPanel() {
         setOpaque(false); // 투명 배경
@@ -51,26 +48,10 @@ public class GameBoardPanel extends JPanel {
     }
     
     /**
-     * GameModel 설정 (기존 방식 호환)
-     */
-    public void setGameModel(GameModel model) {
-        this.gameModel = model;
-        repaint();
-    }
-    
-    /**
      * GameState 기반 렌더링 (새로운 방식)
      */
     public void render(GameState state) {
         this.currentState = state;
-        repaint();
-    }
-    
-    /**
-     * 현재 떨어지는 블록 설정
-     */
-    public void setFallingBlock(Block block) {
-        this.fallingBlock = block;
         repaint();
     }
     
@@ -79,11 +60,9 @@ public class GameBoardPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
         
-        // GameState 우선 사용, 없으면 GameModel 사용
+        // GameState 기반 렌더링
         if (currentState != null) {
             paintFromState(g2d);
-        } else if (gameModel != null) {
-            paintFromModel(g2d);
         }
     }
     
@@ -108,41 +87,6 @@ public class GameBoardPanel extends JPanel {
         
         // 애니메이션 효과
         drawAnimations(g2d, currentState);
-        
-        // 격자 및 테두리
-        drawGrid(g2d);
-        drawBorder(g2d);
-    }
-    
-    /**
-     * GameModel 기반 렌더링 (기존 방식 호환)
-     */
-    private void paintFromModel(Graphics2D g2d) {
-        int[][] board = gameModel.getBoard();
-        
-        // 배경 그리기
-        drawBackground(g2d);
-        
-        // 쌓인 블록 그리기
-        for (int row = 2; row < ROWS + 2; row++) {
-            for (int col = 1; col < COLS + 1; col++) {
-                if (board[row][col] > 0 && board[row][col] < 10) {
-                    Color blockColor = getBlockColor(board[row][col]);
-                    g2d.setColor(blockColor);
-                    g2d.fillRect(
-                        (col - 1) * cellSize,
-                        (row - 2) * cellSize,
-                        cellSize,
-                        cellSize
-                    );
-                }
-            }
-        }
-        
-        // 현재 떨어지는 블록
-        if (fallingBlock != null) {
-            drawBlock(g2d, fallingBlock);
-        }
         
         // 격자 및 테두리
         drawGrid(g2d);
