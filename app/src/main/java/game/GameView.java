@@ -158,11 +158,13 @@ public class GameView extends JPanel {
     // ==================== 기존 호환성 메서드들 ====================
     
     /**
-     * GameModel 설정
+     * GameModel 설정 (deprecated - GameState 사용 권장)
      */
+    @Deprecated
     public void setGameModel(GameModel model) {
         this.gameModel = model;
-        gameBoardPanel.setGameModel(model);
+        // GameBoardPanel은 더 이상 GameModel을 직접 받지 않음
+        // GameState를 통해 렌더링하도록 변경됨
     }
     
     /**
@@ -176,10 +178,13 @@ public class GameView extends JPanel {
     }
     
     /**
-     * 현재 떨어지는 블록 설정
+     * 현재 떨어지는 블록 설정 (deprecated - render(GameState) 사용 권장)
+     * 하위 호환성을 위해 유지
      */
+    @Deprecated
     public void setFallingBlock(Block block) {
-        gameBoardPanel.setFallingBlock(block);
+        // 하위 호환성을 위해 빈 메서드로 유지
+        // 실제로는 render(GameState)를 통해 렌더링됨
     }
     
     /**
