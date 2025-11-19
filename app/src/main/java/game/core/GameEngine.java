@@ -207,13 +207,6 @@ public class GameEngine {
     }
     
     /**
-     * 레벨업 체크 및 계산
-     */
-    public int calculateLevel(int totalLinesCleared) {
-        return (totalLinesCleared / 10) + 1;
-    }
-    
-    /**
      * 아이템 블록 생성 조건 체크
      */
     public boolean shouldSpawnItemBlock(GameState state, int divisor) {
@@ -288,4 +281,92 @@ public class GameEngine {
         double difficultyMultiplier = getDifficultyMultiplier();
         return (int) Math.round(1 * speedMultiplier * difficultyMultiplier);
     }
+    
+    /**
+     * 라인 클리어 (애니메이션 없이 즉시 처리)
+     * 나중에 AnimationManager로 분리 예정
+     * 
+     * @return 클리어된 라인 수
+     */
+    public int performLineClear(int[][] board, int[][] colorBoard) {
+        int linesCleared = 0;
+        
+        for (int row = INNER_BOTTOM; row >= INNER_TOP; row--) {
+            boolean isFull = true;
+            for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
+                if (board[row][col] == 0) {
+                    isFull = false;
+                    break;
+                }
+            }
+            
+            if (isFull) {
+                // 라인 제거 및 위 라인들 아래로 이동
+                clearLine(board, colorBoard, row);
+                linesCleared++;
+                row++; // 같은 행 다시 체크 (위에서 내려온 라인)
+            }
+        }
+        
+        return linesCleared;
+    }
+    
+    /**
+     * 게임 오버 체크
+     */
+    public boolean checkGameOver(int[][] board) {
+        // 상단 2줄(row 2-3)의 중앙 부분(col 3-7)에 블록이 있으면 게임 오버
+        for (int row = INNER_TOP; row < INNER_TOP + 2; row++) {
+            for (int col = 3; col < 8; col++) {
+                if (board[row][col] != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 블록 고정 (블록을 보드에 배치)
+     * 
+     * @return 특수 블록 타입 (0: 일반, 2: AllClear, 3: BoxClear, 4: OneLineClear)
+     */
+    public int placeBlock(Block block, int[][] board, int[][] colorBoard) {
+        if (block == null) return 0;
+        
+        int[][] shape = block.getShape();
+        int x = block.getX();
+        int y = block.getY();
+        java.awt.Color color = block.getColor();
+        int rgb = (color != null ? color.getRGB() : new java.awt.Color(100, 100, 100).getRGB());
+        
+        int specialType = 0;  // 특수 블록 타입
+        
+        for (int row = 0; row < shape.length; row++) {
+            for (int col = 0; col < shape[row].length; col++) {
+                if (shape[row][col] != 0) {
+                    int br = y + row;
+                    int bc = x + col;
+                    board[br][bc] = shape[row][col];
+                    colorBoard[br][bc] = rgb;
+                    
+                    int value = shape[row][col];
+                    if (value == 2 || value == 3 || value == 4) {
+                        specialType = value;  // 특수 블록 감지
+                    }
+                }
+            }
+        }
+        
+        return specialType;
+    }
+    
+    /**
+     * 레벨 계산
+     */
+    public int calculateLevel(int totalLinesCleared) {
+        // 2줄마다 1레벨, 최대 10레벨
+        return Math.min((totalLinesCleared / 2) + 1, 10);
+    }
 }
+

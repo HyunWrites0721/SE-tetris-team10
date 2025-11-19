@@ -8,12 +8,15 @@ import org.junit.jupiter.api.Timeout;
 import javax.swing.SwingUtilities;
 import java.util.concurrent.TimeUnit;
 
+import game.core.GameController;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("FrameBoard 테스트")
 public class FrameBoardTest {
 
     private FrameBoard frameBoard;
+    private GameController gameController;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -21,6 +24,7 @@ public class FrameBoardTest {
         SwingUtilities.invokeAndWait(() -> {
             frameBoard = new FrameBoard(false); // Normal mode로 테스트
             frameBoard.setVisible(false); // 테스트 중에는 화면에 표시하지 않음
+            gameController = frameBoard.getGameController();
         });
         
         // UI 컴포넌트가 완전히 초기화될 때까지 잠시 대기
@@ -31,8 +35,8 @@ public class FrameBoardTest {
     void tearDown() throws Exception {
         if (frameBoard != null) {
             SwingUtilities.invokeAndWait(() -> {
-                if (frameBoard.getGameTimer() != null) {
-                    frameBoard.getGameTimer().stop();
+                if (gameController != null && gameController.isRunning()) {
+                    gameController.stop();
                 }
                 frameBoard.dispose();
             });
@@ -51,8 +55,7 @@ public class FrameBoardTest {
     @DisplayName("게임 컴포넌트 초기화 테스트")
     void testGameComponentsInitialization() {
         assertNotNull(frameBoard.getGameBoard(), "GameView가 초기화되어야 함");
-        assertNotNull(frameBoard.getGameModel(), "GameModel이 초기화되어야 함");
-        assertNotNull(frameBoard.getGameTimer(), "GameTimer가 초기화되어야 함");
+        assertNotNull(frameBoard.getGameController(), "GameController가 초기화되어야 함");
     }
 
     @Test
@@ -91,16 +94,24 @@ public class FrameBoardTest {
     @Timeout(value = 5, unit = TimeUnit.SECONDS)
     void testPauseToggle() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            // 게임 타이머 시작
-            frameBoard.getGameTimer().start();
-            
+            // 게임 시작
+            gameController.start();
+        });
+        
+        // 게임이 시작될 시간 대기
+        Thread.sleep(100);
+        
+        SwingUtilities.invokeAndWait(() -> {
             // 일시정지 활성화
             frameBoard.isPaused = true;
             frameBoard.paused();
         });
         
+        // 일시정지가 처리될 시간 대기
+        Thread.sleep(50);
+        
         assertTrue(frameBoard.isPaused, "일시정지 상태여야 함");
-        assertFalse(frameBoard.getGameTimer().timer.isRunning(), "타이머가 정지되어야 함");
+        assertFalse(gameController.isRunning(), "게임이 정지되어야 함");
         
         SwingUtilities.invokeAndWait(() -> {
             // 일시정지 해제
@@ -108,8 +119,11 @@ public class FrameBoardTest {
             frameBoard.paused();
         });
         
+        // 재개가 처리될 시간 대기
+        Thread.sleep(50);
+        
         assertFalse(frameBoard.isPaused, "일시정지가 해제되어야 함");
-        assertTrue(frameBoard.getGameTimer().timer.isRunning(), "타이머가 재시작되어야 함");
+        assertTrue(gameController.isRunning(), "게임이 재시작되어야 함");
     }
 
     @Test
@@ -123,7 +137,7 @@ public class FrameBoardTest {
         });
         
         assertTrue(frameBoard.isGameOver, "게임오버 상태여야 함");
-        assertFalse(frameBoard.getGameTimer().timer.isRunning(), "타이머가 정지되어야 함");
+        assertFalse(gameController.isRunning(), "게임이 정지되어야 함");
     }
 
     @Test
@@ -147,7 +161,7 @@ public class FrameBoardTest {
         assertDoesNotThrow(() -> {
             frameBoard.getGameBoard().setScore(0); // 점수 설정이 정상적으로 동작하는지 확인
         }, "점수 초기화가 예외 없이 실행되어야 함");
-        assertTrue(frameBoard.getGameTimer().timer.isRunning(), "새로운 타이머가 시작되어야 함");
+        assertTrue(gameController.isRunning(), "새로운 게임이 시작되어야 함");
     }
 
     @Test

@@ -7,7 +7,6 @@ import blocks.item.BoxClearBlock;
 import blocks.item.OneLineClearBlock;
 import blocks.item.ScoreDoubleBlock;
 import blocks.item.WeightBlock;
-import game.GameModel;
 import game.GameView;
 
 public abstract class Block implements java.io.Serializable {
@@ -15,7 +14,6 @@ public abstract class Block implements java.io.Serializable {
     protected int [][] shape;
     private int x, y;
     public transient GameView gameBoard;
-    public transient GameModel gameModel;
     private Color color;
     private Color[][] Colorset;
     private static settings.SettingModel settingModel;
@@ -377,12 +375,11 @@ public abstract class Block implements java.io.Serializable {
     public void setExactColor(Color c) { this.color = c; }
 
     /**
-     * After deserialization you should rebind UI/model references using this method.
-     * Example: Block b = (Block)in.readObject(); b.bind(gameView, gameModel);
+     * After deserialization you should rebind UI references using this method.
+     * Example: Block b = (Block)in.readObject(); b.bind(gameView);
      */
-    public void bind(GameView board, GameModel model) {
+    public void bind(GameView board) {
         this.gameBoard = board;
-        this.gameModel = model;
     }
 
 }

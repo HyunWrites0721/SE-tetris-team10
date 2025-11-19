@@ -8,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import game.core.GameController;
+
 public class GameBoardTest {
 
 	private FrameBoard frameBoard;
-	private GameTimer gameTimer;
+	private GameController gameController;
 
 	@BeforeEach
 	void setUp() throws Exception {
@@ -19,9 +21,9 @@ public class GameBoardTest {
 		SwingUtilities.invokeAndWait(() -> {
 			frameBoard = new FrameBoard(false); // Normal mode
 			frameBoard.setVisible(true); // UI 표시
-			gameTimer = frameBoard.getGameTimer();
-			// GameStart가 하던 역할: 프레임 보유 타이머 시작
-			gameTimer.start();
+			gameController = frameBoard.getGameController();
+			// GameController를 통해 게임 시작
+			gameController.start();
 		});
 	}
 
@@ -40,8 +42,8 @@ public class GameBoardTest {
 		try {
 			SwingUtilities.invokeAndWait(() -> {
 				assertNotNull(frameBoard, "FrameBoard가 생성되어야 함");
-				assertNotNull(gameTimer, "FrameBoard가 GameTimer를 보유해야 함");
-				assertTrue(gameTimer.timer.isRunning(), "테스트 시작 시 타이머가 시작되어야 함");
+				assertNotNull(gameController, "FrameBoard가 GameController를 보유해야 함");
+				assertTrue(gameController.isRunning(), "테스트 시작 시 게임이 실행중이어야 함");
 			});
 		} catch (InterruptedException | java.lang.reflect.InvocationTargetException e) {
 			// If invokeAndWait fails, fail the test with the exception

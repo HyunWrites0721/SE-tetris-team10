@@ -2,6 +2,7 @@ package game;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import game.core.GameController;
 import settings.SettingModel;
 
 
@@ -9,15 +10,13 @@ public class GameKeyListener extends KeyAdapter  {
 
     private final FrameBoard frameBoard;
     private final GameView gameBoard;
-    private final GameModel blockText;
-    private final GameTimer gameTimer;
+    private final GameController gameController;
     private String controlType;
 
-    public GameKeyListener(FrameBoard frameBoard, GameView gameBoard, GameModel gameModel, GameTimer gameTimer) {
+    public GameKeyListener(FrameBoard frameBoard, GameView gameBoard, GameController gameController) {
         this.frameBoard = frameBoard;
         this.gameBoard = gameBoard;
-        this.blockText = gameModel;
-        this.gameTimer = gameTimer;
+        this.gameController = gameController;
         loadControlType();
     }
     
@@ -98,58 +97,48 @@ public class GameKeyListener extends KeyAdapter  {
             // 회전 (Arrow: UP, WASD: W)
             case KeyEvent.VK_UP:
             case KeyEvent.VK_W:
-                if (isValidKey(e.getKeyCode(), "ROTATE") && blockText != null) {
-                    blockText.Rotate90();
+                if (isValidKey(e.getKeyCode(), "ROTATE") && gameController != null) {
+                    gameController.rotate();
                     // 회전한 블록을 즉시 View에 반영
-                    gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    blockText.syncToState(); // GameState 동기화 및 렌더링
+                    gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;
                 
             case KeyEvent.VK_SPACE:
-                if (!frameBoard.isPaused && blockText != null) {
-                    int dropDistance = blockText.HardDrop();
-                    int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 속도 레벨 배율 (1~7배, 레벨 0~6)
-                    int lineClearScore = blockText.getLastLineClearScore();  // 마지막 라인 클리어 점수 가져오기
-                    // 하드드롭 점수에만 배율 적용, 라인클리어 점수는 이미 계산되어 더해진 상태
-                    frameBoard.increaseScore(dropDistance * 2 * speedMultiplier + lineClearScore);
-                    gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    blockText.syncToState(); // GameState 동기화 및 렌더링
+                if (!frameBoard.isPaused && gameController != null) {
+                    int dropDistance = gameController.hardDrop();
+                    // TODO: 속도 레벨 및 라인 클리어 점수는 GameController에서 처리
+                    // 현재는 임시로 dropDistance만 사용
+                    frameBoard.increaseScore(dropDistance * 2);
+                    gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;
             
             // 왼쪽 이동 (Arrow: LEFT, WASD: A)
             case KeyEvent.VK_LEFT:
             case KeyEvent.VK_A:
-                if (isValidKey(e.getKeyCode(), "LEFT") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
-                    blockText.getCurrentBlock().moveLeft(blockText.getBoard());
-                    gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    blockText.syncToState(); // GameState 동기화 및 렌더링
+                if (isValidKey(e.getKeyCode(), "LEFT") && !frameBoard.isPaused && gameController != null) {
+                    gameController.moveLeft();
+                    gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;
 
             // 오른쪽 이동 (Arrow: RIGHT, WASD: D)
             case KeyEvent.VK_RIGHT:
             case KeyEvent.VK_D:
-                if (isValidKey(e.getKeyCode(), "RIGHT") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
-                    blockText.getCurrentBlock().moveRight(blockText.getBoard());
-                    gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                    blockText.syncToState(); // GameState 동기화 및 렌더링
+                if (isValidKey(e.getKeyCode(), "RIGHT") && !frameBoard.isPaused && gameController != null) {
+                    gameController.moveRight();
+                    gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;
 
             // 아래로 이동 (Arrow: DOWN, WASD: S)
             case KeyEvent.VK_DOWN:
             case KeyEvent.VK_S:
-                if (isValidKey(e.getKeyCode(), "DOWN") && !frameBoard.isPaused && blockText != null && blockText.getCurrentBlock() != null) {
-                    if (blockText.getCurrentBlock().isMoveDown(blockText.getBoard())) {
-                        // 성공적으로 아래로 이동했을 때 점수 증가 (속도 배율만 적용)
-                        int speedMultiplier = blockText.getCurrentSpeedLevel() + 1; // 1~7배
-                        int softDropScore = 1 * speedMultiplier;
-                        frameBoard.increaseScore(softDropScore);
-                        gameBoard.setFallingBlock(blockText.getCurrentBlock());
-                        blockText.syncToState(); // GameState 동기화 및 렌더링
-                    }
+                if (isValidKey(e.getKeyCode(), "DOWN") && !frameBoard.isPaused && gameController != null) {
+                    gameController.moveDown();
+                    // TODO: 소프트 드롭 점수는 GameController에서 처리
+                    gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;
                 

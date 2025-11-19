@@ -33,7 +33,6 @@ public class GameView extends JPanel {
     private ScorePanel scorePanel;
     private HighScorePanel highScorePanel;
     
-    private GameModel gameModel;
     private FrameBoard frameBoard;
     
     // 생성자
@@ -156,16 +155,6 @@ public class GameView extends JPanel {
     }
     
     // ==================== 기존 호환성 메서드들 ====================
-    
-    /**
-     * GameModel 설정 (deprecated - GameState 사용 권장)
-     */
-    @Deprecated
-    public void setGameModel(GameModel model) {
-        this.gameModel = model;
-        // GameBoardPanel은 더 이상 GameModel을 직접 받지 않음
-        // GameState를 통해 렌더링하도록 변경됨
-    }
     
     /**
      * GameState 기반 렌더링 (새로운 방식)

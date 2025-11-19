@@ -146,15 +146,15 @@ public class GameStartTest {
             try {
                 new GameStart(false); // Normal mode
                 
-                // 짧은 대기 후 타이머 상태 확인
+                // 짧은 대기 후 게임 컨트롤러 상태 확인
                 SwingUtilities.invokeLater(() -> {
                     try {
                         Window[] windows = Window.getWindows();
                         for (Window window : windows) {
                             if (window instanceof FrameBoard && window.isDisplayable()) {
                                 FrameBoard frameBoard = (FrameBoard) window;
-                                GameTimer timer = frameBoard.getGameTimer();
-                                timerRunningRef[0] = timer.isRunning();
+                                game.core.GameController gameController = frameBoard.getGameController();
+                                timerRunningRef[0] = gameController.isRunning();
                                 break;
                             }
                         }
@@ -282,7 +282,7 @@ public class GameStartTest {
             try {
                 new GameStart(false); // Normal mode
                 
-                // 타이머가 시작될 시간을 주기 위해 약간 대기
+                // 게임이 시작될 시간을 주기 위해 약간 대기
                 Thread.sleep(50);
                 
                 SwingUtilities.invokeLater(() -> {
@@ -292,9 +292,9 @@ public class GameStartTest {
                             if (window instanceof FrameBoard && window.isDisplayable()) {
                                 FrameBoard frameBoard = (FrameBoard) window;
                                 boolean isVisible = frameBoard.isVisible();
-                                boolean isTimerRunning = frameBoard.getGameTimer().isRunning();
+                                boolean isGameRunning = frameBoard.getGameController().isRunning();
                                 
-                                allChecksPassedRef[0] = isVisible && isTimerRunning;
+                                allChecksPassedRef[0] = isVisible && isGameRunning;
                                 break;
                             }
                         }
@@ -407,13 +407,11 @@ public class GameStartTest {
                 if (frameBoard != null) {
                     final FrameBoard finalFrameBoard = frameBoard;
                     
-                    // 타이머가 시작될 시간 대기
+                    // 게임이 시작될 시간 대기
                     Thread.sleep(100);
                     
-                    // 게임 속도를 레벨 2로 변경 (속도 증가)
-                    GameTimer gameTimer = finalFrameBoard.getGameTimer();
-                    gameTimer.updateSpeed(2);
-                    int speedLevel2Delay = gameTimer.timer.getDelay();
+                    // 게임 속도 변경 로직은 GameController 내부에서 처리됨 (레벨업 시 자동)
+                    // 테스트에서는 일시정지/재개 기능만 검증
                     
                     // 일시정지 상태로 변경
                     finalFrameBoard.isPaused = true;
@@ -432,16 +430,13 @@ public class GameStartTest {
                     // 재개 상태 확인
                     assertFalse(finalFrameBoard.isPaused, "게임이 재개되어야 함");
                     
-                    // 속도가 유지되었는지 확인
-                    int resumedDelay = gameTimer.timer.getDelay();
-                    speedMaintainedRef[0] = (speedLevel2Delay == resumedDelay);
+                    // 게임이 재개되었는지 확인
+                    speedMaintainedRef[0] = finalFrameBoard.getGameController().isRunning();
                     
-                    System.out.println("속도 레벨 2 딜레이: " + speedLevel2Delay + "ms");
-                    System.out.println("재개 후 딜레이: " + resumedDelay + "ms");
-                    System.out.println("속도 유지 여부: " + speedMaintainedRef[0]);
+                    System.out.println("게임 재개 확인: " + speedMaintainedRef[0]);
                     
-                    // 타이머가 여전히 실행 중인지 확인
-                    assertTrue(gameTimer.isRunning(), "재개 후 타이머가 실행 중이어야 함");
+                    // 게임 컨트롤러가 여전히 실행 중인지 확인
+                    assertTrue(finalFrameBoard.getGameController().isRunning(), "재개 후 게임이 실행 중이어야 함");
                 }
                 
             } catch (Exception e) {

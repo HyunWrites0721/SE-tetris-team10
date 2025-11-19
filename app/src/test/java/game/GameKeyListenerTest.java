@@ -10,6 +10,8 @@ import javax.swing.JPanel;
 import java.awt.event.KeyEvent;
 import java.awt.Component;
 
+import game.core.GameController;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("GameKeyListener 테스트")
@@ -18,8 +20,7 @@ public class GameKeyListenerTest {
     private GameKeyListener gameKeyListener;
     private FrameBoard frameBoard;
     private GameView gameBoard;
-    private GameModel gameModel;
-    private GameTimer gameTimer;
+    private GameController gameController;
     private Component testComponent;
 
     @BeforeEach
@@ -29,11 +30,10 @@ public class GameKeyListenerTest {
             frameBoard = new FrameBoard(false); // Normal mode
             frameBoard.setVisible(false); // 테스트 중에는 화면에 표시하지 않음
             gameBoard = frameBoard.getGameBoard();
-            gameModel = frameBoard.getGameModel();
-            gameTimer = frameBoard.getGameTimer();
+            gameController = frameBoard.getGameController();
             
             // GameKeyListener 생성
-            gameKeyListener = new GameKeyListener(frameBoard, gameBoard, gameModel, gameTimer);
+            gameKeyListener = new GameKeyListener(frameBoard, gameBoard, gameController);
             
             // 테스트용 컴포넌트 (KeyEvent 생성용)
             testComponent = new JPanel();
@@ -47,8 +47,8 @@ public class GameKeyListenerTest {
     void tearDown() throws Exception {
         if (frameBoard != null) {
             SwingUtilities.invokeAndWait(() -> {
-                if (frameBoard.getGameTimer() != null) {
-                    frameBoard.getGameTimer().stop();
+                if (gameController != null) {
+                    gameController.stop();
                 }
                 frameBoard.dispose();
             });
