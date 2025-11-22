@@ -30,14 +30,13 @@ public class ConnectionManager {
      */
     public void startServer(int port) throws ConnectionException {
         try {
-            this.role = NetworkRole.SERVER;  // 서버 역할 할당
-            this.localPort = port;    
-            
             // 서버 소켓 생성
             serverSocket = new ServerSocket(port);    // 서버소켓 12345번
             serverSocket.setSoTimeout(NetworkConfig.CONNECTION_TIMEOUT);    // 10초 타임아웃 설정
             
-            // 로컬 IP 주소 가져오기
+            // 서버 역할과 정보 즉시 설정 (accept 전에!)
+            this.role = NetworkRole.SERVER;  // 서버 역할 할당
+            this.localPort = port;    
             this.localAddress = getLocalIPAddress();
             
             state = ConnectionState.CONNECTING;
