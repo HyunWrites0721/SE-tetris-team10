@@ -8,7 +8,7 @@ public class NetworkConfig {
     public static final int DEFAULT_PORT = 12345;
     
     // 타임아웃 설정
-    public static final int CONNECTION_TIMEOUT = 10000;  // 10초 (연결 대기 시간)
+    public static final int CONNECTION_TIMEOUT = 60000;  // 60초 (연결 대기 시간)
     public static final int READ_TIMEOUT = 5000;         // 5초 (데이터 읽기 타임 아웃)
     public static final int HEARTBEAT_INTERVAL = 1000;   // 1초 (연결 확인 주기)
     public static final int HEARTBEAT_TIMEOUT = 5000;    // 5초 (무응답 시 끊김 판정)

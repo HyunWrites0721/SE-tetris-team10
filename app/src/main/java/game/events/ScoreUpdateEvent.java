@@ -13,6 +13,11 @@ public class ScoreUpdateEvent extends GameEvent {
         this.newScore = newScore;
     }
     
+    // 기본 생성자 (역직렬화용)
+    public ScoreUpdateEvent() {
+        super("SCORE_UPDATE");
+    }
+    
     public int getNewScore() {
         return newScore;
     }

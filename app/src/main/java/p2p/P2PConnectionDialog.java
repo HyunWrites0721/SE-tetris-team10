@@ -145,20 +145,16 @@ public class P2PConnectionDialog extends JDialog {
             statusCheckTimer.stop();
         }
         
-        // TODO: Phase 2에서 구현 - P2P 대전 게임 시작
-        JOptionPane.showMessageDialog(
-            this,
-            "P2P 대전 게임은 Phase 2에서 구현됩니다.",
-            "알림",
-            JOptionPane.INFORMATION_MESSAGE
-        );
-        
-        // 임시로 메인 메뉴로 복귀
+        // P2P 대전 게임 시작
         dispose();
         if (getOwner() != null) {
             getOwner().dispose();
         }
-        new StartFrame();
+        
+        // P2PVersusFrameBoard 생성 (NORMAL 모드, 난이도 0)
+        SwingUtilities.invokeLater(() -> {
+            new P2PVersusFrameBoard(networkManager, versus.VersusMode.NORMAL, 0);
+        });
     }
     
     /**

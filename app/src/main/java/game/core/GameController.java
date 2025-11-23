@@ -9,6 +9,8 @@ import game.events.TickEvent;
 import game.events.GameOverEvent;
 import game.events.LineClearedEvent;
 import game.events.ScoreUpdateEvent;
+import game.events.BlockMovedEvent;
+import game.events.BlockRotatedEvent;
 import game.events.EventListener;
 import game.loop.GameLoop;
 import game.loop.LocalGameLoop;
@@ -460,8 +462,15 @@ public class GameController {
     public void moveLeft() {
         if (isPaused || !isRunning) return;
         
+        GameState prevState = currentState;
         currentState = engine.moveLeft(currentState);
         view.render(currentState);
+        
+        // 실제로 이동했으면 이벤트 발행
+        if (prevState != currentState && currentState.getCurrentBlock() != null) {
+            Block block = currentState.getCurrentBlock();
+            eventBus.publish(new BlockMovedEvent(block.getX(), block.getY(), 0, 0));
+        }
     }
     
     /**
@@ -470,18 +479,32 @@ public class GameController {
     public void moveRight() {
         if (isPaused || !isRunning) return;
         
+        GameState prevState = currentState;
         currentState = engine.moveRight(currentState);
         view.render(currentState);
+        
+        // 실제로 이동했으면 이벤트 발행
+        if (prevState != currentState && currentState.getCurrentBlock() != null) {
+            Block block = currentState.getCurrentBlock();
+            eventBus.publish(new BlockMovedEvent(block.getX(), block.getY(), 0, 0));
+        }
     }
     
     /**
-     * 블록을 아래로 이동
+     * 블록을 아래로 이동 (소프트 드롭)
      */
     public void moveDown() {
         if (isPaused || !isRunning) return;
         
+        GameState prevState = currentState;
         currentState = engine.moveDown(currentState);
         view.render(currentState);
+        
+        // 실제로 이동했으면 이벤트 발행
+        if (prevState != currentState && currentState.getCurrentBlock() != null) {
+            Block block = currentState.getCurrentBlock();
+            eventBus.publish(new BlockMovedEvent(block.getX(), block.getY(), 0, 0));
+        }
     }
     
     /**
@@ -490,8 +513,15 @@ public class GameController {
     public void rotate() {
         if (isPaused || !isRunning) return;
         
+        GameState prevState = currentState;
         currentState = engine.rotate(currentState);
         view.render(currentState);
+        
+        // 실제로 회전했으면 이벤트 발행
+        if (prevState != currentState && currentState.getCurrentBlock() != null) {
+            Block block = currentState.getCurrentBlock();
+            eventBus.publish(new BlockRotatedEvent(block.getX(), block.getY(), 0, 0));
+        }
     }
     
     /**
