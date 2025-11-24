@@ -150,10 +150,10 @@ public class P2PConnectionDialog extends JDialog {
         if (getOwner() != null) {
             getOwner().dispose();
         }
-        
-        // P2PVersusFrameBoard 생성 (NORMAL 모드, 난이도 0)
+
+        // 연결 후 대기실로 이동 (핸드셰이크 수행)
         SwingUtilities.invokeLater(() -> {
-            new P2PVersusFrameBoard(networkManager, versus.VersusMode.NORMAL, 0);
+            new P2PWaitingRoom(networkManager, isServer);
         });
     }
     

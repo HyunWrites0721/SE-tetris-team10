@@ -24,6 +24,25 @@ public class P2PKeyListener extends KeyAdapter {
     
     @Override
     public void keyPressed(KeyEvent e) {
+        // Debug: log raw key presses to help trace whether input reaches listener
+        try {
+            System.out.println("[DEBUG] Key pressed: code=" + e.getKeyCode() + ", char=" + e.getKeyChar());
+            // Also print controller / eventBus identity to verify instances
+            try {
+                Object eb = null;
+                try {
+                    eb = myController.getEventBus();
+                } catch (Throwable __) {
+                    // ignore if getter not available or throws
+                }
+                System.out.println("[DEBUG P2PKeyListener] controllerId=" + System.identityHashCode(myController)
+                    + ", controllerEventBusId=" + (eb != null ? System.identityHashCode(eb) : "null"));
+            } catch (Throwable __) {
+                // ignore
+            }
+        } catch (Throwable t) {
+            // ignore
+        }
         // 일시정지 상태면 ESC/P만 처리
         if (myController.isPaused()) {
             if (e.getKeyCode() == KeyEvent.VK_ESCAPE || e.getKeyCode() == KeyEvent.VK_P) {

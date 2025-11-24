@@ -56,6 +56,9 @@ public class ItemBlockHandler {
             case 4:  // OneLineClear
                 handleOneLineClear(state, onComplete);
                 break;
+            case 5:  // WeightBlock
+                handleWeightBlock(state, onComplete);
+                break;
             default:
                 // 일반 블록: 즉시 콜백
                 if (onComplete != null) {

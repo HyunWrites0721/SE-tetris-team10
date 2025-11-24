@@ -69,6 +69,12 @@ public class EventBus {
         
         List<ListenerWrapper<?>> eventListeners = listeners.get(event.getClass());
         if (eventListeners == null || eventListeners.isEmpty()) return;
+
+        try {
+            System.out.println("[DEBUG EventBus] publish: " + event.getClass().getSimpleName() + ", listeners=" + eventListeners.size() + ", isAsync=" + isAsync);
+        } catch (Throwable t) {
+            // ignore logging failure
+        }
         
         if (isAsync) {
             asyncExecutor.submit(() -> notifyListeners(event, eventListeners));

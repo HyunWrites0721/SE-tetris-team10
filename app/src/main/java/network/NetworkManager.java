@@ -2,6 +2,10 @@ package network;
 
 import network.messages.NetworkMessage;
 import network.messages.MessageType;
+import network.messages.GameControlMessage;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 네트워크 총괄 관리자
@@ -15,6 +19,8 @@ public class NetworkManager {
     
     private NetworkRole role;
     private ConnectionState state;
+    // GameControlMessage 리스너 목록
+    private final List<GameControlListener> gameControlListeners = new ArrayList<>();
     
     public NetworkManager() {
         this.connectionManager = new ConnectionManager();
@@ -174,6 +180,19 @@ public class NetworkManager {
             // Heartbeat 메시지 처리
             if (message.getType() == MessageType.HEARTBEAT) {
                 connectionMonitor.onHeartbeatReceived();
+                return;
+            }
+
+            // 게임 제어 메시지 처리 (MODE_SELECT, READY, START_GAME 등)
+            if (message.getType() == MessageType.GAME_CONTROL) {
+                try {
+                    GameControlMessage ctrl = (GameControlMessage) message;
+                    notifyGameControlListeners(ctrl);
+                } catch (Exception e) {
+                    System.err.println("GameControlMessage 처리 실패: " + e.getMessage());
+                }
+
+                return;
             }
         }
         
@@ -183,5 +202,48 @@ public class NetworkManager {
             state = ConnectionState.DISCONNECTED;
             disconnect();
         }
+    }
+
+    /**
+     * GameControlMessage 리스너 등록
+     */
+    public void addGameControlListener(GameControlListener listener) {
+        synchronized (gameControlListeners) {
+            gameControlListeners.add(listener);
+        }
+    }
+
+    /**
+     * GameControlMessage 리스너 제거
+     */
+    public void removeGameControlListener(GameControlListener listener) {
+        synchronized (gameControlListeners) {
+            gameControlListeners.remove(listener);
+        }
+    }
+
+    /**
+     * 등록된 리스너들에게 GameControlMessage 전달
+     */
+    private void notifyGameControlListeners(GameControlMessage msg) {
+        List<GameControlListener> copy;
+        synchronized (gameControlListeners) {
+            copy = new ArrayList<>(gameControlListeners);
+        }
+
+        for (GameControlListener l : copy) {
+            try {
+                l.onControlMessage(msg);
+            } catch (Exception e) {
+                System.err.println("GameControlListener 처리 중 오류: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * GameControlMessage 수신 리스너 인터페이스
+     */
+    public interface GameControlListener {
+        void onControlMessage(GameControlMessage message);
     }
 }

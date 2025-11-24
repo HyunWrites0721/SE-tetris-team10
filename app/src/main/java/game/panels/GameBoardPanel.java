@@ -69,11 +69,25 @@ public class GameBoardPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-        
-        // GameState 기반 렌더링
+        // 우선: GameState가 있을 경우 기존 루틴 사용
         if (currentState != null) {
             paintFromState(g2d);
+            return;
         }
+
+        // currentState가 없더라도 원격 블록(remoteBlock)이 있으면 표시해야 함
+        drawBackground(g2d);
+        if (remoteBlock != null) {
+            try {
+                drawBlock(g2d, remoteBlock);
+            } catch (Exception e) {
+                System.err.println("GameBoardPanel.drawBlock 예외: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        // 격자와 테두리는 항상 그림
+        drawGrid(g2d);
+        drawBorder(g2d);
     }
     
     /**
@@ -163,6 +177,24 @@ public class GameBoardPanel extends JPanel {
      */
     private void drawBlock(Graphics2D g2d, Block block) {
         int[][] shape = block.getShape();
+        // Defensive: some remote/reflection-created blocks may not have shape initialized.
+        // Try to initialize if possible, otherwise skip drawing to avoid NPEs.
+        if (shape == null) {
+            try {
+                block.setShape();
+                shape = block.getShape();
+                if (shape != null) {
+                    System.out.println("[GameBoardPanel] block.setShape() 성공: " + block.getClass().getSimpleName());
+                }
+            } catch (Throwable t) {
+                System.err.println("[GameBoardPanel] block.setShape() 실패: " + t.getMessage());
+            }
+        }
+        if (shape == null) {
+            // Nothing to draw for this block
+            System.err.println("[GameBoardPanel] drawBlock 건너뜀: shape가 null (" + block.getClass().getName() + ")");
+            return;
+        }
         Color color = block.getColor();
         // For WeightBlock, ensure the cells it passes are visually cleared
         // in real time by drawing background rectangles over the underlying

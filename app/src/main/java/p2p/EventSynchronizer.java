@@ -8,6 +8,8 @@ import network.messages.NetworkMessage;
 import network.messages.MessageType;
 
 import java.util.Set;
+import network.messages.AttackMessage;
+import game.events.AttackEvent;
 
 /**
  * P2P 네트워크 대전에서 로컬/원격 게임 이벤트를 동기화하는 클래스
@@ -29,6 +31,7 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
         "BLOCK_ROTATED",    // 블록 회전 (실시간)
         "BLOCK_PLACED",     // 블록 고정
         "LINE_CLEARED",     // 줄 삭제
+            "ATTACK_APPLIED",
         "SCORE_UPDATE",     // 점수 업데이트 (실시간)
         "GAME_OVER",        // 게임 오버
         "LEVEL_UP",         // 레벨 업
@@ -57,7 +60,14 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
         // 내 게임의 모든 이벤트 구독
         subscribeToLocalEvents();
         
-        System.out.println("EventSynchronizer 생성: PlayerId=" + myPlayerId);
+        // Debug: 어떤 EventBus 인스턴스에 구독했는지 출력
+        try {
+            System.out.println("EventSynchronizer 생성: PlayerId=" + myPlayerId
+                + ", localEventBusId=" + System.identityHashCode(this.localEventBus)
+                + ", remoteEventBusId=" + System.identityHashCode(this.remoteEventBus));
+        } catch (Throwable __) {
+            System.out.println("EventSynchronizer 생성: PlayerId=" + myPlayerId);
+        }
     }
     
     /**
@@ -105,6 +115,28 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
             System.err.println("❌ [SEND] 전송 중 오류: " + e.getMessage());
             e.printStackTrace();
         }
+
+        // 추가: LineClearedEvent인 경우 공격 계산 후 AttackMessage로 전송
+        try {
+            if (event instanceof LineClearedEvent) {
+                LineClearedEvent le = (LineClearedEvent) event;
+                int lines = le.getClearedLines().length;
+                int attackLines = 0;
+                if (lines >= 2) attackLines = lines; // 간단 규칙: 2줄 이상이면 같은 수만큼 공격
+                if (attackLines > 0) {
+                    // include last block pattern & x so opponent can create hole(s)
+                    int[][] pattern = le.getLastBlockPattern();
+                    int blockX = le.getLastBlockX();
+                    AttackMessage am = new AttackMessage(attackLines, myPlayerId, pattern, blockX);
+                    boolean asent = sender.sendMessage(am);
+                    if (asent) System.out.println("📤 [SEND] AttackMessage attackLines=" + attackLines + " (Player " + myPlayerId + ") pattern=" + (pattern!=null?(pattern.length+"x"+(pattern.length>0?pattern[0].length:0)):"<none>"));
+                    else System.err.println("❌ [SEND] AttackMessage 전송 실패");
+                }
+            }
+        } catch (Throwable __) {
+            // don't let attack message failure affect main flow
+            System.err.println("[EventSynchronizer] AttackMessage 전송 중 예외: " + __.getMessage());
+        }
     }
     
     /**
@@ -115,37 +147,55 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
     @Override
     public void onMessageReceived(NetworkMessage message) {
         System.out.println("📨 [EventSynchronizer] 메시지 수신: type=" + message.getType());
-        
-        if (message.getType() != MessageType.GAME_EVENT) {
-            System.out.println("   ⏭️  게임 이벤트 아님, 건너뜀");
-            return;  // 게임 이벤트만 처리
-        }
-        
-        try {
-            GameEventMessage eventMsg = (GameEventMessage) message;
-            GameEvent event = eventMsg.toGameEvent();
-            
-            if (event != null) {
-                System.out.println("📥 [NETWORK] 이벤트 수신: " + event.getEventType() + 
-                                 " (Player " + eventMsg.getPlayerId() + ")");
-                
-                // 상대방 EventBus에 발행 (상대방 화면 업데이트)
-                System.out.println("   🔄 remoteEventBus.publish() 호출...");
-                remoteEventBus.publish(event);
-                
-                System.out.println("✅ [NETWORK] remoteEventBus에 발행 완료: " + event.getEventType());
-                
-                // 게임 오버 이벤트는 특별 처리
-                if (event instanceof GameOverEvent) {
-                    handleRemoteGameOver((GameOverEvent) event);
+        // 분기: GAME_EVENT / ATTACK 각각 처리
+        if (message.getType() == MessageType.GAME_EVENT) {
+            try {
+                GameEventMessage eventMsg = (GameEventMessage) message;
+                GameEvent event = eventMsg.toGameEvent();
+
+                if (event != null) {
+                    System.out.println("📥 [NETWORK] 이벤트 수신: " + event.getEventType() + 
+                                     " (Player " + eventMsg.getPlayerId() + ")");
+
+                    // 상대방 EventBus에 발행 (상대방 화면 업데이트)
+                    System.out.println("   🔄 remoteEventBus.publish() 호출...");
+                    remoteEventBus.publish(event);
+
+                    System.out.println("✅ [NETWORK] remoteEventBus에 발행 완료: " + event.getEventType());
+
+                    // 게임 오버 이벤트는 특별 처리
+                    if (event instanceof GameOverEvent) {
+                        handleRemoteGameOver((GameOverEvent) event);
+                    }
+                } else {
+                    System.err.println("❌ [NETWORK] 이벤트 역직렬화 실패!");
                 }
-            } else {
-                System.err.println("❌ [NETWORK] 이벤트 역직렬화 실패!");
+            } catch (Exception e) {
+                System.err.println("❌ [NETWORK] 이벤트 수신 중 오류: " + e.getMessage());
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            System.err.println("❌ [NETWORK] 이벤트 수신 중 오류: " + e.getMessage());
-            e.printStackTrace();
+            return;
         }
+
+        if (message.getType() == MessageType.ATTACK) {
+            try {
+                AttackMessage am = (AttackMessage) message;
+                System.out.println("📥 [NETWORK] AttackMessage 수신: lines=" + am.getAttackLines() + " from=" + am.getPlayerId()
+                    + " pattern=" + (am.getBlockPattern()!=null?(am.getBlockPattern().length+"x"+(am.getBlockPattern().length>0?am.getBlockPattern()[0].length:0)) : "<none>"));
+                // 원격 EventBus에 AttackEvent로 발행 (include pattern)
+                AttackEvent ae = new AttackEvent(am.getAttackLines(), am.getPlayerId(), am.getBlockPattern(), am.getBlockX());
+                System.out.println("   🔄 remoteEventBus.publish() 호출... (AttackEvent)");
+                remoteEventBus.publish(ae);
+                System.out.println("✅ [NETWORK] remoteEventBus에 AttackEvent 발행 완료");
+            } catch (Exception ex) {
+                System.err.println("❌ [NETWORK] AttackMessage 처리 실패: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+            return;
+        }
+
+        // 그 외 메시지 타입은 처리 대상 아님
+        System.out.println("   ⏭️  처리 대상이 아닌 메시지 타입: " + message.getType());
     }
     
     /**

@@ -72,6 +72,8 @@ public class GameEventMessage extends NetworkMessage {
                 return new BlockPlacedEvent();
             case "LINE_CLEARED":
                 return new LineClearedEvent();
+            case "ATTACK_APPLIED":
+                return new game.events.AttackAppliedEvent();
             case "SCORE_UPDATE":
                 return new ScoreUpdateEvent();
             case "GAME_OVER":

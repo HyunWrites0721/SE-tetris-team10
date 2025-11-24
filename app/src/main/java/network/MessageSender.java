@@ -32,7 +32,9 @@ public class MessageSender extends Thread {
         }
         
         try {
-            return messageQueue.offer(message);  // 큐가 가득 차면 false 반환
+            boolean offered = messageQueue.offer(message);  // 큐가 가득 차면 false 반환
+            System.out.println("[DEBUG MessageSender] offer result=" + offered + ", queueSize=" + messageQueue.size());
+            return offered;
         } catch (Exception e) {
             System.err.println("메시지 큐 추가 실패: " + e.getMessage());
             return false;
@@ -49,11 +51,11 @@ public class MessageSender extends Thread {
                 NetworkMessage message = messageQueue.take();
                 
                 // 메시지 전송
+                System.out.println("[DEBUG MessageSender] writeObject 시작: " + message);
                 out.writeObject(message);
                 out.flush();
                 out.reset();  // 객체 캐시 초기화 (메모리 누수 방지)
-                
-                System.out.println("메시지 전송: " + message);
+                System.out.println("[DEBUG MessageSender] writeObject 완료: " + message + ", queueSize(after take)=" + messageQueue.size());
                 
             } catch (InterruptedException e) {
                 // 스레드 중단 신호
