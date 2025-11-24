@@ -28,6 +28,7 @@ public class GameBoardPanel extends JPanel {
     
     // 렌더링할 데이터
     private GameState currentState;
+    private Block remoteBlock;  // P2P용: 원격 블록 직접 저장
     
     public GameBoardPanel() {
         setOpaque(false); // 투명 배경
@@ -52,6 +53,15 @@ public class GameBoardPanel extends JPanel {
      */
     public void render(GameState state) {
         this.currentState = state;
+        this.remoteBlock = null;  // GameState 사용 시 remoteBlock 초기화
+        repaint();
+    }
+    
+    /**
+     * P2P용: 원격 블록만 직접 설정
+     */
+    public void setRemoteBlock(Block block) {
+        this.remoteBlock = block;
         repaint();
     }
     
@@ -70,15 +80,17 @@ public class GameBoardPanel extends JPanel {
      * GameState 기반 렌더링
      */
     private void paintFromState(Graphics2D g2d) {
-        int[][] board = currentState.getBoardArray();
-        int[][] colorBoard = currentState.getColorBoard();
-        Block currentBlock = currentState.getCurrentBlock();
+        int[][] board = currentState != null ? currentState.getBoardArray() : null;
+        int[][] colorBoard = currentState != null ? currentState.getColorBoard() : null;
+        Block currentBlock = remoteBlock != null ? remoteBlock : (currentState != null ? currentState.getCurrentBlock() : null);
         
         // 배경 그리기
         drawBackground(g2d);
         
         // 쌓인 블록 그리기
-        stackBlockFromState(g2d, board, colorBoard);
+        if (board != null && colorBoard != null) {
+            stackBlockFromState(g2d, board, colorBoard);
+        }
         
         // 현재 떨어지는 블록 그리기
         if (currentBlock != null) {
@@ -86,7 +98,9 @@ public class GameBoardPanel extends JPanel {
         }
         
         // 애니메이션 효과
-        drawAnimations(g2d, currentState);
+        if (currentState != null) {
+            drawAnimations(g2d, currentState);
+        }
         
         // 격자 및 테두리
         drawGrid(g2d);

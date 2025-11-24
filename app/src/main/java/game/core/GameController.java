@@ -185,6 +185,14 @@ public class GameController {
             // 블록 이동
             currentBlock.moveDown(board);
             
+            // P2P 동기화: 자동 낙하도 BlockMovedEvent 발행
+            eventBus.publish(new BlockMovedEvent(
+                currentBlock.getX(),
+                currentBlock.getY(),
+                0,  // blockType (현재 사용 안 함)
+                0   // rotation (현재 사용 안 함)
+            ));
+            
             // 자동 낙하 점수 추가
             int autoDropScore = engine.calculateAutoDropScore(event.getSpeedLevel());
             addScore(autoDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
@@ -344,6 +352,19 @@ public class GameController {
         // 뷰 업데이트
         view.setFallingBlock(currentState.getCurrentBlock());
         view.render(currentState);
+        
+        // P2P 동기화: 블록 생성 이벤트 발행
+        Block newBlock = currentState.getCurrentBlock();
+        if (newBlock != null) {
+            System.out.println("[GameController] 📤 BlockSpawnedEvent 발행: " + newBlock.getClass().getSimpleName() + " at (" + newBlock.getX() + ", " + newBlock.getY() + ")");
+            eventBus.publish(new game.events.BlockSpawnedEvent(
+                newBlock.getClass().getName(),
+                newBlock.getX(),
+                newBlock.getY()
+            ));
+        } else {
+            System.err.println("[GameController] ⚠️ currentBlock is NULL, BlockSpawnedEvent NOT published");
+        }
     }
     
     /**
@@ -541,6 +562,14 @@ public class GameController {
         if (dropDistance > 0) {
             int hardDropScore = dropDistance * 2;  // 한 칸당 2점
             addScore(hardDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
+            
+            // P2P 동기화: 하드 드롭 후 최종 위치 전송
+            eventBus.publish(new BlockMovedEvent(
+                currentBlock.getX(),
+                currentBlock.getY(),
+                0,
+                0
+            ));
             
             // 블록 착지 처리 (이미 hardDrop으로 이동된 상태)
             handleBlockLanding();

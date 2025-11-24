@@ -21,9 +21,11 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
     private final int myPlayerId;              // 1 (서버) 또는 2 (클라이언트)
     
     // 네트워크로 전송할 이벤트 타입 (실시간 동기화)
-    // TICK만 제외 (각자 처리, 너무 빈번함)
+    // TICK 제외: 너무 빈번하여 네트워크 부하 발생
+    // 대신 BlockMoved 이벤트로 자동 낙하 위치도 전송됨
     private static final Set<String> SYNC_EVENTS = Set.of(
-        "BLOCK_MOVED",      // 블록 이동 (실시간)
+        "BLOCK_SPAWNED",    // 블록 생성 (중요!)
+        "BLOCK_MOVED",      // 블록 이동 (실시간) - TICK 낙하 포함
         "BLOCK_ROTATED",    // 블록 회전 (실시간)
         "BLOCK_PLACED",     // 블록 고정
         "LINE_CLEARED",     // 줄 삭제
@@ -64,6 +66,8 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
     private void subscribeToLocalEvents() {
         // 전송해야 할 각 이벤트 타입에 대해 리스너 등록
         // 우선순위 999: 다른 리스너보다 먼저 실행되어 네트워크로 즉시 전송
+        // TICK은 제외 - BlockMoved로 자동 낙하 위치 전송
+        localEventBus.subscribe(BlockSpawnedEvent.class, this::sendEvent, 999);    // 블록 생성
         localEventBus.subscribe(BlockMovedEvent.class, this::sendEvent, 999);      // 실시간 이동
         localEventBus.subscribe(BlockRotatedEvent.class, this::sendEvent, 999);    // 실시간 회전
         localEventBus.subscribe(BlockPlacedEvent.class, this::sendEvent, 999);     // 블록 고정
@@ -80,7 +84,11 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
      * @param event 전송할 게임 이벤트
      */
     private void sendEvent(GameEvent event) {
-        if (!SYNC_EVENTS.contains(event.getEventType())) {
+        String eventType = event.getEventType();
+        System.out.println("🔔 [EventSynchronizer] sendEvent() 호출됨: " + eventType);
+        
+        if (!SYNC_EVENTS.contains(eventType)) {
+            System.out.println("   ⏭️ SYNC_EVENTS에 없음, 전송 건너뜀");
             return;  // 전송 불필요한 이벤트
         }
         
@@ -89,12 +97,12 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
             boolean sent = sender.sendMessage(message);
             
             if (sent) {
-                System.out.println("이벤트 전송: " + event.getEventType() + " (Player " + myPlayerId + ")");
+                System.out.println("📤 [SEND] " + eventType + " (Player " + myPlayerId + ")");
             } else {
-                System.err.println("이벤트 전송 실패: " + event);
+                System.err.println("❌ [SEND] 전송 실패: " + eventType);
             }
         } catch (Exception e) {
-            System.err.println("이벤트 전송 중 오류: " + e.getMessage());
+            System.err.println("❌ [SEND] 전송 중 오류: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -106,7 +114,10 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
      */
     @Override
     public void onMessageReceived(NetworkMessage message) {
+        System.out.println("📨 [EventSynchronizer] 메시지 수신: type=" + message.getType());
+        
         if (message.getType() != MessageType.GAME_EVENT) {
+            System.out.println("   ⏭️  게임 이벤트 아님, 건너뜀");
             return;  // 게임 이벤트만 처리
         }
         
@@ -115,19 +126,24 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
             GameEvent event = eventMsg.toGameEvent();
             
             if (event != null) {
+                System.out.println("📥 [NETWORK] 이벤트 수신: " + event.getEventType() + 
+                                 " (Player " + eventMsg.getPlayerId() + ")");
+                
                 // 상대방 EventBus에 발행 (상대방 화면 업데이트)
+                System.out.println("   🔄 remoteEventBus.publish() 호출...");
                 remoteEventBus.publish(event);
                 
-                System.out.println("원격 이벤트 수신: " + event.getEventType() + 
-                                 " (Player " + eventMsg.getPlayerId() + ")");
+                System.out.println("✅ [NETWORK] remoteEventBus에 발행 완료: " + event.getEventType());
                 
                 // 게임 오버 이벤트는 특별 처리
                 if (event instanceof GameOverEvent) {
                     handleRemoteGameOver((GameOverEvent) event);
                 }
+            } else {
+                System.err.println("❌ [NETWORK] 이벤트 역직렬화 실패!");
             }
         } catch (Exception e) {
-            System.err.println("이벤트 수신 중 오류: " + e.getMessage());
+            System.err.println("❌ [NETWORK] 이벤트 수신 중 오류: " + e.getMessage());
             e.printStackTrace();
         }
     }

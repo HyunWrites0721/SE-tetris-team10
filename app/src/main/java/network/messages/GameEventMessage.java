@@ -60,6 +60,10 @@ public class GameEventMessage extends NetworkMessage {
      */
     private GameEvent createEventInstance(String type) {
         switch (type) {
+            case "TICK":
+                return new TickEvent();
+            case "BLOCK_SPAWNED":
+                return new BlockSpawnedEvent();
             case "BLOCK_MOVED":
                 return new BlockMovedEvent();
             case "BLOCK_ROTATED":
