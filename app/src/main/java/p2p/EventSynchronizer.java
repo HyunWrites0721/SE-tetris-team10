@@ -6,6 +6,7 @@ import network.MessageReceiver;
 import network.messages.GameEventMessage;
 import network.messages.NetworkMessage;
 import network.messages.MessageType;
+import network.EventFilter;
 
 import java.util.Set;
 import network.messages.AttackMessage;
@@ -14,6 +15,8 @@ import game.events.AttackEvent;
 /**
  * P2P 네트워크 대전에서 로컬/원격 게임 이벤트를 동기화하는 클래스
  * 로컬 이벤트를 네트워크로 전송하고, 수신한 이벤트를 원격 EventBus에 발행합니다.
+ * 
+ * Phase 6: EventFilter를 사용하여 불필요한 이벤트 전송을 차단하고 성능을 최적화합니다.
  */
 public class EventSynchronizer implements MessageReceiver.MessageListener {
     
@@ -21,6 +24,11 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
     private final EventBus remoteEventBus;     // 상대방 게임의 EventBus (화면만 표시)
     private final MessageSender sender;
     private final int myPlayerId;              // 1 (서버) 또는 2 (클라이언트)
+    
+    // 성능 통계
+    private long totalEventsSent = 0;          // 전송한 이벤트 수
+    private long totalEventsFiltered = 0;      // 필터링된 이벤트 수
+    private long lastStatsTime = System.currentTimeMillis();
     
     // 네트워크로 전송할 이벤트 타입 (실시간 동기화)
     // TICK 제외: 너무 빈번하여 네트워크 부하 발생
@@ -90,16 +98,24 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
     
     /**
      * 이벤트를 네트워크로 전송
+     * Phase 6: EventFilter를 사용하여 필터링 적용
      * 
      * @param event 전송할 게임 이벤트
      */
     private void sendEvent(GameEvent event) {
         String eventType = event.getEventType();
-        System.out.println("🔔 [EventSynchronizer] sendEvent() 호출됨: " + eventType);
         
+        // Phase 6: EventFilter로 1차 필터링
+        if (!EventFilter.shouldSync(event)) {
+            totalEventsFiltered++;
+            // 디버그 로그 (필터링된 이벤트는 조용히 차단)
+            return;
+        }
+        
+        // 2차 필터링: SYNC_EVENTS 체크 (기존 로직 유지)
         if (!SYNC_EVENTS.contains(eventType)) {
-            System.out.println("   ⏭️ SYNC_EVENTS에 없음, 전송 건너뜀");
-            return;  // 전송 불필요한 이벤트
+            totalEventsFiltered++;
+            return;
         }
         
         try {
@@ -107,7 +123,11 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
             boolean sent = sender.sendMessage(message);
             
             if (sent) {
+                totalEventsSent++;
                 System.out.println("📤 [SEND] " + eventType + " (Player " + myPlayerId + ")");
+                
+                // 10초마다 성능 통계 출력
+                printStatsIfNeeded();
             } else {
                 System.err.println("❌ [SEND] 전송 실패: " + eventType);
             }
@@ -129,13 +149,42 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
                     int blockX = le.getLastBlockX();
                     AttackMessage am = new AttackMessage(attackLines, myPlayerId, pattern, blockX);
                     boolean asent = sender.sendMessage(am);
-                    if (asent) System.out.println("📤 [SEND] AttackMessage attackLines=" + attackLines + " (Player " + myPlayerId + ") pattern=" + (pattern!=null?(pattern.length+"x"+(pattern.length>0?pattern[0].length:0)):"<none>"));
-                    else System.err.println("❌ [SEND] AttackMessage 전송 실패");
+                    if (asent) {
+                        totalEventsSent++;
+                        System.out.println("📤 [SEND] AttackMessage attackLines=" + attackLines + " (Player " + myPlayerId + ") pattern=" + (pattern!=null?(pattern.length+"x"+(pattern.length>0?pattern[0].length:0)):"<none>"));
+                    } else {
+                        System.err.println("❌ [SEND] AttackMessage 전송 실패");
+                    }
                 }
             }
         } catch (Throwable __) {
             // don't let attack message failure affect main flow
             System.err.println("[EventSynchronizer] AttackMessage 전송 중 예외: " + __.getMessage());
+        }
+    }
+    
+    /**
+     * 성능 통계 출력 (10초마다)
+     */
+    private void printStatsIfNeeded() {
+        long now = System.currentTimeMillis();
+        long elapsed = now - lastStatsTime;
+        
+        if (elapsed >= 10000) {  // 10초마다
+            long totalProcessed = totalEventsSent + totalEventsFiltered;
+            double filterRate = totalProcessed > 0 ? 
+                (totalEventsFiltered * 100.0 / totalProcessed) : 0;
+            
+            System.out.println("📊 [성능 통계] Player " + myPlayerId);
+            System.out.println("   전송: " + totalEventsSent + " 이벤트");
+            System.out.println("   필터링: " + totalEventsFiltered + " 이벤트");
+            System.out.println("   필터율: " + String.format("%.1f", filterRate) + "%");
+            System.out.println("   기간: " + (elapsed / 1000) + "초");
+            
+            // 통계 리셋
+            totalEventsSent = 0;
+            totalEventsFiltered = 0;
+            lastStatsTime = now;
         }
     }
     
