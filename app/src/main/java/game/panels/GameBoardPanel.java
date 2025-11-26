@@ -28,6 +28,7 @@ public class GameBoardPanel extends JPanel {
     
     // 렌더링할 데이터
     private GameState currentState;
+    private Block remoteBlock;  // P2P용: 원격 블록 직접 저장
     
     public GameBoardPanel() {
         setOpaque(false); // 투명 배경
@@ -52,6 +53,15 @@ public class GameBoardPanel extends JPanel {
      */
     public void render(GameState state) {
         this.currentState = state;
+        this.remoteBlock = null;  // GameState 사용 시 remoteBlock 초기화
+        repaint();
+    }
+    
+    /**
+     * P2P용: 원격 블록만 직접 설정
+     */
+    public void setRemoteBlock(Block block) {
+        this.remoteBlock = block;
         repaint();
     }
     
@@ -59,26 +69,42 @@ public class GameBoardPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
-        
-        // GameState 기반 렌더링
+        // 우선: GameState가 있을 경우 기존 루틴 사용
         if (currentState != null) {
             paintFromState(g2d);
+            return;
         }
+
+        // currentState가 없더라도 원격 블록(remoteBlock)이 있으면 표시해야 함
+        drawBackground(g2d);
+        if (remoteBlock != null) {
+            try {
+                drawBlock(g2d, remoteBlock);
+            } catch (Exception e) {
+                System.err.println("GameBoardPanel.drawBlock 예외: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        // 격자와 테두리는 항상 그림
+        drawGrid(g2d);
+        drawBorder(g2d);
     }
     
     /**
      * GameState 기반 렌더링
      */
     private void paintFromState(Graphics2D g2d) {
-        int[][] board = currentState.getBoardArray();
-        int[][] colorBoard = currentState.getColorBoard();
-        Block currentBlock = currentState.getCurrentBlock();
+        int[][] board = currentState != null ? currentState.getBoardArray() : null;
+        int[][] colorBoard = currentState != null ? currentState.getColorBoard() : null;
+        Block currentBlock = remoteBlock != null ? remoteBlock : (currentState != null ? currentState.getCurrentBlock() : null);
         
         // 배경 그리기
         drawBackground(g2d);
         
         // 쌓인 블록 그리기
-        stackBlockFromState(g2d, board, colorBoard);
+        if (board != null && colorBoard != null) {
+            stackBlockFromState(g2d, board, colorBoard);
+        }
         
         // 현재 떨어지는 블록 그리기
         if (currentBlock != null) {
@@ -86,7 +112,9 @@ public class GameBoardPanel extends JPanel {
         }
         
         // 애니메이션 효과
-        drawAnimations(g2d, currentState);
+        if (currentState != null) {
+            drawAnimations(g2d, currentState);
+        }
         
         // 격자 및 테두리
         drawGrid(g2d);
@@ -149,6 +177,24 @@ public class GameBoardPanel extends JPanel {
      */
     private void drawBlock(Graphics2D g2d, Block block) {
         int[][] shape = block.getShape();
+        // Defensive: some remote/reflection-created blocks may not have shape initialized.
+        // Try to initialize if possible, otherwise skip drawing to avoid NPEs.
+        if (shape == null) {
+            try {
+                block.setShape();
+                shape = block.getShape();
+                if (shape != null) {
+                    System.out.println("[GameBoardPanel] block.setShape() 성공: " + block.getClass().getSimpleName());
+                }
+            } catch (Throwable t) {
+                System.err.println("[GameBoardPanel] block.setShape() 실패: " + t.getMessage());
+            }
+        }
+        if (shape == null) {
+            // Nothing to draw for this block
+            System.err.println("[GameBoardPanel] drawBlock 건너뜀: shape가 null (" + block.getClass().getName() + ")");
+            return;
+        }
         Color color = block.getColor();
         // For WeightBlock, ensure the cells it passes are visually cleared
         // in real time by drawing background rectangles over the underlying

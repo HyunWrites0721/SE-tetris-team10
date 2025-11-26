@@ -9,6 +9,9 @@ import game.events.TickEvent;
 import game.events.GameOverEvent;
 import game.events.LineClearedEvent;
 import game.events.ScoreUpdateEvent;
+import game.events.BlockMovedEvent;
+import game.events.BlockRotatedEvent;
+import game.events.BlockPlacedEvent;
 import game.events.EventListener;
 import game.loop.GameLoop;
 import game.loop.LocalGameLoop;
@@ -95,6 +98,13 @@ public class GameController {
         
         // 이벤트 리스너 등록
         setupEventListeners();
+
+        // Debug: print identities to help verify instance wiring (key listener vs controller)
+        try {
+            System.out.println("[DEBUG GameController] instance=" + System.identityHashCode(this) + ", eventBus=" + System.identityHashCode(this.eventBus));
+        } catch (Throwable __) {
+            // ignore
+        }
         
         // 초기 렌더링
         view.render(currentState);
@@ -183,6 +193,14 @@ public class GameController {
             // 블록 이동
             currentBlock.moveDown(board);
             
+            // P2P 동기화: 자동 낙하도 BlockMovedEvent 발행
+            eventBus.publish(new BlockMovedEvent(
+                currentBlock.getX(),
+                currentBlock.getY(),
+                0,  // blockType (현재 사용 안 함)
+                0   // rotation (현재 사용 안 함)
+            ));
+            
             // 자동 낙하 점수 추가
             int autoDropScore = engine.calculateAutoDropScore(event.getSpeedLevel());
             addScore(autoDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
@@ -241,6 +259,17 @@ public class GameController {
         currentState = placedState;  // ✅ currentState 업데이트!
         view.render(placedState);
         System.out.println("Placed state rendered");
+
+        // P2P 동기화: 블록 고정 이벤트 발행 (EventSynchronizer가 이 이벤트를 잡아 네트워크로 전송)
+        try {
+            int placedY = currentBlock.getY();
+            int placedX = lastBlockX;
+            int blockType = specialType; // best-effort: specialType encodes some info, default 0
+            System.out.println("[DEBUG GameController] publish BlockPlacedEvent: (" + placedX + ", " + placedY + ") type=" + blockType);
+            eventBus.publish(new game.events.BlockPlacedEvent(placedX, placedY, blockType, 0));
+        } catch (Throwable t) {
+            System.err.println("[DEBUG GameController] BlockPlacedEvent publish 실패: " + t.getMessage());
+        }
         
         // 특수 블록 처리 (ItemBlockHandler에 위임)
         if (specialType != 0) {
@@ -249,13 +278,29 @@ public class GameController {
                 // 특수 블록 처리 완료 후
                 currentState = newState;
                 score = newState.getScore();
-                
+
+                // PUBLISH ItemActivatedEvent so EventSynchronizer can send it to peer
+                try {
+                    String itemType;
+                    switch (specialType) {
+                        case 2: itemType = "ALL_CLEAR"; break;
+                        case 3: itemType = "BOX_CLEAR"; break;
+                        case 4: itemType = "ONE_LINE_CLEAR"; break;
+                        case 5: itemType = "WEIGHT_BLOCK"; break;
+                        default: itemType = "UNKNOWN_ITEM"; break;
+                    }
+                    System.out.println("[DEBUG GameController] publish ItemActivatedEvent: " + itemType);
+                    eventBus.publish(new game.events.ItemActivatedEvent(itemType, 0));
+                } catch (Throwable t) {
+                    System.err.println("[DEBUG GameController] ItemActivatedEvent publish 실패: " + t.getMessage());
+                }
+
                 // 게임 오버 체크
                 if (engine.checkGameOver(newState.getBoardArray())) {
                     handleGameOver();
                     return;
                 }
-                
+
                 // 새 블록 생성
                 spawnNewBlock();
             });
@@ -304,7 +349,8 @@ public class GameController {
                 
                 // LineClearedEvent 발행
                 int[] rows = fullLines.stream().mapToInt(Integer::intValue).toArray();
-                eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore));
+                // Include last block pattern & X so opponent can reproduce hole shape
+                eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore, lastBlockPattern, lastBlockX));
                 
                 // 게임 오버 체크
                 if (engine.checkGameOver(clearedBoard)) {
@@ -342,6 +388,23 @@ public class GameController {
         // 뷰 업데이트
         view.setFallingBlock(currentState.getCurrentBlock());
         view.render(currentState);
+        
+        // P2P 동기화: 블록 생성 이벤트 발행 (현재 블록 + 다음 블록 클래스명 포함)
+        Block newBlock = currentState.getCurrentBlock();
+        if (newBlock != null) {
+            String nextClass = null;
+            Block nextBlock = currentState.getNextBlock();
+            if (nextBlock != null) nextClass = nextBlock.getClass().getName();
+            System.out.println("[GameController] 📤 BlockSpawnedEvent 발행: " + newBlock.getClass().getSimpleName() + " at (" + newBlock.getX() + ", " + newBlock.getY() + ") next=" + (nextClass != null ? nextClass : "<none>"));
+            eventBus.publish(new game.events.BlockSpawnedEvent(
+                newBlock.getClass().getName(),
+                newBlock.getX(),
+                newBlock.getY(),
+                nextClass
+            ));
+        } else {
+            System.err.println("[GameController] ⚠️ currentBlock is NULL, BlockSpawnedEvent NOT published");
+        }
     }
     
     /**
@@ -459,9 +522,26 @@ public class GameController {
      */
     public void moveLeft() {
         if (isPaused || !isRunning) return;
-        
+        GameState prevState = currentState;
+        Block prevBlock = prevState != null ? prevState.getCurrentBlock() : null;
+        int prevX = prevBlock != null ? prevBlock.getX() : Integer.MIN_VALUE;
+        int prevY = prevBlock != null ? prevBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveLeft start prev=(" + prevX + "," + prevY + ")");
+
         currentState = engine.moveLeft(currentState);
         view.render(currentState);
+
+        // 블록 좌표가 변경되었으면 이벤트 발행
+        Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
+        int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
+        int currY = currBlock != null ? currBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveLeft end curr=(" + currX + "," + currY + ")");
+        if (currBlock != null) {
+            if (currX != prevX || currY != prevY) {
+                System.out.println("[DEBUG GameController] publish BlockMovedEvent: (" + currX + ", " + currY + ")");
+                eventBus.publish(new BlockMovedEvent(currX, currY, 0, 0));
+            }
+        }
     }
     
     /**
@@ -469,19 +549,51 @@ public class GameController {
      */
     public void moveRight() {
         if (isPaused || !isRunning) return;
-        
+        GameState prevState = currentState;
+        Block prevBlock = prevState != null ? prevState.getCurrentBlock() : null;
+        int prevX = prevBlock != null ? prevBlock.getX() : Integer.MIN_VALUE;
+        int prevY = prevBlock != null ? prevBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveRight start prev=(" + prevX + "," + prevY + ")");
+
         currentState = engine.moveRight(currentState);
         view.render(currentState);
+
+        Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
+        int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
+        int currY = currBlock != null ? currBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveRight end curr=(" + currX + "," + currY + ")");
+        if (currBlock != null) {
+            if (currX != prevX || currY != prevY) {
+                System.out.println("[DEBUG GameController] publish BlockMovedEvent: (" + currX + ", " + currY + ")");
+                eventBus.publish(new BlockMovedEvent(currX, currY, 0, 0));
+            }
+        }
     }
     
     /**
-     * 블록을 아래로 이동
+     * 블록을 아래로 이동 (소프트 드롭)
      */
     public void moveDown() {
         if (isPaused || !isRunning) return;
-        
+        GameState prevState = currentState;
+        Block prevBlock = prevState != null ? prevState.getCurrentBlock() : null;
+        int prevX = prevBlock != null ? prevBlock.getX() : Integer.MIN_VALUE;
+        int prevY = prevBlock != null ? prevBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveDown start prev=(" + prevX + "," + prevY + ")");
+
         currentState = engine.moveDown(currentState);
         view.render(currentState);
+
+        Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
+        int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
+        int currY = currBlock != null ? currBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] moveDown end curr=(" + currX + "," + currY + ")");
+        if (currBlock != null) {
+            if (currX != prevX || currY != prevY) {
+                System.out.println("[DEBUG GameController] publish BlockMovedEvent: (" + currX + ", " + currY + ")");
+                eventBus.publish(new BlockMovedEvent(currX, currY, 0, 0));
+            }
+        }
     }
     
     /**
@@ -489,9 +601,25 @@ public class GameController {
      */
     public void rotate() {
         if (isPaused || !isRunning) return;
-        
+        GameState prevState = currentState;
+        Block prevBlock = prevState != null ? prevState.getCurrentBlock() : null;
+        int prevX = prevBlock != null ? prevBlock.getX() : Integer.MIN_VALUE;
+        int prevY = prevBlock != null ? prevBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] rotate start prev=(" + prevX + "," + prevY + ")");
+
         currentState = engine.rotate(currentState);
         view.render(currentState);
+
+        Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
+        int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
+        int currY = currBlock != null ? currBlock.getY() : Integer.MIN_VALUE;
+        System.out.println("[DEBUG GameController] rotate end curr=(" + currX + "," + currY + ")");
+        if (currBlock != null) {
+            // 회전은 위치가 같을 수 있으므로 회전 여부만으로 판단하기 어렵습니다.
+            // 안전하게 회전 이벤트는 항상 발행하여 원격이 회전 상태를 갱신하도록 합니다.
+            System.out.println("[DEBUG GameController] publish BlockRotatedEvent: (" + currX + ", " + currY + ")");
+            eventBus.publish(new BlockRotatedEvent(currX, currY, 0, 0));
+        }
     }
     
     /**
@@ -511,6 +639,14 @@ public class GameController {
         if (dropDistance > 0) {
             int hardDropScore = dropDistance * 2;  // 한 칸당 2점
             addScore(hardDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
+            
+            // P2P 동기화: 하드 드롭 후 최종 위치 전송
+            eventBus.publish(new BlockMovedEvent(
+                currentBlock.getX(),
+                currentBlock.getY(),
+                0,
+                0
+            ));
             
             // 블록 착지 처리 (이미 hardDrop으로 이동된 상태)
             handleBlockLanding();
@@ -613,6 +749,13 @@ public class GameController {
      */
     public void addAttackLines(int lines, int[][] blockPattern, int blockX) {
         if (lines <= 0) return;
+        try {
+            System.out.println("[DEBUG GameController] addAttackLines called: lines=" + lines
+                + ", controllerId=" + System.identityHashCode(this)
+                + ", thread=" + Thread.currentThread().getName());
+        } catch (Throwable __) {
+            // ignore
+        }
         
         int[][] board = currentState.getBoardArray();
         int[][] colorBoard = currentState.getColorBoard();
@@ -641,19 +784,21 @@ public class GameController {
         }
         
         // 블록 패턴이 있으면 그 모양대로 구멍 뚫기
+        // 패턴 높이보다 공격 줄이 많을 경우 패턴을 반복해서 적용하여
+        // 모든 공격 줄에 동일한 구멍 모양이 반영되도록 함
         if (blockPattern != null && blockPattern.length > 0) {
-            int patternHeight = Math.min(blockPattern.length, lines);
-            
-            for (int i = 0; i < patternHeight; i++) {
-                int boardRow = INNER_BOTTOM - i;  // 아래에서부터 채움
-                
-                for (int j = 0; j < blockPattern[i].length; j++) {
+            int patternH = blockPattern.length;
+            int patternW = blockPattern[0].length;
+
+            for (int rOff = 0; rOff < lines; rOff++) {
+                int boardRow = INNER_BOTTOM - rOff;  // 아래에서부터 채움
+                int patternRow = rOff % patternH;   // 반복 적용
+
+                for (int j = 0; j < patternW; j++) {
                     int boardCol = blockX + j;
-                    
                     // 보드 범위 체크
-                    if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT && 
-                        blockPattern[i][j] == 1) {
-                        // 블록이 있던 자리를 빈 칸으로
+                    if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT && patternRow >= 0
+                            && patternRow < blockPattern.length && blockPattern[patternRow][j] == 1) {
                         board[boardRow][boardCol] = 0;
                         colorBoard[boardRow][boardCol] = 0;
                     }
@@ -680,6 +825,33 @@ public class GameController {
         
         // 화면 업데이트
         view.render(currentState);
+        try {
+            System.out.println("[DEBUG GameController] addAttackLines completed: rendered with bottomRowsSample=" +
+                sampleBottomRows(currentState.getBoardArray(), 4));
+        } catch (Throwable __) {
+            // ignore
+        }
+        // Publish an AttackAppliedEvent so the remote peer's opponent view can be updated
+        try {
+            eventBus.publish(new game.events.AttackAppliedEvent(lines, blockPattern, blockX));
+        } catch (Throwable t) {
+            System.err.println("[DEBUG GameController] AttackAppliedEvent publish 실패: " + t.getMessage());
+        }
+    }
+
+    // Helper for logging: show a compact sample of bottom rows
+    private String sampleBottomRows(int[][] board, int rows) {
+        if (board == null) return "<null>";
+        StringBuilder sb = new StringBuilder();
+        int r = board.length - 1;
+        int start = Math.max(0, r - rows + 1);
+        for (int i = start; i <= r; i++) {
+            for (int j = 0; j < board[i].length; j++) {
+                sb.append(board[i][j] == 0 ? '.' : '#');
+            }
+            if (i < r) sb.append('|');
+        }
+        return sb.toString();
     }
     
     /**
