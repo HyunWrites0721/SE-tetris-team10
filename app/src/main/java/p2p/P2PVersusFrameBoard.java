@@ -47,6 +47,9 @@ public class P2PVersusFrameBoard extends JFrame {
     private JLabel remoteScoreLabel;
     private RemoteGamePanel remoteGamePanel;
     
+    // 네트워크 상태 표시
+    private JLabel networkStatusLabel;
+    
     private int myScore = 0;
     private int remoteScore = 0;
     // START_GAME 메시지 전송 플래그
@@ -138,6 +141,15 @@ public class P2PVersusFrameBoard extends JFrame {
         }
         
         add(mainPanel, BorderLayout.CENTER);
+        
+        // 하단에 네트워크 상태 표시
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        statusPanel.setBackground(Color.BLACK);
+        networkStatusLabel = new JLabel("⚫ 연결 확인 중...");
+        networkStatusLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(12 * safeScreenRatio())));
+        networkStatusLabel.setForeground(Color.GRAY);
+        statusPanel.add(networkStatusLabel);
+        add(statusPanel, BorderLayout.SOUTH);
         
         // 키 입력
         P2PKeyListener keyListener = new P2PKeyListener(myGameController);
@@ -274,6 +286,9 @@ public class P2PVersusFrameBoard extends JFrame {
         
         // 원격 이벤트 처리
         setupRemoteEventHandlers(remoteEventBus);
+        
+        // 네트워크 상태 모니터링
+        startNetworkStatusMonitoring();
         
         System.out.println("✅ P2P 네트워크 동기화 설정 완료");
     }
@@ -519,5 +534,62 @@ public class P2PVersusFrameBoard extends JFrame {
             dispose();
             new p2p.P2PMenuFrame();
         });
+    }
+    
+    /**
+     * 네트워크 상태 모니터링 시작
+     * 1초마다 ConnectionMonitor의 상태를 확인하여 UI 업데이트
+     */
+    private void startNetworkStatusMonitoring() {
+        Timer statusTimer = new Timer(1000, e -> {
+            if (networkManager == null || networkManager.getConnectionMonitor() == null) {
+                return;
+            }
+            
+            network.ConnectionMonitor monitor = networkManager.getConnectionMonitor();
+            network.LatencyMonitor latencyMonitor = monitor.getLatencyMonitor();
+            network.ConnectionState state = monitor.getCurrentState();
+            
+            long avgLatency = latencyMonitor.getAverageLatency();
+            String statusText;
+            Color statusColor;
+            
+            switch (state) {
+                case CONNECTED:
+                    if (avgLatency > 0) {
+                        statusText = "🟢 연결됨 (지연: " + avgLatency + "ms)";
+                        statusColor = new Color(0, 200, 0);
+                    } else {
+                        statusText = "🟢 연결됨";
+                        statusColor = new Color(0, 200, 0);
+                    }
+                    break;
+                    
+                case LAGGING:
+                    statusText = "🟡 랙 걸림 (지연: " + avgLatency + "ms)";
+                    statusColor = Color.ORANGE;
+                    break;
+                    
+                case TIMEOUT:
+                    statusText = "🔴 연결 끊김";
+                    statusColor = Color.RED;
+                    break;
+                    
+                default:
+                    statusText = "⚫ 연결 확인 중...";
+                    statusColor = Color.GRAY;
+                    break;
+            }
+            
+            SwingUtilities.invokeLater(() -> {
+                if (networkStatusLabel != null) {
+                    networkStatusLabel.setText(statusText);
+                    networkStatusLabel.setForeground(statusColor);
+                }
+            });
+        });
+        
+        statusTimer.start();
+        System.out.println("✅ 네트워크 상태 모니터링 시작");
     }
 }

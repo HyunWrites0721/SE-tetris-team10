@@ -9,14 +9,18 @@ import network.messages.MessageType;
  */
 public class ConnectionMonitor extends Thread {
     private final MessageSender sender;
+    private final LatencyMonitor latencyMonitor;
     private volatile boolean running = true;
     private volatile long lastHeartbeatReceived;
+    private volatile long lastHeartbeatSent;  // RTT 측정용
     private volatile ConnectionState currentState;
     private ConnectionStateListener stateListener;
     
     public ConnectionMonitor(MessageSender sender) {
         this.sender = sender;
+        this.latencyMonitor = new LatencyMonitor();
         this.lastHeartbeatReceived = System.currentTimeMillis();
+        this.lastHeartbeatSent = System.currentTimeMillis();
         this.currentState = ConnectionState.CONNECTED;
         setDaemon(true);
         setName("ConnectionMonitor-Thread");
@@ -33,8 +37,19 @@ public class ConnectionMonitor extends Thread {
      * Heartbeat 수신 시 호출
      */
     public void onHeartbeatReceived() {
-        lastHeartbeatReceived = System.currentTimeMillis();
-        updateState(ConnectionState.CONNECTED);
+        long receivedTime = System.currentTimeMillis();
+        lastHeartbeatReceived = receivedTime;
+        
+        // RTT(Round Trip Time) 계산
+        long rtt = receivedTime - lastHeartbeatSent;
+        latencyMonitor.recordLatency(rtt);
+        
+        // 랙 상태 확인
+        if (latencyMonitor.isLagging()) {
+            updateState(ConnectionState.LAGGING);
+        } else {
+            updateState(ConnectionState.CONNECTED);
+        }
     }
     
     @Override
@@ -67,6 +82,7 @@ public class ConnectionMonitor extends Thread {
      * Heartbeat 메시지 전송
      */
     private void sendHeartbeat() {
+        lastHeartbeatSent = System.currentTimeMillis();
         HeartbeatMessage heartbeat = new HeartbeatMessage();
         sender.sendMessage(heartbeat);
     }
@@ -119,6 +135,13 @@ public class ConnectionMonitor extends Thread {
      */
     public ConnectionState getCurrentState() {
         return currentState;
+    }
+    
+    /**
+     * LatencyMonitor 반환
+     */
+    public LatencyMonitor getLatencyMonitor() {
+        return latencyMonitor;
     }
     
     /**

@@ -16,6 +16,7 @@ public class NetworkManager {
     private MessageSender messageSender;
     private MessageReceiver messageReceiver;
     private ConnectionMonitor connectionMonitor;
+    private DisconnectionHandler disconnectionHandler;
     
     private NetworkRole role;
     private ConnectionState state;
@@ -25,6 +26,14 @@ public class NetworkManager {
     public NetworkManager() {
         this.connectionManager = new ConnectionManager();
         this.state = ConnectionState.DISCONNECTED;
+    }
+    
+    /**
+     * DisconnectionHandler 설정
+     * @param handler 연결 끊김 시 실행할 핸들러
+     */
+    public void setDisconnectionHandler(DisconnectionHandler handler) {
+        this.disconnectionHandler = handler;
     }
     
     /**
@@ -78,10 +87,15 @@ public class NetworkManager {
             state = newState;
             System.out.println("네트워크 상태: " + newState);
             
-            // 타임아웃 시 연결 종료
+            // 타임아웃 시 연결 종료 및 핸들러 호출
             if (newState == ConnectionState.TIMEOUT) {
                 System.err.println("연결 타임아웃! 연결을 종료합니다.");
                 disconnect();
+                
+                // DisconnectionHandler 호출 (설정된 경우)
+                if (disconnectionHandler != null && !disconnectionHandler.isHandled()) {
+                    disconnectionHandler.handleTimeout(null);
+                }
             }
         });
         connectionMonitor.start();
@@ -171,6 +185,10 @@ public class NetworkManager {
         return connectionManager.isConnected();
     }
     
+    public ConnectionMonitor getConnectionMonitor() {
+        return connectionMonitor;
+    }
+    
     /**
      * 내부 메시지 리스너 (Heartbeat 처리)
      */
@@ -201,6 +219,11 @@ public class NetworkManager {
             System.err.println("연결이 끊어졌습니다!");
             state = ConnectionState.DISCONNECTED;
             disconnect();
+            
+            // DisconnectionHandler 호출 (설정된 경우)
+            if (disconnectionHandler != null && !disconnectionHandler.isHandled()) {
+                disconnectionHandler.handleDisconnection("상대방과의 연결이 끊어졌습니다.", null);
+            }
         }
     }
 
