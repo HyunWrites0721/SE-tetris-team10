@@ -365,6 +365,22 @@ public class GameController {
         }
         
         // 라인 클리어가 없는 경우
+        // currentState의 점수를 최신 score 필드로 동기화 (하드 드롭 점수 반영)
+        currentState = new GameState.Builder(
+            currentState.getBoardArray(),
+            currentState.getColorBoard(),
+            null,  // 블록 고정 후이므로 null
+            currentState.getNextBlock(),
+            currentState.isItemMode()
+        )
+            .score(score)  // ✅ 최신 score로 업데이트
+            .totalLinesCleared(currentState.getTotalLinesCleared())
+            .currentLevel(currentState.getCurrentLevel())
+            .lineClearCount(currentState.getLineClearCount())
+            .itemGenerateCount(currentState.getItemGenerateCount())
+            .blocksSpawned(currentState.getBlocksSpawned())
+            .build();
+        
         // 게임 오버 체크
         if (engine.checkGameOver(board)) {
             handleGameOver();
@@ -435,8 +451,8 @@ public class GameController {
      */
     public void start() {
         if (isRunning || gameLoop.isRunning()) {
-            System.out.println("GameController already running - ignored start()");
-            return;
+            System.out.println("GameController already running - stopping first");
+            stop();
         }
         
         System.out.println("GameController started");
@@ -592,6 +608,9 @@ public class GameController {
             if (currX != prevX || currY != prevY) {
                 System.out.println("[DEBUG GameController] publish BlockMovedEvent: (" + currX + ", " + currY + ")");
                 eventBus.publish(new BlockMovedEvent(currX, currY, 0, 0));
+                
+                // 소프트 드롭 점수 추가: 한 칸 내려갈 때마다 1점
+                addScore(1);
             }
         }
     }
@@ -699,6 +718,8 @@ public class GameController {
     
     /**
      * 점수 추가 (HighScore도 함께 체크)
+     * 주의: 이 메서드는 score 필드만 업데이트하며, currentState는 업데이트하지 않습니다.
+     * spawnNewBlock() 호출 전에 currentState 동기화가 필요합니다.
      */
     public void addScore(int points) {
         score += points;

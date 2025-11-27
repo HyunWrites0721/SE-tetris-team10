@@ -219,7 +219,8 @@ public class GameEngine {
             default: baseScore = 100 * linesCleared; break;
         }
         
-        int levelMultiplier = currentLevel;
+        // 레벨이 0일 때도 점수가 부여되도록 수정 (레벨 0 → 곱하기 1, 레벨 1 → 곱하기 2)
+        int levelMultiplier = currentLevel + 1;
         double difficultyMultiplier = getDifficultyMultiplier();
         
         return (int) Math.round(baseScore * levelMultiplier * difficultyMultiplier);
