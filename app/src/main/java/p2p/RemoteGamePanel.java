@@ -13,6 +13,7 @@ public class RemoteGamePanel {
     
     private GameBoardPanel boardPanel;
     private Block currentBlock;
+    private GameView boundView;
     // Remote fixed board state (matches GameState board dimensions used in GameController)
     private int[][] remoteBoard;
     private int[][] remoteColorBoard;
@@ -81,6 +82,7 @@ public class RemoteGamePanel {
     public void setRemoteComponents(GameView view, GameController controller) {
         // GameView에서 GameBoardPanel 가져오기 (재귀 탐색)
         this.boardPanel = findGameBoardPanel(view);
+        this.boundView = view;
         // 만약 이미 currentBlock이 존재하면 boardPanel이 세팅된 후 적용
         if (this.boardPanel != null && this.currentBlock != null) {
             try {
@@ -159,9 +161,18 @@ public class RemoteGamePanel {
     
     public void moveBlock(int x, int y) {
         if (currentBlock == null) {
-            System.err.println("[REMOTE] ❌ moveBlock: currentBlock is NULL! - queuing event until spawn");
+            System.err.println("[REMOTE] ❌ moveBlock: currentBlock is NULL! - BLOCK_SPAWNED may have been lost, creating emergency block");
+            // BLOCK_SPAWNED was likely missed (timing issue). Create a fallback block immediately.
             synchronized (pendingEvents) {
                 pendingEvents.add(new PendingEvent(PendingEvent.Type.MOVE, x, y));
+                // Create emergency block on first MOVE if spawn was lost
+                if (pendingEvents.size() == 1) {
+                    System.out.println("[REMOTE] 🚨 First MOVE without spawn detected - creating emergency block");
+                    createEmergencyBlock(x, y);
+                } else if (pendingEvents.size() >= 8 && currentBlock == null) {
+                    System.out.println("[REMOTE] ⚠️ pending events >=8, creating placeholder block for visibility");
+                    createPlaceholderBlock(x, y);
+                }
             }
             return;
         }
@@ -182,6 +193,10 @@ public class RemoteGamePanel {
             System.err.println("[REMOTE] ❌ rotateBlock: currentBlock is NULL! - queuing event until spawn");
             synchronized (pendingEvents) {
                 pendingEvents.add(new PendingEvent(PendingEvent.Type.ROTATE));
+                if (pendingEvents.size() >= 8 && currentBlock == null) {
+                    System.out.println("[REMOTE] ⚠️ pending events >=8, creating placeholder block for visibility");
+                    createPlaceholderBlock(4, 2);
+                }
             }
             return;
         }
@@ -310,6 +325,59 @@ public class RemoteGamePanel {
                     t.printStackTrace();
                 }
             }
+        }
+    }
+
+    // Create an emergency block when BLOCK_SPAWNED was lost (spawn a real random block)
+    private void createEmergencyBlock(int x, int y) {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(() -> createEmergencyBlock(x, y));
+            return;
+        }
+        if (currentBlock != null) return;
+        try {
+            // Use Block.spawn() to create a random block like the real game
+            Block emergency = blocks.Block.spawn();
+            if (emergency.getShape() == null) {
+                emergency.setShape();
+            }
+            emergency.bind(boundView);
+            emergency.setPosition(x, y);
+            this.currentBlock = emergency;
+            if (boardPanel != null) boardPanel.setRemoteBlock(emergency);
+            System.out.println("[REMOTE] 🚨 Emergency block spawned: " + emergency.getClass().getSimpleName() + " at (" + x + "," + y + ")");
+            // Now drain queued events so the block moves to the correct position
+            drainPendingEvents();
+        } catch (Throwable t) {
+            System.err.println("[REMOTE] emergency block 생성 실패: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+
+    // Create a simple placeholder block (1x1) to allow moves/rotates to be visible
+    private void createPlaceholderBlock(int x, int y) {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(() -> createPlaceholderBlock(x, y));
+            return;
+        }
+        if (currentBlock != null) return;
+        try {
+            Block placeholder = new Block() {
+                private static final long serialVersionUID = 1L;
+                @Override
+                public void setShape() {
+                    this.shape = new int[][]{{1}};
+                }
+            };
+            placeholder.setShape();
+            placeholder.bind(boundView);
+            placeholder.setPosition(x, y);
+            this.currentBlock = placeholder;
+            if (boardPanel != null) boardPanel.setRemoteBlock(placeholder);
+            System.out.println("[REMOTE] ✅ placeholder block created at (" + x + "," + y + ")");
+        } catch (Throwable t) {
+            System.err.println("[REMOTE] placeholder 생성 실패: " + t.getMessage());
+            t.printStackTrace();
         }
     }
     
