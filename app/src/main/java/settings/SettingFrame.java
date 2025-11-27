@@ -32,26 +32,23 @@ public class SettingFrame extends JFrame {
         titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(36*screenRatio)));
         add(titleLabel, BorderLayout.NORTH);
 
-        // 우측 메뉴 패널 (GridBagLayout으로 중앙 정렬)
-        menuPanel = new JPanel(new GridBagLayout());
+        // 우측 메뉴 패널 (메인 화면과 동일하게 동적 높이로 맞춤)
+        menuPanel = new JPanel();
+        menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(10, 0, 10, 0); // 버튼 간 간격
-        gbc.anchor = GridBagConstraints.CENTER;
-
+        
         menuButtons = new JButton[menuNames.length];
-        JPanel buttonBox = new JPanel();
-        buttonBox.setLayout(new BoxLayout(buttonBox, BoxLayout.Y_AXIS));
-        buttonBox.setMaximumSize(new Dimension((int)(200*screenRatio), (int)((menuNames.length * 60)*screenRatio)));
-        Dimension btnSize = new Dimension((int)(200*screenRatio), (int)(50*screenRatio));
+        
+        // 동적으로 버튼 크기 계산 (메인 화면과 동일)
+        int totalHeight = (int)(600 * screenRatio);
+        int buttonHeight = (totalHeight - (int)(80*screenRatio)) / menuNames.length; // 상하 여백 80 빼기
+        buttonHeight = Math.max(buttonHeight, (int)(35*screenRatio)); // 최소 높이 설정
+        
         for (int i = 0; i < menuNames.length; i++) {
             JButton btn = new JButton(menuNames[i]);
-            btn.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(14*screenRatio)));
-            btn.setMinimumSize(btnSize);
-            btn.setPreferredSize(btnSize);
-            btn.setMaximumSize(btnSize);
+            btn.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(12*screenRatio)));
+            btn.setMaximumSize(new Dimension((int)(200*screenRatio), buttonHeight));
+            btn.setPreferredSize(new Dimension((int)(200*screenRatio), buttonHeight));
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
             btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
             
@@ -59,13 +56,22 @@ public class SettingFrame extends JFrame {
             final int index = i;
             btn.addActionListener(e -> handleMenuAction(index));
             
-            buttonBox.add(btn);
-            if (i < menuNames.length - 1)
-                buttonBox.add(Box.createVerticalStrut((int)(20*screenRatio)));
+            menuPanel.add(btn);
             menuButtons[i] = btn;
         }
-        menuPanel.add(buttonBox, gbc);
-        add(menuPanel, BorderLayout.EAST);
+        
+        // 상하 여백 추가 (메인 화면과 동일)
+        JPanel topPanel = new JPanel();
+        topPanel.setPreferredSize(new Dimension((int)(200*screenRatio), (int)(40*screenRatio)));
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setPreferredSize(new Dimension((int)(200*screenRatio), (int)(40*screenRatio)));
+        
+        JPanel eastPanel = new JPanel(new BorderLayout());
+        eastPanel.add(topPanel, BorderLayout.NORTH);
+        eastPanel.add(menuPanel, BorderLayout.CENTER);
+        eastPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        add(eastPanel, BorderLayout.EAST);
 
         // 초기 하이라이트
         StartFrame.updateMenuHighlight(menuButtons, selectedIndex);

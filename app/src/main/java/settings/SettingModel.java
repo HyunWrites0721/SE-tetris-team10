@@ -11,20 +11,9 @@ public class SettingModel {
     public SettingModel() {
         try {
             // ConfigManager를 사용하여 설정 파일 경로 가져오기
+            // 모든 읽기/쓰기를 ConfigManager 경로로 통일하여 일관성 유지
             String settingsPath = ConfigManager.getSettingsPath();
-            // 테스트/개발 환경에서 프로젝트 내의 설정 파일을 직접 수정하는 경우를 지원
-            java.nio.file.Path devPath = java.nio.file.Paths.get("app/src/main/java/settings/data", "SettingSave.json");
-            String json;
-            if (java.nio.file.Files.exists(devPath)) {
-                // 프로젝트 파일이 있으면 우선 읽되, 실패하면 config dir 파일을 시도
-                try {
-                    json = java.nio.file.Files.readString(devPath);
-                } catch (Exception ex) {
-                    json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
-                }
-            } else {
-                json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
-            }
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             
@@ -89,8 +78,11 @@ public class SettingModel {
             data.colorBlindMode = this.colorBlindMode;
             String newJson = gson.toJson(data);
             java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
+            System.out.println("✓ 색맹 모드 저장 완료: " + this.colorBlindMode);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
+            System.err.println("✗ 색맹 모드 저장 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -110,13 +102,17 @@ public class SettingModel {
             // screenSize가 유효한 값인지 확인 (equals 사용)
             if (!this.screenSize.equals("small") && !this.screenSize.equals("medium") && !this.screenSize.equals("large")) {
                 // 유효하지 않은 경우 아무것도 하지 않음
+                System.err.println("✗ 화면 크기 저장 실패: 유효하지 않은 값 - " + this.screenSize);
                 return;
             }
             data.screenSize = this.screenSize;
             String newJson = gson.toJson(data);
             java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
+            System.out.println("✓ 화면 크기 저장 완료: " + this.screenSize);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
+            System.err.println("✗ 화면 크기 저장 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -136,13 +132,17 @@ public class SettingModel {
             // controlType이 유효한 값인지 확인 (equals 사용)
             if (!this.controlType.equals("arrow") && !this.controlType.equals("wasd")) {
                 // 유효하지 않은 경우 아무것도 하지 않음
+                System.err.println("✗ 조작키 설정 저장 실패: 유효하지 않은 값 - " + this.controlType);
                 return;
             }
             data.controlType = this.controlType;
             String newJson = gson.toJson(data);
             java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
+            System.out.println("✓ 조작키 설정 저장 완료: " + this.controlType);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
+            System.err.println("✗ 조작키 설정 저장 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -162,13 +162,17 @@ public class SettingModel {
             // difficulty가 유효한 값이면 파일에 덮어씀
             if (!this.difficulty.equals("easy") && !this.difficulty.equals("normal") && !this.difficulty.equals("hard")) {
                 // 유효하지 않은 경우 아무것도 하지 않음
+                System.err.println("✗ 난이도 저장 실패: 유효하지 않은 값 - " + this.difficulty);
                 return;
             }
             data.difficulty = this.difficulty;
             String newJson = gson.toJson(data);
             java.nio.file.Files.writeString(java.nio.file.Paths.get(settingsPath), newJson);
+            System.out.println("✓ 난이도 저장 완료: " + this.difficulty);
         } catch (Exception e) {
             // 파일 접근/파싱 오류 시 무시
+            System.err.println("✗ 난이도 저장 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

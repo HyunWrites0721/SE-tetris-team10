@@ -68,14 +68,20 @@ public class StartFrame extends JFrame {
         // 2. 우측 메뉴 버튼들
         JPanel menuPanel = new JPanel(null);
         menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
-        menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));             //메뉴 위아래 여백
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));// 메뉴 패널 가로 사이즈 200으로 맞춤, 세로 자동
         String[] menuNames = {"일반 모드 시작", "아이템 모드 시작", "대전 모드", "P2P 대전", "설정", "스코어보드", "게임 종료"};
         menuButtons = new JButton[menuNames.length];
+        
+        // 동적으로 버튼 크기 계산 (화면 높이 / 메뉴 개수)
+        int totalHeight = (int)(600 * screenRatio);
+        int buttonHeight = (totalHeight - (int)(80*screenRatio)) / menuNames.length; // 상하 여백 80 빼기
+        buttonHeight = Math.max(buttonHeight, (int)(35*screenRatio)); // 최소 높이 설정
+        
         for (int i = 0; i < menuNames.length; i++) {
             JButton btn = new JButton(menuNames[i]);
-            btn.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(14*screenRatio)));
-            btn.setMaximumSize(new Dimension((int)(200*screenRatio), (int)(50*screenRatio)));
+            btn.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(12*screenRatio)));
+            btn.setMaximumSize(new Dimension((int)(200*screenRatio), buttonHeight));
+            btn.setPreferredSize(new Dimension((int)(200*screenRatio), buttonHeight));
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
             btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
             
@@ -84,11 +90,21 @@ public class StartFrame extends JFrame {
             btn.addActionListener(e -> handleMenuAction(index));
             
             menuPanel.add(btn);
-            menuPanel.add(Box.createRigidArea(new Dimension((int)(10*screenRatio), (int)(50*screenRatio))));
             menuButtons[i] = btn;
         }
-        menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));            //메뉴 위아래 여백
-        add(menuPanel, BorderLayout.EAST);      //오른쪽에 메뉴 패널 얹기
+        
+        // 상하 여백 추가
+        JPanel topPanel = new JPanel();
+        topPanel.setPreferredSize(new Dimension((int)(200*screenRatio), (int)(40*screenRatio)));
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setPreferredSize(new Dimension((int)(200*screenRatio), (int)(40*screenRatio)));
+        
+        JPanel eastPanel = new JPanel(new BorderLayout());
+        eastPanel.add(topPanel, BorderLayout.NORTH);
+        eastPanel.add(menuPanel, BorderLayout.CENTER);
+        eastPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        add(eastPanel, BorderLayout.EAST);      //오른쪽에 메뉴 패널 얹기
 
 
         //초기 버튼 하이라이트
