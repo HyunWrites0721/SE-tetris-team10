@@ -16,6 +16,17 @@ public class RemoteGamePanel {
     // Remote fixed board state (matches GameState board dimensions used in GameController)
     private int[][] remoteBoard;
     private int[][] remoteColorBoard;
+    // Queue for pending remote events that arrived before a spawn
+    private final java.util.Queue<PendingEvent> pendingEvents = new java.util.ArrayDeque<>();
+
+    private static class PendingEvent {
+        enum Type { MOVE, ROTATE, PLACE }
+        final Type type;
+        final int x;
+        final int y;
+        PendingEvent(Type type, int x, int y) { this.type = type; this.x = x; this.y = y; }
+        PendingEvent(Type type) { this(type, Integer.MIN_VALUE, Integer.MIN_VALUE); }
+    }
     
     public RemoteGamePanel() {
         // Initialize remote board with GameController's default dimensions (23 x 12)
@@ -80,6 +91,12 @@ public class RemoteGamePanel {
             }
         }
         System.out.println("[REMOTE] ✅ Components 설정 완료: boardPanel=" + (boardPanel != null));
+        // After components are set, there may be pending events to apply
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            drainPendingEvents();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(() -> drainPendingEvents());
+        }
         // If we already have some fixed blocks, render them
         if (boardPanel != null) {
             try {
@@ -131,15 +148,21 @@ public class RemoteGamePanel {
             // Ensure UI update happens on EDT
             if (javax.swing.SwingUtilities.isEventDispatchThread()) {
                 boardPanel.setRemoteBlock(block);
+                // Drain any events that were queued while waiting for the spawn
+                drainPendingEvents();
             } else {
                 javax.swing.SwingUtilities.invokeLater(() -> boardPanel.setRemoteBlock(block));
+                javax.swing.SwingUtilities.invokeLater(() -> drainPendingEvents());
             }
         }
     }
     
     public void moveBlock(int x, int y) {
         if (currentBlock == null) {
-            System.err.println("[REMOTE] ❌ moveBlock: currentBlock is NULL!");
+            System.err.println("[REMOTE] ❌ moveBlock: currentBlock is NULL! - queuing event until spawn");
+            synchronized (pendingEvents) {
+                pendingEvents.add(new PendingEvent(PendingEvent.Type.MOVE, x, y));
+            }
             return;
         }
         
@@ -156,7 +179,10 @@ public class RemoteGamePanel {
     
     public void rotateBlock() {
         if (currentBlock == null) {
-            System.err.println("[REMOTE] ❌ rotateBlock: currentBlock is NULL!");
+            System.err.println("[REMOTE] ❌ rotateBlock: currentBlock is NULL! - queuing event until spawn");
+            synchronized (pendingEvents) {
+                pendingEvents.add(new PendingEvent(PendingEvent.Type.ROTATE));
+            }
             return;
         }
         
@@ -173,7 +199,10 @@ public class RemoteGamePanel {
     
     public void placeBlock() {
         if (currentBlock == null) {
-            System.err.println("[REMOTE] ❌ placeBlock: currentBlock is NULL!");
+            System.err.println("[REMOTE] ❌ placeBlock: currentBlock is NULL! - queuing PLACE until spawn");
+            synchronized (pendingEvents) {
+                pendingEvents.add(new PendingEvent(PendingEvent.Type.PLACE));
+            }
             return;
         }
         
@@ -242,6 +271,45 @@ public class RemoteGamePanel {
         } catch (Throwable t) {
             System.err.println("[REMOTE] placeBlock 처리 중 예외: " + t.getMessage());
             t.printStackTrace();
+        }
+    }
+
+    // Apply any pending events that arrived before a spawn. Must be called on EDT.
+    private void drainPendingEvents() {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(() -> drainPendingEvents());
+            return;
+        }
+        synchronized (pendingEvents) {
+            while (!pendingEvents.isEmpty()) {
+                PendingEvent ev = pendingEvents.poll();
+                try {
+                    switch (ev.type) {
+                        case MOVE:
+                            if (currentBlock != null) {
+                                currentBlock.setPosition(ev.x, ev.y);
+                                if (boardPanel != null) boardPanel.setRemoteBlock(currentBlock);
+                                System.out.println("[REMOTE] ▶ applied queued MOVE to (" + ev.x + "," + ev.y + ")");
+                            }
+                            break;
+                        case ROTATE:
+                            if (currentBlock != null) {
+                                currentBlock.getRotatedShape();
+                                if (boardPanel != null) boardPanel.setRemoteBlock(currentBlock);
+                                System.out.println("[REMOTE] ▶ applied queued ROTATE");
+                            }
+                            break;
+                        case PLACE:
+                            // Call placeBlock() to apply and render
+                            placeBlock();
+                            System.out.println("[REMOTE] ▶ applied queued PLACE");
+                            break;
+                    }
+                } catch (Throwable t) {
+                    System.err.println("[REMOTE] pending event 처리 중 예외: " + t.getMessage());
+                    t.printStackTrace();
+                }
+            }
         }
     }
     
