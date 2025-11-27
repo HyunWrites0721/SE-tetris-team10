@@ -164,6 +164,8 @@ public class ConnectionManager {
         try {
             // 네트워크 인터페이스 순회
             var interfaces = NetworkInterface.getNetworkInterfaces();
+            String fallbackIP = null;
+            
             while (interfaces.hasMoreElements()) {
                 NetworkInterface iface = interfaces.nextElement();
                 
@@ -179,12 +181,25 @@ public class ConnectionManager {
                     
                     // IPv4만 사용
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return addr.getHostAddress();
+                        String ip = addr.getHostAddress();
+                        
+                        // 사설 네트워크 대역이면 바로 반환
+                        if (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172.")) {
+                            return ip;
+                        }
+                        
+                        // 공인 IP는 fallback으로 저장
+                        if (fallbackIP == null) {
+                            fallbackIP = ip;
+                        }
                     }
                 }
             }
             
-            // 못 찾으면 localhost
+            // 사설 IP 못 찾으면 fallback 또는 localhost
+            if (fallbackIP != null) {
+                return fallbackIP;
+            }
             return InetAddress.getLocalHost().getHostAddress();
             
         } catch (Exception e) {

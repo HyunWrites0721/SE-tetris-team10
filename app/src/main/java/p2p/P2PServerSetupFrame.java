@@ -121,8 +121,33 @@ public class P2PServerSetupFrame extends JFrame {
      */
     private String getLocalIP() {
         try {
-            InetAddress localhost = InetAddress.getLocalHost();
-            return localhost.getHostAddress();
+            // 네트워크 인터페이스에서 실제 IP 찾기
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                
+                // 루프백이나 비활성 인터페이스 건너뛰기
+                if (iface.isLoopback() || !iface.isUp()) {
+                    continue;
+                }
+                
+                java.util.Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    
+                    // IPv4 주소만 선택
+                    if (addr instanceof java.net.Inet4Address && !addr.isLoopbackAddress()) {
+                        String ip = addr.getHostAddress();
+                        // 일반적인 사설 네트워크 대역 우선
+                        if (ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172.")) {
+                            return ip;
+                        }
+                    }
+                }
+            }
+            
+            // 못 찾으면 기본값
+            return InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
             return "127.0.0.1";
         }
