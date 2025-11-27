@@ -113,12 +113,46 @@ public class GameEngine {
      */
     public GameState rotate(GameState state) {
         Block currentBlock = state.getCurrentBlock();
-        
         if (currentBlock != null) {
-            currentBlock.getRotatedShape();
+            int[][] board = state.getBoardArray();
+            int origX = currentBlock.getX();
+            int origY = currentBlock.getY();
+
+            // compute rotated shape without applying it
+            int[][] rotated = currentBlock.Rotateshape();
+
+            // try no-kick first, then small horizontal kicks (simple wall-kick)
+            int[] kicks = new int[] {0, -1, 1, -2, 2};
+            for (int kick : kicks) {
+                int tryX = origX + kick;
+                if (!collides(rotated, board, tryX, origY)) {
+                    // apply rotation and adjust position if kicked
+                    currentBlock.setPosition(tryX, origY);
+                    currentBlock.getRotatedShape();
+                    break;
+                }
+            }
         }
         
         return state;
+    }
+
+    // Check if the given shape placed at (x,y) would collide with board or walls
+    private boolean collides(int[][] shape, int[][] board, int x, int y) {
+        if (shape == null) return true;
+        for (int row = 0; row < shape.length; row++) {
+            for (int col = 0; col < shape[row].length; col++) {
+                if (shape[row][col] != 0) {
+                    int br = y + row;
+                    int bc = x + col;
+                    // out of bounds
+                    if (br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return true;
+                    // collision with existing cell (walls represented by non-zero in board)
+                    if (board[br][bc] != 0) return true;
+                }
+            }
+        }
+        return false;
     }
     
     /**
