@@ -81,6 +81,9 @@ public class P2PVersusFrameBoard extends JFrame {
         setResizable(false);
         setLayout(new BorderLayout());
         
+        // Register game control listener FIRST to catch early START_GAME messages
+        registerGameControlListener();
+        
         setupUI();
         setupNetworkSync();
 
@@ -217,6 +220,22 @@ public class P2PVersusFrameBoard extends JFrame {
         return panel;
     }
     
+    /**
+     * Register the game control listener to handle START_GAME messages.
+     * This must be called EARLY before UI setup to catch messages that arrive quickly.
+     */
+    private void registerGameControlListener() {
+        // 게임 제어 메시지(START_GAME) 수신 처리: START_GAME을 받으면 게임 시작
+        gameControlListener = message -> {
+            if (message.getControlType() == network.messages.GameControlMessage.ControlType.START_GAME) {
+                System.out.println("[P2PVersusFrameBoard] START_GAME 수신, 게임 시작 요청");
+                requestStart();
+            }
+        };
+        networkManager.addGameControlListener(gameControlListener);
+        System.out.println("[P2PVersusFrameBoard] Game control listener registered");
+    }
+    
     private void setupNetworkSync() {
         // EventBus 생성 (원격용)
         EventBus remoteEventBus = new EventBus();
@@ -274,15 +293,6 @@ public class P2PVersusFrameBoard extends JFrame {
         
         // 네트워크 메시지 수신
         networkManager.addMessageListener(eventSynchronizer);
-
-        // 게임 제어 메시지(START_GAME) 수신 처리: START_GAME을 받으면 게임 시작
-        gameControlListener = message -> {
-            if (message.getControlType() == network.messages.GameControlMessage.ControlType.START_GAME) {
-                System.out.println("[P2PVersusFrameBoard] START_GAME 수신, 게임 시작 요청");
-                requestStart();
-            }
-        };
-        networkManager.addGameControlListener(gameControlListener);
         
         // 원격 이벤트 처리
         setupRemoteEventHandlers(remoteEventBus);
