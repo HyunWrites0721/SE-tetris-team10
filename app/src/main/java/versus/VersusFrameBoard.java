@@ -212,22 +212,22 @@ public class VersusFrameBoard extends JFrame {
             if (player == 1) {
                 int received = attackManager2.receiveAttack(attackLines);
                 System.out.println("Player 1 attacks Player 2 with " + received + " lines");
-                // 즉시 상대방 보드에 공격 줄 추가 (Player 1의 블록 패턴 사용)
+                // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
                     Object[] blockInfo = gameController1.getLastBlockInfo();
                     int[][] pattern = (int[][]) blockInfo[0];
                     int blockX = (int) blockInfo[1];
-                    gameController2.addAttackLines(received, pattern, blockX);
+                    gameController2.queueAttackLines(received, pattern, blockX);
                 }
             } else {
                 int received = attackManager1.receiveAttack(attackLines);
                 System.out.println("Player 2 attacks Player 1 with " + received + " lines");
-                // 즉시 상대방 보드에 공격 줄 추가 (Player 2의 블록 패턴 사용)
+                // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
                     Object[] blockInfo = gameController2.getLastBlockInfo();
                     int[][] pattern = (int[][]) blockInfo[0];
                     int blockX = (int) blockInfo[1];
-                    gameController1.addAttackLines(received, pattern, blockX);
+                    gameController1.queueAttackLines(received, pattern, blockX);
                 }
             }
         }

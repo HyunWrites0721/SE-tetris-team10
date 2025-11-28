@@ -47,6 +47,7 @@ public class GameController {
     private boolean isGameOver = false;
     private int[][] lastBlockPattern = null;  // 마지막 블록의 패턴 (대전 모드 공격용)
     private int lastBlockX = -1;  // 마지막 블록의 X 위치 (대전 모드 공격용)
+    private final java.util.Deque<AttackItem> pendingAttacks = new java.util.ArrayDeque<>();  // 대기 중인 공격줄 큐
     
     // 설정
     private final boolean itemMode;
@@ -226,11 +227,50 @@ public class GameController {
         
         // 블록 패턴과 위치를 저장 (대전 모드 공격용)
         int[][] shape = currentBlock.getShape();
-        lastBlockPattern = new int[shape.length][];
+        
+        System.out.println("[DEBUG] 블록 패턴 저장: shape.length=" + shape.length + ", shape[0].length=" + shape[0].length);
+        
+        // 실제 블록만 추출 (0이 아닌 부분만)
+        java.util.List<Integer> blockRows = new java.util.ArrayList<>();
+        int minCol = Integer.MAX_VALUE;
+        int maxCol = -1;
+        
         for (int i = 0; i < shape.length; i++) {
-            lastBlockPattern[i] = shape[i].clone();
+            boolean hasBlock = false;
+            for (int j = 0; j < shape[i].length; j++) {
+                if (shape[i][j] != 0) {
+                    hasBlock = true;
+                    minCol = Math.min(minCol, j);
+                    maxCol = Math.max(maxCol, j);
+                }
+            }
+            if (hasBlock) {
+                blockRows.add(i);
+            }
         }
-        lastBlockX = currentBlock.getX();
+        
+        if (blockRows.isEmpty()) {
+            // 블록이 없으면 전체 복사
+            lastBlockPattern = new int[shape.length][];
+            for (int i = 0; i < shape.length; i++) {
+                lastBlockPattern[i] = shape[i].clone();
+            }
+        } else {
+            int patternHeight = blockRows.size();
+            int patternWidth = maxCol - minCol + 1;
+            lastBlockPattern = new int[patternHeight][patternWidth];
+            
+            for (int i = 0; i < patternHeight; i++) {
+                int srcRow = blockRows.get(i);
+                for (int j = 0; j < patternWidth; j++) {
+                    lastBlockPattern[i][j] = shape[srcRow][minCol + j];
+                }
+            }
+            System.out.println("[DEBUG] 블록만 추출: [" + patternHeight + "][" + patternWidth + "], minCol=" + minCol);
+        }
+        
+        lastBlockX = currentBlock.getX() + (minCol != Integer.MAX_VALUE ? minCol : 0);
+        System.out.println("[DEBUG] lastBlockX=" + lastBlockX + " (원본X=" + currentBlock.getX() + " + offset=" + (minCol != Integer.MAX_VALUE ? minCol : 0) + ")");
         
         // 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
@@ -295,6 +335,9 @@ public class GameController {
                     System.err.println("[DEBUG GameController] ItemActivatedEvent publish 실패: " + t.getMessage());
                 }
 
+                // 블록 고정 시점: 큐에 쌓인 공격줄 적용
+                applyQueuedAttacks();
+
                 // 게임 오버 체크
                 if (engine.checkGameOver(newState.getBoardArray())) {
                     handleGameOver();
@@ -352,6 +395,9 @@ public class GameController {
                 // Include last block pattern & X so opponent can reproduce hole shape
                 eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore, lastBlockPattern, lastBlockX));
                 
+                // 블록 고정 시점: 큐에 쌓인 공격줄 적용
+                applyQueuedAttacks();
+                
                 // 게임 오버 체크
                 if (engine.checkGameOver(clearedBoard)) {
                     handleGameOver();
@@ -380,6 +426,9 @@ public class GameController {
             .itemGenerateCount(currentState.getItemGenerateCount())
             .blocksSpawned(currentState.getBlocksSpawned())
             .build();
+        
+        // 블록 고정 시점: 큐에 쌓인 공격줄 적용
+        applyQueuedAttacks();
         
         // 게임 오버 체크
         if (engine.checkGameOver(board)) {
@@ -770,13 +819,6 @@ public class GameController {
      */
     public void addAttackLines(int lines, int[][] blockPattern, int blockX) {
         if (lines <= 0) return;
-        try {
-            System.out.println("[DEBUG GameController] addAttackLines called: lines=" + lines
-                + ", controllerId=" + System.identityHashCode(this)
-                + ", thread=" + Thread.currentThread().getName());
-        } catch (Throwable __) {
-            // ignore
-        }
         
         int[][] board = currentState.getBoardArray();
         int[][] colorBoard = currentState.getColorBoard();
@@ -787,22 +829,31 @@ public class GameController {
         int INNER_TOP = 2;
         int INNER_BOTTOM = ROWS - 2;
         
+        System.out.println("[DEBUG GameController] addAttackLines 시작: " + lines + "줄 추가 요청");
+        System.out.println("  보드 크기: ROWS=" + ROWS + ", INNER_TOP=" + INNER_TOP + ", INNER_BOTTOM=" + INNER_BOTTOM);
+        System.out.println("  사용 가능 내부 높이: " + (INNER_BOTTOM - INNER_TOP + 1) + "줄");
+        
         // 기존 블록들을 위로 올림
+        System.out.println("  블록 이동: " + INNER_TOP + " ~ " + (INNER_BOTTOM - lines) + " 범위를 " + lines + "칸 위로");
         for (int i = INNER_TOP; i <= INNER_BOTTOM - lines; i++) {
             for (int j = INNER_LEFT; j <= INNER_RIGHT; j++) {
                 board[i][j] = board[i + lines][j];
                 colorBoard[i][j] = colorBoard[i + lines][j];
             }
         }
+        System.out.println("  블록 이동 완료");
         
         // 아래쪽에 새 줄 추가 (블록 패턴 모양으로 빈 칸 생성)
-        for (int i = INNER_BOTTOM - lines + 1; i <= INNER_BOTTOM; i++) {
+        int startRow = INNER_BOTTOM - lines + 1;
+        System.out.println("  공격줄 추가: " + startRow + " ~ " + INNER_BOTTOM + " 범위에 " + lines + "줄 채우기");
+        for (int i = startRow; i <= INNER_BOTTOM; i++) {
             for (int j = INNER_LEFT; j <= INNER_RIGHT; j++) {
                 // 기본적으로 모두 채움
                 board[i][j] = 1;
                 colorBoard[i][j] = 8;  // 회색 (공격 줄 색상)
             }
         }
+        System.out.println("  공격줄 " + lines + "줄 추가 완료");
         
         // 블록 패턴이 있으면 그 모양대로 구멍 뚫기
         // 패턴 높이보다 공격 줄이 많을 경우 패턴을 반복해서 적용하여
@@ -873,6 +924,135 @@ public class GameController {
             if (i < r) sb.append('|');
         }
         return sb.toString();
+    }
+    
+    /**
+     * Queue incoming attack lines for later application (on block lock).
+     */
+    public void queueAttackLines(int lines, int[][] blockPattern, int blockX) {
+        if (lines <= 0) return;
+        // make defensive copy of pattern
+        int[][] copy = null;
+        if (blockPattern != null) {
+            copy = new int[blockPattern.length][];
+            for (int i = 0; i < blockPattern.length; i++) copy[i] = blockPattern[i].clone();
+        }
+        pendingAttacks.addLast(new AttackItem(lines, copy, blockX));
+        
+        // 디버그: 큐에 추가된 공격 로그
+        int totalQueued = 0;
+        for (AttackItem it : pendingAttacks) totalQueued += it.lines;
+        System.out.println("[DEBUG GameController] queueAttackLines: +" + lines + "줄 추가, 총 큐: " + totalQueued + "줄 (" + pendingAttacks.size() + "개 아이템)");
+    }
+
+    /**
+     * Apply all queued attacks immediately and clear the queue.
+     * 모든 공격을 미리보기와 동일한 순서로 한 번에 적용
+     */
+    private void applyQueuedAttacks() {
+        if (pendingAttacks.isEmpty()) return;
+        
+        // 디버그: 적용될 공격 총합 계산
+        int totalToApply = 0;
+        for (AttackItem it : pendingAttacks) totalToApply += it.lines;
+        System.out.println("[DEBUG GameController] applyQueuedAttacks 시작: " + totalToApply + "줄 적용 예정 (" + pendingAttacks.size() + "개 아이템)");
+        
+        // 모든 공격을 리스트로 변환 (역순으로, 나중 공격이 먼저)
+        java.util.List<AttackItem> attackList = new java.util.ArrayList<>(pendingAttacks);
+        java.util.Collections.reverse(attackList);  // 나중 공격부터 아래에 배치
+        
+        // 보드 접근
+        int[][] board = currentState.getBoardArray();
+        int[][] colorBoard = currentState.getColorBoard();
+        int ROWS = board.length;
+        int COLS = board[0].length;
+        int INNER_LEFT = 1;
+        int INNER_RIGHT = COLS - 2;
+        int INNER_TOP = 2;
+        int INNER_BOTTOM = ROWS - 2;
+        
+        // 기존 블록들을 위로 올림 (총 공격줄만큼)
+        for (int i = INNER_TOP; i <= INNER_BOTTOM - totalToApply; i++) {
+            for (int j = INNER_LEFT; j <= INNER_RIGHT; j++) {
+                board[i][j] = board[i + totalToApply][j];
+                colorBoard[i][j] = colorBoard[i + totalToApply][j];
+            }
+        }
+        
+        // 공격줄을 아래부터 차례로 추가 (역순 리스트 순서대로)
+        int currentRow = INNER_BOTTOM;
+        for (AttackItem item : attackList) {
+            System.out.println("[DEBUG GameController]   -> " + item.lines + "줄 적용 중 (row " + (currentRow - item.lines + 1) + "~" + currentRow + ")");
+            
+            for (int lineOffset = 0; lineOffset < item.lines; lineOffset++) {
+                int row = currentRow - lineOffset;
+                if (row < INNER_TOP) break;
+                
+                // 줄 전체를 회색으로 채움
+                for (int col = INNER_LEFT; col <= INNER_RIGHT; col++) {
+                    board[row][col] = 1;
+                    colorBoard[row][col] = 8;
+                }
+                
+                // 패턴에 따라 구멍 뚫기
+                if (item.pattern != null && item.pattern.length > 0) {
+                    int patternH = item.pattern.length;
+                    int patternW = item.pattern[0].length;
+                    int patternRow = lineOffset % patternH;
+                    
+                    System.out.println("[DEBUG]     row=" + row + ", patternH=" + patternH + ", patternW=" + patternW + ", patternRow=" + patternRow + ", blockX=" + item.blockX);
+                    
+                    for (int j = 0; j < patternW; j++) {
+                        int boardCol = item.blockX + j;
+                        if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT 
+                            && patternRow < item.pattern.length 
+                            && j < item.pattern[patternRow].length
+                            && item.pattern[patternRow][j] == 1) {
+                            board[row][boardCol] = 0;
+                            colorBoard[row][boardCol] = 0;
+                            System.out.println("[DEBUG]       구멍: col=" + boardCol);
+                        }
+                    }
+                }
+            }
+            
+            currentRow -= item.lines;
+        }
+        
+        // 상태 업데이트
+        currentState = new GameState.Builder(
+            board,
+            colorBoard,
+            currentState.getCurrentBlock(),
+            currentState.getNextBlock(),
+            currentState.isItemMode()
+        )
+            .score(currentState.getScore())
+            .totalLinesCleared(currentState.getTotalLinesCleared())
+            .currentLevel(currentState.getCurrentLevel())
+            .lineClearCount(currentState.getLineClearCount())
+            .itemGenerateCount(currentState.getItemGenerateCount())
+            .blocksSpawned(currentState.getBlocksSpawned())
+            .lastLineClearScore(currentState.getLastLineClearScore())
+            .build();
+        
+        // 화면 업데이트
+        view.render(currentState);
+        
+        pendingAttacks.clear();
+        System.out.println("[DEBUG GameController] applyQueuedAttacks 완료: 총 " + totalToApply + "줄 적용됨");
+    }
+
+    // simple container for queued attack
+    private static class AttackItem {
+        final int lines;
+        final int[][] pattern;
+        final int blockX;
+        AttackItem(int lines, int[][] pattern, int blockX) {
+            this.lines = lines;
+            this.pattern = pattern;
+            this.blockX = blockX;
+        }
     }
     
     /**
