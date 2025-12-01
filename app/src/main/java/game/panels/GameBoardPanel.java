@@ -135,6 +135,21 @@ public class GameBoardPanel extends JPanel {
     private void stackBlockFromState(Graphics2D g2d, int[][] board, int[][] colorBoard) {
         for (int row = 2; row < ROWS + 2; row++) {
             for (int col = 1; col < COLS + 1; col++) {
+                // 라인 클리어 플래시: 해당 행이 플래시 대상이고 현재 블랙 단계라면 검은색으로 채우고 다음 셀로
+                if (currentState != null && currentState.isLineClearAnimating() 
+                    && currentState.isFlashBlack() && currentState.isRowFlashing(row)) {
+                    int drawX = (col - 1) * cellSize;
+                    int drawY = (row - 2) * cellSize;
+                    g2d.setColor(Color.BLACK);
+                    g2d.fillRect(drawX, drawY, cellSize, cellSize);
+                    
+                    // 첫 번째 셀에서만 로그 출력
+                    if (col == 1) {
+                        System.out.println("[RENDER] 라인 클리어 플래시 렌더링 중! row=" + row);
+                    }
+                    continue;
+                }
+                
                 if (board[row][col] > 0 && board[row][col] < 10) {
                     Color blockColor;
                     if (colorBoard != null && colorBoard[row][col] != 0) {
@@ -252,73 +267,44 @@ public class GameBoardPanel extends JPanel {
     }
     
     /**
-     * 애니메이션 효과 그리기
+     * 애니메이션 효과 그리기 (블록 위에 오버레이)
      */
     private void drawAnimations(Graphics2D g2d, GameState state) {
-        float alpha = 0.7f;
-        
-        // 라인 클리어 애니메이션
-        if (state.isLineClearAnimating()) {
-            List<Integer> flashingRows = state.getFlashingRows();
-            boolean flashBlack = state.isFlashBlack();
-            
-            if (flashingRows != null && !flashingRows.isEmpty()) {
-                Color flashColor = flashBlack ? Color.BLACK : Color.WHITE;
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                g2d.setColor(flashColor);
-                
-                for (int row : flashingRows) {
-                    g2d.fillRect(
-                        0,
-                        (row - 2) * cellSize,
-                        COLS * cellSize,
-                        cellSize
-                    );
-                }
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+        // AllClear: 보드 전체를 검게 플래시
+        if (state.isAllClearAnimating() && state.isAllClearFlashBlack()) {
+            Graphics2D overlay = (Graphics2D) g2d.create();
+            try {
+                overlay.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.85f));
+                overlay.setColor(Color.BLACK);
+                overlay.fillRect(0, 0, COLS * cellSize, ROWS * cellSize);
+            } finally {
+                overlay.dispose();
             }
         }
-        
-        // All Clear 애니메이션
-        if (state.isAllClearAnimating()) {
-            boolean flashBlack = state.isAllClearFlashBlack();
-            Color flashColor = flashBlack ? Color.BLACK : Color.WHITE;
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g2d.setColor(flashColor);
-            g2d.fillRect(0, 0, COLS * cellSize, ROWS * cellSize);
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
-        }
-        
-        // Box Clear 애니메이션
-        if (state.isBoxClearAnimating()) {
+
+        // BoxClear: 각 5x5 폭발 영역을 검게 플래시
+        if (state.isBoxClearAnimating() && state.isBoxFlashBlack()) {
             List<int[]> centers = state.getBoxFlashCenters();
-            boolean flashBlack = state.isBoxFlashBlack();
-            
             if (centers != null && !centers.isEmpty()) {
-                Color flashColor = flashBlack ? Color.BLACK : Color.WHITE;
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                g2d.setColor(flashColor);
-                
+                g2d.setColor(Color.BLACK);
                 for (int[] center : centers) {
-                    int centerX = center[1];  // col
-                    int centerY = center[0];  // row
-                    int startRow = Math.max(2, centerY - 2);
-                    int endRow = Math.min(ROWS + 1, centerY + 3);
-                    int startCol = Math.max(1, centerX - 2);
-                    int endCol = Math.min(COLS, centerX + 3);
+                    int centerRow = center[0];  // row
+                    int centerCol = center[1];  // col
+                    
+                    // 5x5 영역 계산 (중심 ±2)
+                    int startRow = Math.max(2, centerRow - 2);
+                    int endRow = Math.min(ROWS + 1, centerRow + 2);
+                    int startCol = Math.max(1, centerCol - 2);
+                    int endCol = Math.min(COLS, centerCol + 2);
                     
                     for (int row = startRow; row <= endRow; row++) {
                         for (int col = startCol; col <= endCol; col++) {
-                            g2d.fillRect(
-                                (col - 1) * cellSize,
-                                (row - 2) * cellSize,
-                                cellSize,
-                                cellSize
-                            );
+                            int drawX = (col - 1) * cellSize;
+                            int drawY = (row - 2) * cellSize;
+                            g2d.fillRect(drawX, drawY, cellSize, cellSize);
                         }
                     }
                 }
-                g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
             }
         }
     }

@@ -26,6 +26,7 @@ public class ItemBlockHandler {
     
     private final GameView view;
     private final AnimationManager animationManager;
+    private Runnable renderCallback;  // 애니메이션 시작 후 화면 갱신용
     
     /**
      * ItemBlockHandler 생성자
@@ -36,6 +37,13 @@ public class ItemBlockHandler {
     public ItemBlockHandler(GameView view, AnimationManager animationManager) {
         this.view = view;
         this.animationManager = animationManager;
+    }
+    
+    /**
+     * 렌더링 콜백 설정 (애니메이션 시작 후 화면 갱신)
+     */
+    public void setRenderCallback(Runnable renderCallback) {
+        this.renderCallback = renderCallback;
     }
     
     /**
@@ -120,6 +128,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     // ==================== BoxClear (값 3) ====================
@@ -190,6 +203,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     /**
@@ -291,6 +309,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     /**
