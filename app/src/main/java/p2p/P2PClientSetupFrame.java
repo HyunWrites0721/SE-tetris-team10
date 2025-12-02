@@ -34,6 +34,9 @@ public class P2PClientSetupFrame extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         
+        // 모든 창이 닫히면 프로세스 종료
+        util.WindowManager.addAutoExitListener(this);
+        
         // 제목
         JLabel titleLabel = new JLabel("서버에 연결", SwingConstants.CENTER);
         titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(28 * screenRatio)));

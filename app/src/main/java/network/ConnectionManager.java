@@ -17,6 +17,7 @@ public class ConnectionManager {
     
     private final AtomicBoolean isConnected = new AtomicBoolean(false);  // 연결 상태 (멀티스레드 안전)
     private ConnectionState state = ConnectionState.DISCONNECTED;        // 현재 연결 상태
+    private volatile boolean normalShutdown = false;                     // 정상 종료 플래그
     
     private String localAddress;                 // 내 IP 주소
     private int localPort;                       // 내 포트 번호
@@ -30,8 +31,12 @@ public class ConnectionManager {
      */
     public void startServer(int port) throws ConnectionException {
         try {
+            normalShutdown = false;  // 정상 종료 플래그 초기화
+            
             // 서버 소켓 생성
-            serverSocket = new ServerSocket(port);    // 서버소켓 12345번
+            serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(true); // 포트 재사용 허용 (좀비 프로세스 방지)
+            serverSocket.bind(new InetSocketAddress(port));
             serverSocket.setSoTimeout(NetworkConfig.CONNECTION_TIMEOUT);    // 10초 타임아웃 설정
             
             // 서버 역할과 정보 즉시 설정 (accept 전에!)
@@ -62,6 +67,12 @@ public class ConnectionManager {
             state = ConnectionState.TIMEOUT;
             throw new ConnectionException("연결 대기 시간 초과", e);
         } catch (IOException e) {
+            // 정상 종료인 경우 예외를 던지지 않음
+            if (normalShutdown) {
+                System.out.println("서버 정상 종료");
+                state = ConnectionState.DISCONNECTED;
+                return;
+            }
             state = ConnectionState.DISCONNECTED;
             throw new ConnectionException("서버 시작 실패: " + e.getMessage(), e);
         }
@@ -128,6 +139,7 @@ public class ConnectionManager {
      * 연결 종료
      */
     public void disconnect() {
+        normalShutdown = true;  // 정상 종료 플래그 설정
         isConnected.set(false);
         state = ConnectionState.DISCONNECTED;
         

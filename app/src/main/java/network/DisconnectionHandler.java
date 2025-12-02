@@ -1,6 +1,5 @@
 package network;
 
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import java.awt.Window;
 
@@ -36,22 +35,9 @@ public class DisconnectionHandler {
         
         System.out.println("❌ 연결 끊김 처리: " + reason);
         
-        // UI 스레드에서 다이얼로그 표시
+        // UI 스레드에서 콜백만 실행 (다이얼로그는 P2PVersusFrameBoard에서 표시)
         SwingUtilities.invokeLater(() -> {
-            // 에러 다이얼로그 표시
-            JOptionPane.showMessageDialog(
-                currentWindow,
-                reason + "\n\nP2P 메뉴로 돌아갑니다.",
-                "연결 끊김",
-                JOptionPane.ERROR_MESSAGE
-            );
-            
-            // 창 닫기
-            if (currentWindow != null) {
-                currentWindow.dispose();
-            }
-            
-            // 콜백 실행 (P2P 메뉴로 복귀)
+            // 콜백 실행 (P2PVersusFrameBoard.handleOpponentDisconnected)
             if (onDisconnect != null) {
                 onDisconnect.run();
             }

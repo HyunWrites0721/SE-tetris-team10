@@ -15,7 +15,11 @@ public class GameControlMessage extends NetworkMessage {
         RESUME_GAME,
         END_GAME,
         READY,
-        MODE_SELECT
+        MODE_SELECT,
+        MODE_CHANGED,    // 서버가 모드를 변경했을 때 클라이언트에 알림
+        VERSION_CHECK,   // 클라이언트가 버전 확인 완료 응답
+        START_REQUEST,   // 서버가 게임 시작 요청 (모든 조건 충족 후)
+        READY_CANCEL     // 클라이언트가 준비 취소
     }
 
     private final ControlType controlType;

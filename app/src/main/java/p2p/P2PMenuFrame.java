@@ -26,6 +26,9 @@ public class P2PMenuFrame extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         
+        // 모든 창이 닫히면 프로세스 종료
+        util.WindowManager.addAutoExitListener(this);
+        
         // 제목 라벨
         JLabel titleLabel = new JLabel("P2P 대전 모드", SwingConstants.CENTER);
         titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(28 * screenRatio)));
