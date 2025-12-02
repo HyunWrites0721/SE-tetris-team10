@@ -233,12 +233,35 @@ public class GameController {
         // WeightBlock은 보드에 고정하지 않고 즉시 드릴 애니메이션 시작
         if (currentBlock instanceof blocks.item.WeightBlock) {
             System.out.println("[handleBlockLanding] WeightBlock detected at (" + currentBlock.getX() + ", " + currentBlock.getY() + ") - starting drill animation");
+            System.out.println("[handleBlockLanding] Current score before drill: " + score);
+            
+            // 드릴 시작 전 현재 점수를 저장 (하드드롭 점수가 이미 추가된 상태)
+            final int scoreBeforeDrill = score;
+            
             // WeightBlock을 포함한 현재 상태로 드릴 애니메이션 시작
             itemBlockHandler.handleWeightBlock(currentState, (newState) -> {
                 System.out.println("[handleBlockLanding] WeightBlock drill completed - callback invoked");
-                // 드릴 완료 후
-                currentState = newState;
-                score = newState.getScore();
+                System.out.println("[handleBlockLanding] scoreBeforeDrill=" + scoreBeforeDrill + ", newState.getScore()=" + newState.getScore());
+                
+                // 드릴 완료 후 - 드릴 전 점수를 유지하면서 상태 업데이트
+                currentState = new GameState.Builder(
+                    newState.getBoardArray(),
+                    newState.getColorBoard(),
+                    null,  // 드릴 후 currentBlock은 null
+                    newState.getNextBlock(),
+                    newState.isItemMode()
+                )
+                    .score(scoreBeforeDrill)  // ✅ 하드드롭 점수가 포함된 점수 유지
+                    .totalLinesCleared(newState.getTotalLinesCleared())
+                    .currentLevel(newState.getCurrentLevel())
+                    .lineClearCount(newState.getLineClearCount())
+                    .itemGenerateCount(newState.getItemGenerateCount())
+                    .blocksSpawned(newState.getBlocksSpawned())
+                    .lastLineClearScore(newState.getLastLineClearScore())
+                    .build();
+                
+                score = scoreBeforeDrill;  // ✅ score 필드도 동기화
+                System.out.println("[handleBlockLanding] Score after drill: " + score);
                 
                 // PUBLISH ItemActivatedEvent
                 try {
