@@ -243,19 +243,25 @@ public class FrameBoard extends JFrame {
     }
     
     public void gameOver() {
+        // GameBoard에서 실제 점수 가져오기
+        int finalScore = gameBoard.getScore();
+        
         // 이미 게임오버 상태가 아닐 때만 최종 점수 출력
         if (!isGameOver) {
-            System.out.println("Final Score: " + score);  // 최종 점수 출력
+            System.out.println("Final Score: " + finalScore);  // 최종 점수 출력
             isGameOver = true;  // 게임오버 상태로 설정
         }
-        // GameOverBoard 정보 업데이트
-        gameOverBoard.updateInfo();
-        gameOverBoard.setVisible(true);
-        gameOverBoard.setOpaque(true);
+        
+        System.out.println("[DEBUG] gameOver() 호출됨");
+        System.out.println("[DEBUG] scoreSaved: " + scoreSaved);
+        System.out.println("[DEBUG] finalScore (from GameBoard): " + finalScore);
+        
         gameController.stop();
         
         // 점수가 이미 저장되었으면 다시 저장하지 않음 (중복 방지)
-        if (!scoreSaved && score > 0) {
+        if (!scoreSaved && finalScore > 0) {
+            System.out.println("[DEBUG] 점수 저장 시작...");
+            
             // 난이도 문자열 변환 (0: normal, 1: hard, 2: easy)
             String difficultyStr = "normal";
             switch (difficulty) {
@@ -265,15 +271,26 @@ public class FrameBoard extends JFrame {
                 default: difficultyStr = "normal"; break;
             }
             
-            // 사용자 이름 입력받기
+            System.out.println("[DEBUG] 이름 입력 다이얼로그 표시 시작...");
+            
+            // 사용자 이름 입력받기 (게임오버 화면 표시 전에 실행)
             String playerName = promptPlayerName();
             
-            highScoreModel.addScore(playerName, score, difficultyStr, itemMode);
+            System.out.println("[DEBUG] 입력된 이름: " + playerName);
+            
+            highScoreModel.addScore(playerName, finalScore, difficultyStr, itemMode);
             scoreSaved = true;  // 저장 완료 플래그 설정
-            System.out.println("점수 저장 완료: " + playerName + " - " + score + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficultyStr + ")");
+            System.out.println("점수 저장 완료: " + playerName + " - " + finalScore + " (Mode: " + (itemMode ? "Item" : "Normal") + ", Difficulty: " + difficultyStr + ")");
             
             // HighScore는 내부적으로만 업데이트 (UI는 제거됨)
+        } else {
+            System.out.println("[DEBUG] 점수 저장 건너뜀 - scoreSaved: " + scoreSaved + ", finalScore: " + finalScore);
         }
+        
+        // 점수 저장 후 GameOverBoard 표시
+        gameOverBoard.updateInfo();
+        gameOverBoard.setVisible(true);
+        gameOverBoard.setOpaque(true);
         
         // 게임오버 화면이 표시될 때 포커스 설정
         gameOverBoard.setFocusable(true);

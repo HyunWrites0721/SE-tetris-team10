@@ -259,9 +259,9 @@ public class GameOverBoard extends JPanel implements KeyListener {
     private String getDifficultyString() {
         int difficulty = frameBoard.getDifficulty();
         switch(difficulty) {
-            case 0: return "Easy";
-            case 1: return "Normal";
-            case 2: return "Hard";
+            case 0: return "Normal";
+            case 1: return "Hard";
+            case 2: return "Easy";
             default: return "Normal";
         }
     }
