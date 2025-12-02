@@ -213,6 +213,7 @@ public class GameController {
             renderWithAnimation();
         } else {
             // 블록을 고정할 수 없으면 착지 처리
+            System.out.println("[processGameTick] Block cannot move down - calling handleBlockLanding. Block type: " + currentBlock.getClass().getSimpleName());
             handleBlockLanding();
         }
     }
@@ -227,6 +228,37 @@ public class GameController {
         int[][] board = currentState.getBoardArray();
         int[][] colorBoard = currentState.getColorBoard();
         
+        // WeightBlock은 보드에 고정하지 않고 즉시 드릴 애니메이션 시작
+        if (currentBlock instanceof blocks.item.WeightBlock) {
+            System.out.println("[handleBlockLanding] WeightBlock detected at (" + currentBlock.getX() + ", " + currentBlock.getY() + ") - starting drill animation");
+            // WeightBlock을 포함한 현재 상태로 드릴 애니메이션 시작
+            itemBlockHandler.handleWeightBlock(currentState, (newState) -> {
+                System.out.println("[handleBlockLanding] WeightBlock drill completed - callback invoked");
+                // 드릴 완료 후
+                currentState = newState;
+                score = newState.getScore();
+                
+                // PUBLISH ItemActivatedEvent
+                try {
+                    System.out.println("[DEBUG GameController] publish ItemActivatedEvent: WEIGHT_BLOCK");
+                    eventBus.publish(new game.events.ItemActivatedEvent("WEIGHT_BLOCK", 0));
+                } catch (Throwable t) {
+                    System.err.println("[DEBUG GameController] ItemActivatedEvent publish 실패: " + t.getMessage());
+                }
+                
+                // 게임 오버 체크
+                if (engine.checkGameOver(newState.getBoardArray())) {
+                    handleGameOver();
+                    return;
+                }
+                
+                System.out.println("[handleBlockLanding] Spawning new block after drill");
+                // 새 블록 생성
+                spawnNewBlock();
+            });
+            return;  // 드릴 애니메이션 진행 중, 콜백에서 처리
+        }
+        
         // 블록 패턴과 위치를 저장 (대전 모드 공격용)
         int[][] shape = currentBlock.getShape();
         lastBlockPattern = new int[shape.length][];
@@ -235,7 +267,7 @@ public class GameController {
         }
         lastBlockX = currentBlock.getX();
         
-        // 블록을 보드에 고정
+        // 일반 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
         
         System.out.println("Block placed at x=" + lastBlockX + ", y=" + currentBlock.getY() + ", specialType=" + specialType);
@@ -276,7 +308,7 @@ public class GameController {
         
         // 특수 블록 처리 (ItemBlockHandler에 위임)
         if (specialType != 0) {
-            // AllClear(2), BoxClear(3), OneLineClear(4) 처리
+            // AllClear(2), BoxClear(3), OneLineClear(4), WeightBlock(5) 처리
             itemBlockHandler.handleSpecialBlock(specialType, placedState, (newState) -> {
                 // 특수 블록 처리 완료 후
                 currentState = newState;
@@ -659,6 +691,13 @@ public class GameController {
         
         Block currentBlock = currentState.getCurrentBlock();
         if (currentBlock == null) return 0;
+        
+        // WeightBlock은 일반 하드드롭 대신 즉시 드릴 애니메이션 시작
+        if (currentBlock instanceof blocks.item.WeightBlock) {
+            // 착지 처리로 넘어가서 드릴 애니메이션 시작
+            handleBlockLanding();
+            return 0;
+        }
         
         // 하드 드롭 거리 계산하고 실제로 이동
         int dropDistance = engine.calculateHardDropDistance(currentState);
