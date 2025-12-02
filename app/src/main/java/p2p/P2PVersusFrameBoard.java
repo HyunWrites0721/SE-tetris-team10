@@ -61,6 +61,8 @@ public class P2PVersusFrameBoard extends JFrame {
     private int remoteScore = 0;
     // START_GAME 메시지 전송 플래그
     private boolean startGameMessageSent = false;
+    // 게임 정상 종료 플래그 (승패가 결정되어 정상 종료된 경우)
+    private volatile boolean gameEndedNormally = false;
     
     public P2PVersusFrameBoard(NetworkManager networkManager, VersusMode mode, int difficulty) {
         this.networkManager = networkManager;
@@ -764,6 +766,9 @@ public class P2PVersusFrameBoard extends JFrame {
         String player = isLocal ? "나" : "상대방";
         System.out.println(player + " 게임 오버! 최종 점수: " + finalScore);
         
+        // 게임이 정상 종료되었음을 표시 (승패가 결정됨)
+        gameEndedNormally = true;
+        
         // 타이머 정지
         if (gameTimer != null) {
             gameTimer.stop();
@@ -866,6 +871,12 @@ public class P2PVersusFrameBoard extends JFrame {
     private void handleOpponentDisconnected() {
         System.out.println("⚠️ 상대방 연결 끊김 감지");
         
+        // 게임이 정상 종료된 경우 (승패가 이미 결정됨) - 아무것도 하지 않음
+        if (gameEndedNormally) {
+            System.out.println("ℹ️ 게임이 이미 정상 종료되어 연결 끊김 알림을 표시하지 않습니다.");
+            return;
+        }
+        
         // 게임 중지
         if (myGameController != null) {
             myGameController.stop();
@@ -874,7 +885,7 @@ public class P2PVersusFrameBoard extends JFrame {
             remoteGameController.stop();
         }
         
-        // 승리 처리
+        // 승리 처리 (게임 중 상대방이 연결 끊김)
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(
                 this,

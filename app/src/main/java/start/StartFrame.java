@@ -87,7 +87,7 @@ public class StartFrame extends JFrame {
             btn.addActionListener(e -> handleMenuAction(index));
             
             menuPanel.add(btn);
-            menuPanel.add(Box.createRigidArea(new Dimension((int)(10*screenRatio), (int)(50*screenRatio))));
+            menuPanel.add(Box.createRigidArea(new Dimension((int)(10*screenRatio), (int)(40*screenRatio))));  // 메인 메뉴 컴포넌트 간 간격
             menuButtons[i] = btn;
         }
         menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));            //메뉴 위아래 여백

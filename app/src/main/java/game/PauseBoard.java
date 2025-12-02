@@ -261,9 +261,9 @@ public class PauseBoard extends JPanel implements KeyListener {
         // FrameBoard의 난이도 정보를 가져오기
         int difficulty = frameBoard.getDifficulty();
         switch(difficulty) {
-            case 0: return "Easy";
-            case 1: return "Normal";
-            case 2: return "Hard";
+            case 0: return "Normal";
+            case 1: return "Hard";
+            case 2: return "Easy";
             default: return "Normal";
         }
     }
