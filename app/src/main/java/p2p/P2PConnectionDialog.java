@@ -3,94 +3,40 @@ package p2p;
 import javax.swing.*;
 import network.NetworkManager;
 import network.ConnectionState;
-import start.StartFrame;
-import java.awt.*;
 
 /**
  * P2P 연결 진행 상태 다이얼로그
- * 연결 완료 후 게임 시작 대기 화면
+ * 연결 완료 후 즉시 대기실로 이동
+ * (UI는 표시하지 않고 백그라운드에서 상태만 모니터링)
  */
 public class P2PConnectionDialog extends JDialog {
-    private double screenRatio;
     private NetworkManager networkManager;
     private boolean isServer;
-    private JLabel statusLabel;
-    private JButton startButton;
-    private JButton cancelButton;
     private Timer statusCheckTimer;
+    private Timer autoStartTimer;
+    private volatile boolean isCancelled = false;  // 취소 플래그
     
     public P2PConnectionDialog(JFrame parent, NetworkManager networkManager, boolean isServer) {
-        super(parent, "연결 완료", true);
+        super(parent, "연결 완료", false);  // 모달 해제
         
-        this.screenRatio = StartFrame.screenRatio;
         this.networkManager = networkManager;
         this.isServer = isServer;
         
-        // 다이얼로그 설정
-        setSize((int)(400 * screenRatio), (int)(250 * screenRatio));
-        setLocationRelativeTo(parent);
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        setLayout(new BorderLayout());
-        
-        // 중앙 패널
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setBorder(BorderFactory.createEmptyBorder((int)(20 * screenRatio), (int)(20 * screenRatio), (int)(20 * screenRatio), (int)(20 * screenRatio)));
-        
-        // 연결 성공 아이콘
-        JLabel iconLabel = new JLabel("✓", SwingConstants.CENTER);
-        iconLabel.setFont(new Font("Dialog", Font.BOLD, (int)(48 * screenRatio)));
-        iconLabel.setForeground(new Color(0, 128, 0));
-        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(iconLabel);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, (int)(15 * screenRatio))));
-        
-        // 연결 정보
-        String roleText = isServer ? "서버" : "클라이언트";
-        JLabel roleLabel = new JLabel(roleText + " 연결 완료", SwingConstants.CENTER);
-        roleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(18 * screenRatio)));
-        roleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(roleLabel);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, (int)(10 * screenRatio))));
-        
-        // 상대방 정보
-        String remoteInfo = networkManager.getRemoteAddress() + ":" + networkManager.getRemotePort();
-        JLabel infoLabel = new JLabel("상대방: " + remoteInfo, SwingConstants.CENTER);
-        infoLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(12 * screenRatio)));
-        infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(infoLabel);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, (int)(15 * screenRatio))));
-        
-        // 상태 표시
-        statusLabel = new JLabel("연결 상태: 정상", SwingConstants.CENTER);
-        statusLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(11 * screenRatio)));
-        statusLabel.setForeground(new Color(0, 128, 0));
-        statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        centerPanel.add(statusLabel);
-        
-        add(centerPanel, BorderLayout.CENTER);
-        
-        // 하단 버튼 패널
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, (int)(10 * screenRatio), (int)(10 * screenRatio)));
-        
-        startButton = new JButton("게임 시작");
-        startButton.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(14 * screenRatio)));
-        startButton.setPreferredSize(new Dimension((int)(120 * screenRatio), (int)(40 * screenRatio)));
-        startButton.addActionListener(e -> startGame());
-        buttonPanel.add(startButton);
-        
-        cancelButton = new JButton("취소");
-        cancelButton.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(14 * screenRatio)));
-        cancelButton.setPreferredSize(new Dimension((int)(120 * screenRatio), (int)(40 * screenRatio)));
-        cancelButton.addActionListener(e -> cancelConnection());
-        buttonPanel.add(cancelButton);
-        
-        add(buttonPanel, BorderLayout.SOUTH);
+        // 다이얼로그는 표시하지 않음 (백그라운드 모니터링만)
+        setSize(0, 0);
+        setUndecorated(true);
+        setVisible(false);  // UI 표시 안 함
         
         // 연결 상태 모니터링 시작
         startStatusMonitoring();
         
-        setVisible(true);
+        // 1초 후 자동으로 대기실 진입
+        autoStartTimer = new Timer(1000, e -> {
+            autoStartTimer.stop();
+            enterWaitingRoom();
+        });
+        autoStartTimer.setRepeats(false);
+        autoStartTimer.start();
     }
     
     /**
@@ -101,36 +47,33 @@ public class P2PConnectionDialog extends JDialog {
             ConnectionState state = networkManager.getState();
             
             switch (state) {
-                case CONNECTED:
-                    statusLabel.setText("연결 상태: 정상");
-                    statusLabel.setForeground(new Color(0, 128, 0));
-                    startButton.setEnabled(true);
-                    break;
-                    
-                case LAGGING:
-                    statusLabel.setText("연결 상태: 지연 중 (렉)");
-                    statusLabel.setForeground(Color.ORANGE);
-                    startButton.setEnabled(true);
-                    break;
-                    
                 case TIMEOUT:
                 case DISCONNECTED:
-                    statusLabel.setText("연결 상태: 끊김");
-                    statusLabel.setForeground(Color.RED);
-                    startButton.setEnabled(false);
-                    
-                    // 연결 끊김 알림
-                    statusCheckTimer.stop();
-                    JOptionPane.showMessageDialog(
-                        this,
-                        "연결이 끊어졌습니다.",
-                        "연결 끊김",
-                        JOptionPane.ERROR_MESSAGE
-                    );
-                    cancelConnection();
+                    // 연결 끊김 처리 (중복 방지)
+                    if (!isCancelled) {
+                        statusCheckTimer.stop();
+                        if (autoStartTimer != null) {
+                            autoStartTimer.stop();
+                        }
+                        isCancelled = true;  // 플래그 먼저 설정
+                        
+                        // 다이얼로그 정리
+                        dispose();
+                        
+                        // 연결 종료 알림만 표시 (대기실 진입 안 함!)
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(
+                                null,
+                                "연결을 종료했습니다.",
+                                "연결 종료",
+                                JOptionPane.INFORMATION_MESSAGE
+                            );
+                        });
+                    }
                     break;
                     
                 default:
+                    // 정상 상태는 무시
                     break;
             }
         });
@@ -138,39 +81,27 @@ public class P2PConnectionDialog extends JDialog {
     }
     
     /**
-     * 게임 시작
+     * 대기실 진입
      */
-    private void startGame() {
+    private void enterWaitingRoom() {
+        // 이미 취소된 경우 대기실로 진입하지 않음
+        if (isCancelled) {
+            return;
+        }
+        
         if (statusCheckTimer != null) {
             statusCheckTimer.stop();
         }
         
-        // P2P 대전 게임 시작
+        // P2P 대기실로 이동
         dispose();
         if (getOwner() != null) {
             getOwner().dispose();
         }
 
-        // 연결 후 대기실로 이동 (핸드셰이크 수행)
+        // 연결 후 즉시 대기실로 이동
         SwingUtilities.invokeLater(() -> {
             new P2PWaitingRoom(networkManager, isServer);
         });
-    }
-    
-    /**
-     * 연결 취소
-     */
-    private void cancelConnection() {
-        if (statusCheckTimer != null) {
-            statusCheckTimer.stop();
-        }
-        
-        networkManager.disconnect();
-        
-        dispose();
-        if (getOwner() != null) {
-            getOwner().dispose();
-        }
-        new P2PMenuFrame();
     }
 }

@@ -54,8 +54,11 @@ public class StartFrame extends JFrame {
         //창
         setTitle(titleName); // 창 제목
         setSize((int)(600*screenRatio), (int)(600*screenRatio));
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);  // EXIT_ON_CLOSE → DISPOSE_ON_CLOSE 변경
         setLocationRelativeTo(null);
+        
+        // 모든 창이 닫히면 프로세스 종료
+        util.WindowManager.addAutoExitListener(this);
 
         // 전체 레이아웃: BorderLayout
         setLayout(new BorderLayout());

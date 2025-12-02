@@ -30,6 +30,9 @@ public class P2PServerSetupFrame extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         
+        // 모든 창이 닫히면 프로세스 종료
+        util.WindowManager.addAutoExitListener(this);
+        
         // 창 닫기 이벤트 처리
         addWindowListener(new WindowAdapter() {
             @Override

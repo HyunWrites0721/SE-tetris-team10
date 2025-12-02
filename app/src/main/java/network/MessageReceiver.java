@@ -55,10 +55,13 @@ public class MessageReceiver extends Thread {
                 notifyListeners(message);
                 
             } catch (Exception e) {
+                // running이 false면 정상 종료 (오류 출력 안 함)
                 if (running) {
                     System.err.println("메시지 수신 실패: " + e.getMessage());
                     // 연결 끊김 알림
                     notifyConnectionLost();
+                } else {
+                    System.out.println("MessageReceiver 정상 종료");
                 }
                 break;
             }

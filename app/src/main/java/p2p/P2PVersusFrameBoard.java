@@ -6,6 +6,7 @@ import game.GameView;
 import game.core.GameController;
 import game.events.*;
 import network.NetworkManager;
+import network.DisconnectionHandler;
 import network.messages.GameControlMessage;
 import network.messages.GameControlMessage.ControlType;
 import network.NetworkRole;
@@ -61,6 +62,11 @@ public class P2PVersusFrameBoard extends JFrame {
         this.difficulty = difficulty;
         this.myPlayerId = (networkManager.getRole() == NetworkRole.SERVER) ? 1 : 2;
         
+        // 연결 끊김 핸들러 등록
+        networkManager.setDisconnectionHandler(new DisconnectionHandler(() -> {
+            handleOpponentDisconnected();
+        }));
+        
         // 로그 파일로 출력
         try {
             String logFile = "p2p_debug_player" + myPlayerId + ".log";
@@ -77,7 +83,16 @@ public class P2PVersusFrameBoard extends JFrame {
         
         String roleName = (myPlayerId == 1) ? "서버" : "클라이언트";
         setTitle("Tetris - P2P 대전 (" + roleName + ")");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); // 강제 종료 방지
+        
+        // 윈도우 닫기 이벤트 처리
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                P2PVersusFrameBoard.this.handleWindowClosing();
+            }
+        });
+        
         setResizable(false);
         setLayout(new BorderLayout());
         
@@ -305,9 +320,64 @@ public class P2PVersusFrameBoard extends JFrame {
 
     @Override
     public void dispose() {
-        // 네트워크 리스너 정리
+        System.out.println("🔄 P2PVersusFrameBoard dispose() 호출됨");
+        cleanupResources();
+        super.dispose();
+    }
+    
+    /**
+     * 윈도우 닫기 이벤트 처리
+     */
+    private void handleWindowClosing() {
+        System.out.println("⚠️  사용자가 창을 닫으려고 함");
+        
+        int option = JOptionPane.showConfirmDialog(
+            this,
+            "게임을 종료하시겠습니까?",
+            "게임 종료",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+        );
+        
+        if (option == JOptionPane.YES_OPTION) {
+            System.out.println("✅ 사용자가 게임 종료 확인");
+            cleanupResources();
+            dispose();
+            new p2p.P2PMenuFrame();
+        } else {
+            System.out.println("❌ 사용자가 게임 종료 취소");
+        }
+    }
+    
+    /**
+     * 모든 리소스 정리
+     */
+    private void cleanupResources() {
+        System.out.println("🧹 리소스 정리 시작...");
+        
+        // 1. 게임 컨트롤러 중지
+        try {
+            if (myGameController != null) {
+                System.out.println("  - 내 게임 컨트롤러 중지");
+                myGameController.stop();
+            }
+        } catch (Exception e) {
+            System.err.println("  ✗ 내 게임 컨트롤러 중지 실패: " + e.getMessage());
+        }
+        
+        try {
+            if (remoteGameController != null) {
+                System.out.println("  - 상대방 게임 컨트롤러 중지");
+                remoteGameController.stop();
+            }
+        } catch (Exception e) {
+            System.err.println("  ✗ 상대방 게임 컨트롤러 중지 실패: " + e.getMessage());
+        }
+        
+        // 2. 네트워크 리스너 정리
         try {
             if (networkManager != null) {
+                System.out.println("  - 네트워크 리스너 제거");
                 if (eventSynchronizer != null) {
                     networkManager.removeMessageListener(eventSynchronizer);
                 }
@@ -316,9 +386,20 @@ public class P2PVersusFrameBoard extends JFrame {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error while cleaning up network listeners: " + e.getMessage());
+            System.err.println("  ✗ 네트워크 리스너 제거 실패: " + e.getMessage());
         }
-        super.dispose();
+        
+        // 3. 네트워크 연결 종료
+        try {
+            if (networkManager != null) {
+                System.out.println("  - 네트워크 연결 종료");
+                networkManager.disconnect();
+            }
+        } catch (Exception e) {
+            System.err.println("  ✗ 네트워크 연결 종료 실패: " + e.getMessage());
+        }
+        
+        System.out.println("✅ 리소스 정리 완료");
     }
     
     private void setupRemoteEventHandlers(EventBus remoteEventBus) {
@@ -452,7 +533,16 @@ public class P2PVersusFrameBoard extends JFrame {
         // 점수 업데이트
         remoteEventBus.subscribe(ScoreUpdateEvent.class, e -> {
             remoteScore = e.getNewScore();
-            SwingUtilities.invokeLater(() -> remoteScoreLabel.setText("Score: " + remoteScore));
+            SwingUtilities.invokeLater(() -> {
+                // 상단 점수 레이블 업데이트
+                remoteScoreLabel.setText("Score: " + remoteScore);
+                
+                // 상단 점수를 그대로 하단 scoreboard에 복사
+                if (remoteGameView != null) {
+                    remoteGameView.setScore(remoteScore);
+                    System.out.println("[P2P] 상대방 점수 업데이트: " + remoteScore);
+                }
+            });
         }, 0);
         
         // 게임 오버
@@ -532,6 +622,18 @@ public class P2PVersusFrameBoard extends JFrame {
         String player = isLocal ? "나" : "상대방";
         System.out.println(player + " 게임 오버! 최종 점수: " + finalScore);
         
+        // 게임 종료 시 양쪽 게임 모두 중지
+        try {
+            if (myGameController != null) {
+                myGameController.stop();
+            }
+            if (remoteGameController != null) {
+                remoteGameController.stop();
+            }
+        } catch (Exception e) {
+            System.err.println("게임 중지 실패: " + e.getMessage());
+        }
+        
         SwingUtilities.invokeLater(() -> {
             String message;
             if (isLocal) {
@@ -541,6 +643,7 @@ public class P2PVersusFrameBoard extends JFrame {
             }
             
             JOptionPane.showMessageDialog(this, message, "게임 종료", JOptionPane.INFORMATION_MESSAGE);
+            cleanupResources();
             dispose();
             new p2p.P2PMenuFrame();
         });
@@ -581,8 +684,15 @@ public class P2PVersusFrameBoard extends JFrame {
                     break;
                     
                 case TIMEOUT:
+                case DISCONNECTED:
                     statusText = "🔴 연결 끊김";
                     statusColor = Color.RED;
+                    
+                    // 연결 끊김 감지 시 자동으로 승리 처리
+                    SwingUtilities.invokeLater(() -> {
+                        handleOpponentDisconnected();
+                    });
+                    ((Timer)e.getSource()).stop();
                     break;
                     
                 default:
@@ -601,5 +711,35 @@ public class P2PVersusFrameBoard extends JFrame {
         
         statusTimer.start();
         System.out.println("✅ 네트워크 상태 모니터링 시작");
+    }
+    
+    /**
+     * 상대방 연결 끊김 처리
+     */
+    private void handleOpponentDisconnected() {
+        System.out.println("⚠️ 상대방 연결 끊김 감지");
+        
+        // 게임 중지
+        if (myGameController != null) {
+            myGameController.stop();
+        }
+        if (remoteGameController != null) {
+            remoteGameController.stop();
+        }
+        
+        // 승리 처리
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                this,
+                "상대방과의 연결이 끊어졌습니다.\n당신의 승리입니다!",
+                "승리",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+            
+            // 메뉴로 돌아가기
+            cleanupResources();
+            dispose();
+            new p2p.P2PMenuFrame();
+        });
     }
 }
