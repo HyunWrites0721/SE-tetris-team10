@@ -97,6 +97,9 @@ public class GameController {
         // ItemBlockHandler 생성
         this.itemBlockHandler = new ItemBlockHandler(view, animationManager);
         
+        // ItemBlockHandler에 렌더 콜백 설정
+        this.itemBlockHandler.setRenderCallback(() -> renderWithAnimation());
+        
         // 이벤트 리스너 등록
         setupEventListeners();
 
@@ -108,7 +111,7 @@ public class GameController {
         }
         
         // 초기 렌더링
-        view.render(currentState);
+        renderWithAnimation();
     }
     
     /**
@@ -208,9 +211,10 @@ public class GameController {
             
             // 뷰 업데이트
             view.setFallingBlock(currentBlock);
-            view.render(currentState);
+            renderWithAnimation();
         } else {
             // 블록을 고정할 수 없으면 착지 처리
+            System.out.println("[processGameTick] Block cannot move down - calling handleBlockLanding. Block type: " + currentBlock.getClass().getSimpleName());
             handleBlockLanding();
         }
     }
@@ -224,6 +228,37 @@ public class GameController {
         
         int[][] board = currentState.getBoardArray();
         int[][] colorBoard = currentState.getColorBoard();
+        
+        // WeightBlock은 보드에 고정하지 않고 즉시 드릴 애니메이션 시작
+        if (currentBlock instanceof blocks.item.WeightBlock) {
+            System.out.println("[handleBlockLanding] WeightBlock detected at (" + currentBlock.getX() + ", " + currentBlock.getY() + ") - starting drill animation");
+            // WeightBlock을 포함한 현재 상태로 드릴 애니메이션 시작
+            itemBlockHandler.handleWeightBlock(currentState, (newState) -> {
+                System.out.println("[handleBlockLanding] WeightBlock drill completed - callback invoked");
+                // 드릴 완료 후
+                currentState = newState;
+                score = newState.getScore();
+                
+                // PUBLISH ItemActivatedEvent
+                try {
+                    System.out.println("[DEBUG GameController] publish ItemActivatedEvent: WEIGHT_BLOCK");
+                    eventBus.publish(new game.events.ItemActivatedEvent("WEIGHT_BLOCK", 0));
+                } catch (Throwable t) {
+                    System.err.println("[DEBUG GameController] ItemActivatedEvent publish 실패: " + t.getMessage());
+                }
+                
+                // 게임 오버 체크
+                if (engine.checkGameOver(newState.getBoardArray())) {
+                    handleGameOver();
+                    return;
+                }
+                
+                System.out.println("[handleBlockLanding] Spawning new block after drill");
+                // 새 블록 생성
+                spawnNewBlock();
+            });
+            return;  // 드릴 애니메이션 진행 중, 콜백에서 처리
+        }
         
         // 블록 패턴과 위치를 저장 (대전 모드 공격용)
         int[][] shape = currentBlock.getShape();
@@ -272,7 +307,7 @@ public class GameController {
         lastBlockX = currentBlock.getX() + (minCol != Integer.MAX_VALUE ? minCol : 0);
         System.out.println("[DEBUG] lastBlockX=" + lastBlockX + " (원본X=" + currentBlock.getX() + " + offset=" + (minCol != Integer.MAX_VALUE ? minCol : 0) + ")");
         
-        // 블록을 보드에 고정
+        // 일반 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
         
         System.out.println("Block placed at x=" + lastBlockX + ", y=" + currentBlock.getY() + ", specialType=" + specialType);
@@ -297,7 +332,7 @@ public class GameController {
         // 고정된 블록을 화면에 표시
         System.out.println("Rendering placed state...");
         currentState = placedState;  // ✅ currentState 업데이트!
-        view.render(placedState);
+        renderWithAnimation();
         System.out.println("Placed state rendered");
 
         // P2P 동기화: 블록 고정 이벤트 발행 (EventSynchronizer가 이 이벤트를 잡아 네트워크로 전송)
@@ -313,7 +348,7 @@ public class GameController {
         
         // 특수 블록 처리 (ItemBlockHandler에 위임)
         if (specialType != 0) {
-            // AllClear(2), BoxClear(3), OneLineClear(4) 처리
+            // AllClear(2), BoxClear(3), OneLineClear(4), WeightBlock(5) 처리
             itemBlockHandler.handleSpecialBlock(specialType, placedState, (newState) -> {
                 // 특수 블록 처리 완료 후
                 currentState = newState;
@@ -353,7 +388,10 @@ public class GameController {
         // 일반 블록: 라인 클리어 전에 삭제할 줄 찾기
         List<Integer> fullLines = findFullLines(board);
         
+        System.out.println("[GameController] 라인 체크 완료: fullLines=" + fullLines);
+        
         if (fullLines.size() > 0) {
+            System.out.println("[GameController] 라인 클리어 애니메이션 시작 예정!");
             // 애니메이션 시작
             animationManager.startLineClearAnimation(fullLines, () -> {
                 // 애니메이션 완료 후 실제 라인 클리어 수행
@@ -407,6 +445,9 @@ public class GameController {
                 // 새 블록 생성
                 spawnNewBlock();
             });
+            
+            // 애니메이션 시작 직후 화면 업데이트 (애니메이션 상태 반영)
+            renderWithAnimation();
             return;  // 애니메이션 진행 중
         }
         
@@ -444,15 +485,22 @@ public class GameController {
      * 새 블록 생성
      */
     private void spawnNewBlock() {
+        int oldScore = score;
+        int stateScore = currentState.getScore();
         BlockSpawner.SpawnResult result = blockSpawner.spawnNewBlock(currentState);
         currentState = result.newState;
+        
+        // score 필드와 currentState.getScore() 동기화
+        score = currentState.getScore();
+        System.out.println("[SCORE] spawnNewBlock: oldScore=" + oldScore + ", stateScore=" + stateScore + ", newScore=" + score);
+        view.setScore(score);
         
         // 속도 업데이트
         updateSpeed(result.speedLevel);
         
         // 뷰 업데이트
         view.setFallingBlock(currentState.getCurrentBlock());
-        view.render(currentState);
+        renderWithAnimation();
         
         // P2P 동기화: 블록 생성 이벤트 발행 (현재 블록 + 다음 블록 클래스명 포함)
         Block newBlock = currentState.getCurrentBlock();
@@ -561,7 +609,7 @@ public class GameController {
         animationManager.stopAllAnimations();
         
         // 뷰 업데이트
-        view.render(currentState);
+        renderWithAnimation();
         
         System.out.println("GameController reset complete");
     }
@@ -594,7 +642,7 @@ public class GameController {
         System.out.println("[DEBUG GameController] moveLeft start prev=(" + prevX + "," + prevY + ")");
 
         currentState = engine.moveLeft(currentState);
-        view.render(currentState);
+        renderWithAnimation();
 
         // 블록 좌표가 변경되었으면 이벤트 발행
         Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
@@ -621,7 +669,7 @@ public class GameController {
         System.out.println("[DEBUG GameController] moveRight start prev=(" + prevX + "," + prevY + ")");
 
         currentState = engine.moveRight(currentState);
-        view.render(currentState);
+        renderWithAnimation();
 
         Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
         int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
@@ -647,7 +695,7 @@ public class GameController {
         System.out.println("[DEBUG GameController] moveDown start prev=(" + prevX + "," + prevY + ")");
 
         currentState = engine.moveDown(currentState);
-        view.render(currentState);
+        renderWithAnimation();
 
         Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
         int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
@@ -676,7 +724,7 @@ public class GameController {
         System.out.println("[DEBUG GameController] rotate start prev=(" + prevX + "," + prevY + ")");
 
         currentState = engine.rotate(currentState);
-        view.render(currentState);
+        renderWithAnimation();
 
         Block currBlock = currentState != null ? currentState.getCurrentBlock() : null;
         int currX = currBlock != null ? currBlock.getX() : Integer.MIN_VALUE;
@@ -700,12 +748,20 @@ public class GameController {
         Block currentBlock = currentState.getCurrentBlock();
         if (currentBlock == null) return 0;
         
+        // WeightBlock은 일반 하드드롭 대신 즉시 드릴 애니메이션 시작
+        if (currentBlock instanceof blocks.item.WeightBlock) {
+            // 착지 처리로 넘어가서 드릴 애니메이션 시작
+            handleBlockLanding();
+            return 0;
+        }
+        
         // 하드 드롭 거리 계산하고 실제로 이동
         int dropDistance = engine.calculateHardDropDistance(currentState);
         
         // 하드 드롭 점수 추가 및 착지 처리
         if (dropDistance > 0) {
             int hardDropScore = dropDistance * 2;  // 한 칸당 2점
+            System.out.println("[SCORE] hardDrop: distance=" + dropDistance + ", score=" + hardDropScore);
             addScore(hardDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
             
             // P2P 동기화: 하드 드롭 후 최종 위치 전송
@@ -771,7 +827,9 @@ public class GameController {
      * spawnNewBlock() 호출 전에 currentState 동기화가 필요합니다.
      */
     public void addScore(int points) {
+        int oldScore = score;
         score += points;
+        System.out.println("[SCORE] addScore: " + oldScore + " + " + points + " = " + score);
         view.setScore(score);
         
         // HighScore 체크 및 업데이트
@@ -896,7 +954,7 @@ public class GameController {
             .build();
         
         // 화면 업데이트
-        view.render(currentState);
+        renderWithAnimation();
         try {
             System.out.println("[DEBUG GameController] addAttackLines completed: rendered with bottomRowsSample=" +
                 sampleBottomRows(currentState.getBoardArray(), 4));
@@ -1067,5 +1125,25 @@ public class GameController {
      */
     public GameEngine getEngine() {
         return engine;
+    }
+    
+    /**
+     * 애니메이션 상태가 적용된 GameState를 뷰에 렌더링
+     */
+    private void renderWithAnimation() {
+        GameState stateWithAnimation = animationManager.applyAnimationState(currentState);
+        
+        // 디버그: 애니메이션 상태 확인
+        if (stateWithAnimation.isLineClearAnimating()) {
+            System.out.println("[ANIMATION] 라인 클리어 애니메이션 활성화! flashBlack=" + stateWithAnimation.isFlashBlack() + ", rows=" + stateWithAnimation.getFlashingRows());
+        }
+        if (stateWithAnimation.isAllClearAnimating()) {
+            System.out.println("[ANIMATION] AllClear 애니메이션 활성화! flashBlack=" + stateWithAnimation.isAllClearFlashBlack());
+        }
+        if (stateWithAnimation.isBoxClearAnimating()) {
+            System.out.println("[ANIMATION] BoxClear 애니메이션 활성화! flashBlack=" + stateWithAnimation.isBoxFlashBlack());
+        }
+        
+        view.render(stateWithAnimation);
     }
 }

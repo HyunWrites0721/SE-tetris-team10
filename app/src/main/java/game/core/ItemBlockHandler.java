@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import blocks.Block;
 import game.GameView;
 
 /**
@@ -26,6 +27,7 @@ public class ItemBlockHandler {
     
     private final GameView view;
     private final AnimationManager animationManager;
+    private Runnable renderCallback;  // 애니메이션 시작 후 화면 갱신용
     
     /**
      * ItemBlockHandler 생성자
@@ -36,6 +38,13 @@ public class ItemBlockHandler {
     public ItemBlockHandler(GameView view, AnimationManager animationManager) {
         this.view = view;
         this.animationManager = animationManager;
+    }
+    
+    /**
+     * 렌더링 콜백 설정 (애니메이션 시작 후 화면 갱신)
+     */
+    public void setRenderCallback(Runnable renderCallback) {
+        this.renderCallback = renderCallback;
     }
     
     /**
@@ -120,6 +129,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     // ==================== BoxClear (값 3) ====================
@@ -190,6 +204,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     /**
@@ -291,6 +310,11 @@ public class ItemBlockHandler {
                 onComplete.accept(newState);
             }
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     /**
@@ -323,18 +347,154 @@ public class ItemBlockHandler {
      * @param onComplete 드릴 완료 후 콜백
      */
     public void handleWeightBlock(GameState state, java.util.function.Consumer<GameState> onComplete) {
-        // WeightBlock 로직은 별도 구현 필요 (현재 블록이 아래로 드릴하며 내려가는 복잡한 로직)
-        // 일단 기본 구조만 작성
+        int[][] board = state.getBoardArray();
+        int[][] colorBoard = state.getColorBoard();
+        Block currentBlock = state.getCurrentBlock();
         
-        animationManager.startWeightAnimation(() -> {
-            // 매 프레임마다 블록을 한 칸씩 아래로 이동
-            // TODO: 실제 드릴 로직 구현
-        }, () -> {
-            // 드릴 완료
+        if (currentBlock == null) {
             if (onComplete != null) {
                 onComplete.accept(state);
             }
+            return;
+        }
+        
+        // WeightBlock의 현재 위치 저장
+        int[][] shape = currentBlock.getShape();
+        int startX = currentBlock.getX();
+        int startY = currentBlock.getY();
+        
+        System.out.println("[WeightBlock] Starting drill from position: (" + startX + ", " + startY + ")");
+        
+        // ⚠️ WeightBlock을 보드에서 제거하지 않음! 화면에 보이면서 이동해야 함
+        // 대신 currentBlock의 위치만 조작하여 애니메이션
+        
+        // 드릴 애니메이션: WeightBlock이 화면에 보이면서 한 칸씩 아래로 이동
+        final int[] currentY = {startY};
+        final int[] currentX = {startX};
+        
+        System.out.println("[WeightBlock] Animation starting with Timer");
+        
+        animationManager.startWeightAnimation(() -> {
+            // 현재 위치의 블록을 지움 (이전 프레임에서 통과한 자리)
+            for (int row = 0; row < shape.length; row++) {
+                for (int col = 0; col < shape[row].length; col++) {
+                    if (shape[row][col] == 6) {
+                        int prevY = currentY[0] + row;
+                        int prevX = currentX[0] + col;
+                        if (prevY >= INNER_TOP && prevY <= INNER_BOTTOM && prevX >= INNER_LEFT && prevX <= INNER_RIGHT) {
+                            board[prevY][prevX] = 0;
+                            colorBoard[prevY][prevX] = 0;
+                        }
+                    }
+                }
+            }
+            
+            // 다음 위치 계산
+            int nextY = currentY[0] + 1;
+            System.out.println("[WeightBlock] Animation frame - moving from Y=" + currentY[0] + " to Y=" + nextY);
+            
+            // 바닥에 도달했는지 확인
+            boolean hitBottom = false;
+            for (int row = 0; row < shape.length; row++) {
+                for (int col = 0; col < shape[row].length; col++) {
+                    if (shape[row][col] == 6) {
+                        int ny = nextY + row;
+                        int nx = currentX[0] + col;
+                        if (ny >= board.length - 1) {  // 바닥 도달
+                            hitBottom = true;
+                            System.out.println("[WeightBlock] Hit bottom at Y=" + ny);
+                            break;
+                        }
+                    }
+                }
+                if (hitBottom) break;
+            }
+            
+            if (hitBottom) {
+                System.out.println("[WeightBlock] Drill complete - stopping animation");
+                
+                // 마지막 위치도 지움
+                for (int row = 0; row < shape.length; row++) {
+                    for (int col = 0; col < shape[row].length; col++) {
+                        if (shape[row][col] == 6) {
+                            int finalY = currentY[0] + row;
+                            int finalX = currentX[0] + col;
+                            if (finalY >= INNER_TOP && finalY <= INNER_BOTTOM && finalX >= INNER_LEFT && finalX <= INNER_RIGHT) {
+                                board[finalY][finalX] = 0;
+                                colorBoard[finalY][finalX] = 0;
+                            }
+                        }
+                    }
+                }
+                
+                // 드릴 완료: 애니메이션 정지
+                animationManager.stopWeightAnimation();
+                
+                // 중력 적용 (공중에 떠 있는 블록들을 아래로)
+                applyGravity(board, colorBoard);
+                
+                // 새로운 GameState 생성
+                GameState newState = new GameState.Builder(
+                    board,
+                    colorBoard,
+                    null,  // 드릴 완료 후 블록 없음
+                    state.getNextBlock(),
+                    state.isItemMode()
+                )
+                    .score(state.getScore())
+                    .totalLinesCleared(state.getTotalLinesCleared())
+                    .currentLevel(state.getCurrentLevel())
+                    .lineClearCount(state.getLineClearCount())
+                    .itemGenerateCount(state.getItemGenerateCount())
+                    .blocksSpawned(state.getBlocksSpawned())
+                    .lastLineClearScore(0)
+                    .build();
+                
+                if (view != null) view.repaintBlock();
+                
+                System.out.println("[WeightBlock] Invoking onComplete callback");
+                if (onComplete != null) {
+                    onComplete.accept(newState);
+                }
+                return;
+            }
+            
+            // 한 칸 아래로 이동
+            currentY[0] = nextY;
+            
+            // WeightBlock의 위치를 업데이트하여 화면에 표시
+            currentBlock.setPosition(currentX[0], currentY[0]);
+            
+            // 다음 위치의 블록들을 지움 (드릴 효과)
+            for (int row = 0; row < shape.length; row++) {
+                for (int col = 0; col < shape[row].length; col++) {
+                    if (shape[row][col] == 6) {
+                        int ny = currentY[0] + row;
+                        int nx = currentX[0] + col;
+                        if (ny >= INNER_TOP && ny <= INNER_BOTTOM && nx >= INNER_LEFT && nx <= INNER_RIGHT) {
+                            board[ny][nx] = 0;
+                            colorBoard[ny][nx] = 0;
+                        }
+                    }
+                }
+            }
+            
+            // 화면 갱신 (WeightBlock이 새 위치에서 보이도록)
+            if (view != null) {
+                view.setFallingBlock(currentBlock);
+            }
+            if (renderCallback != null) {
+                renderCallback.run();
+            }
+        }, () -> {
+            // 이 콜백은 stopWeightAnimation이 호출될 때 실행되지 않음
+            // 실제 완료 처리는 위의 프레임 콜백 내부에서 수행
         });
+        
+        // 애니메이션 시작 직후 화면 갱신
+        if (renderCallback != null) {
+            renderCallback.run();
+        }
     }
     
     // ==================== 유틸리티 메서드 ====================

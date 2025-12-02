@@ -65,7 +65,10 @@ public class AnimationManager {
      * @param onComplete 애니메이션 완료 후 콜백
      */
     public void startLineClearAnimation(List<Integer> fullLines, Runnable onComplete) {
+        System.out.println("[AnimationManager] startLineClearAnimation 호출됨! fullLines=" + fullLines + ", lineClearAnimating=" + lineClearAnimating);
+        
         if (lineClearAnimating || fullLines.isEmpty()) {
+            System.out.println("[AnimationManager] 애니메이션 건너뜀 (이미 진행 중이거나 fullLines 비어있음)");
             if (onComplete != null) onComplete.run();
             return;
         }
@@ -74,6 +77,8 @@ public class AnimationManager {
         flashingRows.addAll(fullLines);
         lineClearAnimating = true;
         flashBlack = true;
+        
+        System.out.println("[AnimationManager] 라인 클리어 애니메이션 시작! flashingRows=" + flashingRows + ", flashBlack=" + flashBlack);
         
         if (view != null) view.repaintBlock();
         

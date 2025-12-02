@@ -106,10 +106,8 @@ public class GameKeyListener extends KeyAdapter  {
                 
             case KeyEvent.VK_SPACE:
                 if (!frameBoard.isPaused && gameController != null) {
-                    int dropDistance = gameController.hardDrop();
-                    // TODO: 속도 레벨 및 라인 클리어 점수는 GameController에서 처리
-                    // 현재는 임시로 dropDistance만 사용
-                    frameBoard.increaseScore(dropDistance * 2);
+                    gameController.hardDrop();
+                    // 점수는 GameController.hardDrop() 내부에서 처리됨
                     gameBoard.setFallingBlock(gameController.getCurrentBlock());
                 }
                 break;

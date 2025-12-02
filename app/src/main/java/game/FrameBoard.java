@@ -118,9 +118,7 @@ public class FrameBoard extends JFrame {
      * FrameBoard용 라인 클리어 이벤트 처리
      */
     private void handleLineClearedForFrameBoard(LineClearedEvent event) {
-        // 점수 업데이트
-        increaseScore(event.getScore());
-        
+        // 점수는 GameController에서 이미 처리됨 (중복 방지)
         System.out.println("FrameBoard: Line cleared - Score: " + event.getScore() + 
                          ", Lines: " + event.getClearedLines().length);
     }

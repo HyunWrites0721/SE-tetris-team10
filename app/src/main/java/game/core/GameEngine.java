@@ -388,6 +388,8 @@ public class GameEngine {
                     int value = shape[row][col];
                     if (value == 2 || value == 3 || value == 4) {
                         specialType = value;  // 특수 블록 감지
+                    } else if (value == 6) {
+                        specialType = 5;  // WeightBlock 감지 (shape 값 6 -> specialType 5)
                     }
                 }
             }
