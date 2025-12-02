@@ -81,13 +81,11 @@ public class ItemBlockHandler {
     
     /**
      * AllClear 효과: 보드 전체 초기화
-     * 점수: 500 * (speedLevel + 1) * difficultyMultiplier
+     * 점수: 없음 (0점)
      */
     private void handleAllClear(GameState state, java.util.function.Consumer<GameState> onComplete) {
-        // 점수 계산
-        int speedLevel = calculateSpeedLevel(state);
-        double difficultyMultiplier = getDifficultyMultiplier(state);
-        int allClearScore = (int) Math.round(500 * (speedLevel + 1) * difficultyMultiplier);
+        // AllClearBlock은 점수를 부여하지 않음
+        int allClearScore = 0;
         
         // 애니메이션 시작
         animationManager.startAllClearAnimation(() -> {
@@ -102,6 +100,9 @@ public class ItemBlockHandler {
                     newColorBoard[r][c] = 0;
                 }
             }
+            
+            // 완성된 라인이 있다면 점수 없이 제거 (AllClear 후 자연스럽게 생긴 라인)
+            clearFullLinesWithoutScore(newBoard, newColorBoard);
             
             // 새로운 GameState 생성
             GameState newState = new GameState.Builder(
@@ -140,7 +141,7 @@ public class ItemBlockHandler {
     
     /**
      * BoxClear 효과: 5x5 영역 폭발 후 중력 적용
-     * 점수: 2줄 클리어와 동일
+     * 점수: 없음 (0점)
      */
     private void handleBoxClear(GameState state, java.util.function.Consumer<GameState> onComplete) {
         int[][] board = state.getBoardArray();
@@ -162,8 +163,8 @@ public class ItemBlockHandler {
             return;
         }
         
-        // 점수 계산 (2줄 클리어와 동일)
-        int boxClearScore = calculateLineClearScore(2, state);
+        // BoxClearBlock은 점수를 부여하지 않음
+        int boxClearScore = 0;
         
         // 애니메이션 시작
         animationManager.startBoxClearAnimation(centers, () -> {
@@ -177,6 +178,9 @@ public class ItemBlockHandler {
             
             // 중력 적용
             applyGravity(newBoard, newColorBoard);
+            
+            // 완성된 라인이 있다면 점수 없이 제거 (BoxClear 후 중력으로 자연스럽게 생긴 라인)
+            clearFullLinesWithoutScore(newBoard, newColorBoard);
             
             // 새로운 GameState 생성
             GameState newState = new GameState.Builder(
@@ -560,5 +564,38 @@ public class ItemBlockHandler {
      */
     private double getDifficultyMultiplier(GameState state) {
         return state.isItemMode() ? 0.7 : 1.0;
+    }
+    
+    /**
+     * 완성된 라인을 점수 없이 제거
+     * AllClear나 BoxClear 후 자연스럽게 생긴 라인에 대해 점수를 부여하지 않기 위함
+     */
+    private void clearFullLinesWithoutScore(int[][] board, int[][] colorBoard) {
+        List<Integer> fullLines = new ArrayList<>();
+        
+        // 완성된 라인 찾기
+        for (int r = INNER_TOP; r <= INNER_BOTTOM; r++) {
+            boolean isFull = true;
+            for (int c = INNER_LEFT; c <= INNER_RIGHT; c++) {
+                if (board[r][c] == 0) {
+                    isFull = false;
+                    break;
+                }
+            }
+            if (isFull) {
+                fullLines.add(r);
+            }
+        }
+        
+        // 완성된 라인이 없으면 종료
+        if (fullLines.isEmpty()) {
+            return;
+        }
+        
+        // 라인 제거 (역순으로 처리)
+        Collections.sort(fullLines, Collections.reverseOrder());
+        for (int r : fullLines) {
+            clearRowForce(board, colorBoard, r);
+        }
     }
 }
