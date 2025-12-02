@@ -164,9 +164,9 @@ public class VersusFrameBoard extends JFrame {
         
         panel.add(scorePanel, BorderLayout.NORTH);
         
-        // 게임 보드 (HighScore 패널 숨김)
+        // 게임 보드 (HighScore 패널 숨김, AttackPreview 패널 표시)
         boolean itemMode = (mode == VersusMode.ITEM);
-        GameView gameBoard = new GameView(itemMode, false);  // false = HighScore 패널 숨김
+        GameView gameBoard = new GameView(itemMode, false, true);  // false = HighScore 숨김, true = AttackPreview 표시
         
         // GameController 생성
         GameController gameController = new GameController(gameBoard, itemMode, difficulty);

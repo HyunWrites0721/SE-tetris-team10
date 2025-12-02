@@ -23,8 +23,8 @@ public class P2PVersusFrameBoard extends JFrame {
         return r;
     }
     
-    private final int FRAME_WIDTH = (int)(1200 * safeScreenRatio());
-    private final int FRAME_HEIGHT = (int)(600 * safeScreenRatio());
+    private final int FRAME_WIDTH = (int)(1400 * safeScreenRatio());  // 대전 모드와 동일
+    private final int FRAME_HEIGHT = (int)(700 * safeScreenRatio());  // 대전 모드와 동일
     
     // 네트워크
     private final NetworkManager networkManager;
@@ -36,6 +36,12 @@ public class P2PVersusFrameBoard extends JFrame {
     // 게임 상태
     private final VersusMode mode;
     private final int difficulty;
+    
+    // 시간제한 모드 관련
+    private javax.swing.Timer gameTimer;
+    private int remainingSeconds = 60;
+    private JLabel timerLabel;
+    private volatile boolean isGameOver = false;
     
     // 내 게임
     private GameView myGameView;
@@ -125,8 +131,8 @@ public class P2PVersusFrameBoard extends JFrame {
         
         boolean itemMode = (mode == VersusMode.ITEM);
         
-        // 내 게임 생성
-        myGameView = new GameView(itemMode, false);
+        // 내 게임 생성 (HighScore 숨김, AttackPreview 표시)
+        myGameView = new GameView(itemMode, false, true);
         myGameController = new GameController(myGameView, itemMode, difficulty);
         try {
             System.out.println("[DEBUG P2PVersusFrameBoard] myGameController instance=" + System.identityHashCode(myGameController)
@@ -136,8 +142,8 @@ public class P2PVersusFrameBoard extends JFrame {
         }
         JPanel myPanel = createMyPanel();
         
-        // 상대방 게임 생성
-        remoteGameView = new GameView(itemMode, false);
+        // 상대방 게임 생성 (HighScore 숨김, AttackPreview 표시)
+        remoteGameView = new GameView(itemMode, false, true);
         remoteGameController = new GameController(remoteGameView, itemMode, difficulty);
         try {
             System.out.println("[DEBUG P2PVersusFrameBoard] remoteGameController instance=" + System.identityHashCode(remoteGameController)
@@ -158,7 +164,34 @@ public class P2PVersusFrameBoard extends JFrame {
             mainPanel.add(myPanel);
         }
         
-        add(mainPanel, BorderLayout.CENTER);
+        // 시간제한 모드일 때 타이머 UI 추가
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        
+        if (mode == VersusMode.TIME_LIMIT) {
+            JPanel timerContainer = new JPanel(new BorderLayout());
+            timerContainer.setOpaque(false);
+            
+            JPanel timerPanel = new JPanel();
+            timerPanel.setBackground(new Color(200, 50, 50));
+            timerPanel.setPreferredSize(new Dimension((int)(150 * safeScreenRatio()), (int)(40 * safeScreenRatio())));
+            timerPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+            
+            timerLabel = new JLabel("1:00", SwingConstants.CENTER);
+            timerLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(20 * safeScreenRatio())));
+            timerLabel.setForeground(Color.WHITE);
+            
+            timerPanel.add(timerLabel);
+            
+            JPanel topPadding = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            topPadding.setOpaque(false);
+            topPadding.add(timerPanel);
+            
+            timerContainer.add(topPadding, BorderLayout.NORTH);
+            centerContainer.add(timerContainer, BorderLayout.NORTH);
+        }
+        
+        centerContainer.add(mainPanel, BorderLayout.CENTER);
+        add(centerContainer, BorderLayout.CENTER);
         
         // 하단에 네트워크 상태 표시
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -206,6 +239,40 @@ public class P2PVersusFrameBoard extends JFrame {
         // 게임 오버
         myGameController.getEventBus().subscribe(GameOverEvent.class, e -> {
             handleGameOver(true, e.getFinalScore());
+        }, 0);
+        
+        // 내가 공격을 적용했을 때 remoteGameController의 큐 초기화
+        myGameController.getEventBus().subscribe(game.events.AttackAppliedEvent.class, e -> {
+            System.out.println("[P2P] 💥 내가 AttackAppliedEvent 발행: lines=" + e.getAttackLines());
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    // 내가 공격을 적용했으므로 remoteGameController의 큐에서 해당 공격 제거
+                    remoteGameController.clearAttackQueue();
+                    remoteGameView.repaint();
+                } catch (Exception ex) {
+                    System.err.println("[P2P] remoteGameController.clearAttackQueue 예외: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            });
+        }, 0);
+        
+        // 라인 클리어 (공격 발생) - remoteGameController의 AttackPreviewPanel 업데이트
+        myGameController.getEventBus().subscribe(LineClearedEvent.class, e -> {
+            int lines = e.getClearedLines().length;
+            final int attackLines = (lines >= 2) ? lines : 0; // 2줄 이상이면 같은 수만큼 공격
+            if (attackLines > 0) {
+                System.out.println("[P2P] 💥 내가 공격 발생: " + attackLines + "줄 → remoteGameController.queueAttackLines() 호출");
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        // remoteGameController의 큐에 추가하여 AttackPreviewPanel 업데이트
+                        remoteGameController.queueAttackLines(attackLines, e.getLastBlockPattern(), e.getLastBlockX());
+                        remoteGameView.repaint();
+                    } catch (Exception ex) {
+                        System.err.println("[P2P] remoteGameController.queueAttackLines 예외: " + ex.getMessage());
+                        ex.printStackTrace();
+                    }
+                });
+            }
         }, 0);
         
         return panel;
@@ -269,29 +336,6 @@ public class P2PVersusFrameBoard extends JFrame {
             senderWrapper,
             myPlayerId
         );
-
-        // 즉시 시각 피드백: 내가 라인 클리어로 공격을 보낼 때 발신자 화면의 상대 패널에
-        // 바로 공격 시각을 표시하여 네트워크 지연/손실로 인한 보이지 않는 문제를 완화
-        myGameController.getEventBus().subscribe(LineClearedEvent.class, e -> {
-            try {
-                int lines = e.getClearedLines() != null ? e.getClearedLines().length : 0;
-                if (lines >= 2) {
-                    int[][] pattern = e.getLastBlockPattern();
-                    int blockX = e.getLastBlockX();
-                    SwingUtilities.invokeLater(() -> {
-                        try {
-                            remoteGamePanel.applyAttackVisual(lines, pattern, blockX);
-                        } catch (Throwable ex) {
-                            System.err.println("[P2P] 즉시 시각 피드백 적용 실패: " + ex.getMessage());
-                            ex.printStackTrace();
-                        }
-                    });
-                }
-            } catch (Throwable __) {
-                // don't let this affect game flow
-                System.err.println("[P2P] LineClearedEvent 즉시 피드백 처리 예외: " + __.getMessage());
-            }
-        }, 998);
 
         // Debug: print listener counts for verification
         try {
@@ -563,12 +607,15 @@ public class P2PVersusFrameBoard extends JFrame {
             });
         }, 0);
 
-        // 원격에서 공격이 적용되었음을 알리는 이벤트: 상대의 보드(내가 보는 opponent panel)에 반영
+        // 상대방이 공격을 실제로 적용했을 때 내 화면의 상대방 패널에 시각적으로 표시
         remoteEventBus.subscribe(game.events.AttackAppliedEvent.class, e -> {
-            System.out.println("[P2P] 🛡️ AttackAppliedEvent: lines=" + e.getAttackLines());
+            System.out.println("[P2P] 🛡️ AttackAppliedEvent 수신: lines=" + e.getAttackLines());
             SwingUtilities.invokeLater(() -> {
                 try {
                     remoteGamePanel.applyAttackVisual(e.getAttackLines(), e.getBlockPattern(), e.getBlockX());
+                    // 상대방이 공격을 적용했으므로 remoteGameController의 큐 초기화
+                    remoteGameController.clearAttackQueue();
+                    remoteGameView.repaint();
                 } catch (Exception ex) {
                     System.err.println("[P2P] applyAttackVisual 예외: " + ex.getMessage());
                     ex.printStackTrace();
@@ -576,17 +623,17 @@ public class P2PVersusFrameBoard extends JFrame {
             });
         }, 0);
 
-        // 공격 수신: 원격 플레이어의 공격은 내 로컬 보드에 적용되어야 합니다
+        // 공격 수신: 원격 플레이어의 공격은 내 로컬 보드에 큐에 추가 (대전 모드와 동일)
         remoteEventBus.subscribe(game.events.AttackEvent.class, e -> {
             System.out.println("[P2P] ⚔️ AttackEvent 수신: lines=" + e.getAttackLines() + " from=" + e.getPlayerId()
                 + " pattern=" + (e.getBlockPattern()!=null?(e.getBlockPattern().length+"x"+(e.getBlockPattern().length>0?e.getBlockPattern()[0].length:0)) : "<none>"));
             SwingUtilities.invokeLater(() -> {
                 try {
-                    System.out.println("[DEBUG P2PVersusFrameBoard] invoking addAttackLines: lines=" + e.getAttackLines()
+                    System.out.println("[DEBUG P2PVersusFrameBoard] invoking queueAttackLines: lines=" + e.getAttackLines()
                         + ", controllerId=" + System.identityHashCode(myGameController)
                         + ", thread=" + Thread.currentThread().getName());
-                    // 원격의 공격은 내 로컬 컨트롤러에 적용
-                    myGameController.addAttackLines(e.getAttackLines(), e.getBlockPattern(), e.getBlockX());
+                    // 원격의 공격은 내 로컬 컨트롤러의 큐에 추가 (블럭 착지 시 적용됨)
+                    myGameController.queueAttackLines(e.getAttackLines(), e.getBlockPattern(), e.getBlockX());
                     // 즉시 뷰 갱신을 보장하기 위해 myGameView를 리페인트
                     try {
                         myGameView.repaint();
@@ -594,7 +641,7 @@ public class P2PVersusFrameBoard extends JFrame {
                         // ignore
                     }
                 } catch (Exception ex) {
-                    System.err.println("[P2P] addAttackLines 예외: " + ex.getMessage());
+                    System.err.println("[P2P] queueAttackLines 예외: " + ex.getMessage());
                     ex.printStackTrace();
                 }
             });
@@ -616,11 +663,111 @@ public class P2PVersusFrameBoard extends JFrame {
         }
 
         myGameController.start();
+        
+        // 원격 게임 컨트롤러는 시작하지 않음 - 네트워크 이벤트로만 화면 업데이트
+        // remoteGameController.start()를 호출하면 독립적으로 블럭이 생성되어 동기화 문제 발생
+        
+        // 시간제한 모드일 때 타이머 시작 (서버와 클라이언트 모두)
+        if (mode == VersusMode.TIME_LIMIT) {
+            startTimer();
+        }
+    }
+    
+    /**
+     * 타이머 시작 (시간제한 모드)
+     */
+    private void startTimer() {
+        remainingSeconds = 60;  // 1분
+        
+        gameTimer = new javax.swing.Timer(1000, new java.awt.event.ActionListener() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!isGameOver) {
+                    remainingSeconds--;
+                    updateTimerDisplay();
+                    
+                    if (remainingSeconds <= 0) {
+                        handleTimeUp();
+                    }
+                }
+            }
+        });
+        gameTimer.start();
+    }
+    
+    /**
+     * 타이머 표시 업데이트
+     */
+    private void updateTimerDisplay() {
+        int minutes = remainingSeconds / 60;
+        int seconds = remainingSeconds % 60;
+        String timeText = String.format("%d:%02d", minutes, seconds);
+        
+        if (timerLabel != null) {
+            SwingUtilities.invokeLater(() -> {
+                timerLabel.setText(timeText);
+                
+                // 10초 이하일 때 깜빡임
+                if (remainingSeconds <= 10) {
+                    timerLabel.setForeground(remainingSeconds % 2 == 0 ? Color.WHITE : Color.YELLOW);
+                }
+            });
+        }
+    }
+    
+    /**
+     * 시간 종료 처리
+     */
+    private void handleTimeUp() {
+        if (isGameOver) return;
+        
+        isGameOver = true;
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        
+        // 게임 중지
+        try {
+            if (myGameController != null) {
+                myGameController.stop();
+            }
+            if (remoteGameController != null) {
+                remoteGameController.stop();
+            }
+        } catch (Exception e) {
+            System.err.println("게임 중지 실패: " + e.getMessage());
+        }
+        
+        // 점수로 승자 결정
+        SwingUtilities.invokeLater(() -> {
+            String message;
+            if (myScore > remoteScore) {
+                message = "승리!\n내 점수: " + myScore + "\n상대방 점수: " + remoteScore;
+            } else if (remoteScore > myScore) {
+                message = "패배!\n내 점수: " + myScore + "\n상대방 점수: " + remoteScore;
+            } else {
+                message = "무승부!\n내 점수: " + myScore + "\n상대방 점수: " + remoteScore;
+            }
+            
+            JOptionPane.showMessageDialog(this, message, "시간 종료", JOptionPane.INFORMATION_MESSAGE);
+            cleanupResources();
+            dispose();
+            new p2p.P2PMenuFrame();
+        });
     }
     
     private void handleGameOver(boolean isLocal, int finalScore) {
+        if (isGameOver) return;  // 이미 게임 오버 처리됨
+        
+        isGameOver = true;
+        
         String player = isLocal ? "나" : "상대방";
         System.out.println(player + " 게임 오버! 최종 점수: " + finalScore);
+        
+        // 타이머 정지
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
         
         // 게임 종료 시 양쪽 게임 모두 중지
         try {

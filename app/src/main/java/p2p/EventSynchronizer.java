@@ -94,6 +94,7 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
         localEventBus.subscribe(GameOverEvent.class, this::sendEvent, 999);        // 게임 오버
         localEventBus.subscribe(LevelUpEvent.class, this::sendEvent, 999);         // 레벨 업
         localEventBus.subscribe(ItemActivatedEvent.class, this::sendEvent, 999);   // 아이템
+        localEventBus.subscribe(game.events.AttackAppliedEvent.class, this::sendEvent, 999); // 공격 적용 (시각적 동기화용)
     }
     
     /**

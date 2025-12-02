@@ -1001,6 +1001,9 @@ public class GameController {
         int totalQueued = 0;
         for (AttackItem it : pendingAttacks) totalQueued += it.lines;
         System.out.println("[DEBUG GameController] queueAttackLines: +" + lines + "줄 추가, 총 큐: " + totalQueued + "줄 (" + pendingAttacks.size() + "개 아이템)");
+        
+        // 공격 미리보기 업데이트
+        updateAttackPreview();
     }
 
     /**
@@ -1097,8 +1100,22 @@ public class GameController {
         // 화면 업데이트
         view.render(currentState);
         
+        // AttackAppliedEvent 발행 - P2P 상대방 화면 동기화
+        // 각 공격 아이템에 대해 개별적으로 이벤트 발행
+        for (AttackItem item : attackList) {
+            try {
+                eventBus.publish(new game.events.AttackAppliedEvent(item.lines, item.pattern, item.blockX));
+                System.out.println("[DEBUG GameController] AttackAppliedEvent 발행: " + item.lines + "줄");
+            } catch (Throwable t) {
+                System.err.println("[DEBUG GameController] AttackAppliedEvent 발행 실패: " + t.getMessage());
+            }
+        }
+        
         pendingAttacks.clear();
         System.out.println("[DEBUG GameController] applyQueuedAttacks 완료: 총 " + totalToApply + "줄 적용됨");
+        
+        // 공격 미리보기 클리어
+        updateAttackPreview();
     }
 
     // simple container for queued attack
@@ -1111,6 +1128,32 @@ public class GameController {
             this.pattern = pattern;
             this.blockX = blockX;
         }
+    }
+    
+    /**
+     * 공격 미리보기 패널 업데이트
+     */
+    private void updateAttackPreview() {
+        try {
+            if (view instanceof game.GameView) {
+                java.util.List<game.model.AttackPreviewItem> snapshot = new java.util.ArrayList<>();
+                for (AttackItem it : pendingAttacks) {
+                    snapshot.add(new game.model.AttackPreviewItem(it.lines, it.pattern, it.blockX));
+                }
+                ((game.GameView) view).updateAttackPreview(snapshot);
+            }
+        } catch (Throwable t) {
+            System.err.println("[DEBUG GameController] updateAttackPreview 실패: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * 공격 큐 초기화 (P2P 동기화용)
+     */
+    public void clearAttackQueue() {
+        pendingAttacks.clear();
+        updateAttackPreview();
+        System.out.println("[DEBUG GameController] 공격 큐 초기화됨");
     }
     
     /**

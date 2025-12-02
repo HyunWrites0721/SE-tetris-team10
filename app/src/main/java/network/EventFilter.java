@@ -38,6 +38,9 @@ public class EventFilter {
         SYNC_EVENTS.add(ScoreUpdateEvent.class);
         SYNC_EVENTS.add(GameOverEvent.class);
         
+        // 공격 관련 이벤트: AttackAppliedEvent는 상대방 화면에 시각적 표시용
+        SYNC_EVENTS.add(AttackAppliedEvent.class);
+        
         // 아이템 관련 이벤트 (있는 경우)
         try {
             Class<?> itemEventClass = Class.forName("game.events.ItemUsedEvent");

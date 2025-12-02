@@ -32,18 +32,26 @@ public class GameView extends JPanel {
     private NextBlockPanel nextBlockPanel;
     private ScorePanel scorePanel;
     private HighScorePanel highScorePanel;
+    private game.panels.AttackPreviewPanel attackPreviewPanel;
     
     private FrameBoard frameBoard;
     private boolean showHighScore = true;  // HighScore 패널 표시 여부
+    private boolean showAttackPreview = false;  // AttackPreview 패널 표시 여부 (대전/P2P 모드)
     
-    // 생성자 (기본: HighScore 표시)
+    // 생성자 (기본: HighScore 표시, AttackPreview 숨김)
     public GameView(boolean item) {
-        this(item, true);
+        this(item, true, false);
     }
     
     // 생성자 (HighScore 표시 여부 선택 가능)
     public GameView(boolean item, boolean showHighScore) {
+        this(item, showHighScore, false);
+    }
+    
+    // 생성자 (HighScore, AttackPreview 표시 여부 선택 가능)
+    public GameView(boolean item, boolean showHighScore, boolean showAttackPreview) {
         this.showHighScore = showHighScore;
+        this.showAttackPreview = showAttackPreview;
         setLayout(null); // 절대 위치 지정
         setOpaque(true);
         setBackground(new java.awt.Color(240, 240, 240));
@@ -57,6 +65,10 @@ public class GameView extends JPanel {
             highScorePanel = new HighScorePanel();
         }
         
+        if (showAttackPreview) {
+            attackPreviewPanel = new game.panels.AttackPreviewPanel();
+        }
+        
         // 레이아웃 설정
         layoutPanels();
         
@@ -64,6 +76,10 @@ public class GameView extends JPanel {
         add(gameBoardPanel);
         add(nextBlockPanel);
         add(scorePanel);
+        
+        if (showAttackPreview && attackPreviewPanel != null) {
+            add(attackPreviewPanel);
+        }
         
         if (showHighScore && highScorePanel != null) {
             add(highScorePanel);
@@ -116,11 +132,20 @@ public class GameView extends JPanel {
         scorePanel.setBounds(offsetX + boardWidth, offsetY + scoreY, rightPanelWidth, scoreHeight);
         scorePanel.setCellSize(CELL_SIZE);
         
-        // HIGHSCORE 패널 (SCORE 아래) - 중앙 정렬 적용 (옵션)
+        int currentY = scoreY + scoreHeight;
+        
+        // ATTACK PREVIEW 패널 (SCORE 아래) - 대전/P2P 모드에서만 표시
+        if (showAttackPreview && attackPreviewPanel != null) {
+            int attackPreviewHeight = 8 * CELL_SIZE;
+            attackPreviewPanel.setBounds(offsetX + boardWidth, offsetY + currentY, rightPanelWidth, attackPreviewHeight);
+            attackPreviewPanel.setCellSize(CELL_SIZE);
+            currentY += attackPreviewHeight;
+        }
+        
+        // HIGHSCORE 패널 (ATTACK PREVIEW 또는 SCORE 아래) - 중앙 정렬 적용 (옵션)
         if (showHighScore && highScorePanel != null) {
             int highScoreHeight = 4 * CELL_SIZE;
-            int highScoreY = scoreY + scoreHeight;
-            highScorePanel.setBounds(offsetX + boardWidth, offsetY + highScoreY, rightPanelWidth, highScoreHeight);
+            highScorePanel.setBounds(offsetX + boardWidth, offsetY + currentY, rightPanelWidth, highScoreHeight);
             highScorePanel.setCellSize(CELL_SIZE);
         }
         
@@ -154,6 +179,11 @@ public class GameView extends JPanel {
         nextBlockPanel.setFontSize(fontSize);
         scorePanel.setCellSize(CELL_SIZE);
         scorePanel.setFontSize(fontSize);
+        
+        if (showAttackPreview && attackPreviewPanel != null) {
+            attackPreviewPanel.setCellSize(CELL_SIZE);
+            attackPreviewPanel.setFontSize(fontSize);
+        }
         
         if (showHighScore && highScorePanel != null) {
             highScorePanel.setCellSize(CELL_SIZE);
@@ -236,6 +266,15 @@ public class GameView extends JPanel {
      */
     public void repaintBlock() {
         repaint();
+    }
+    
+    /**
+     * 공격 미리보기 업데이트 (대전/P2P 모드)
+     */
+    public void updateAttackPreview(java.util.List<game.model.AttackPreviewItem> items) {
+        if (showAttackPreview && attackPreviewPanel != null) {
+            attackPreviewPanel.updateQueue(items);
+        }
     }
     
 }
