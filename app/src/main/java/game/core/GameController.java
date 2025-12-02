@@ -436,8 +436,15 @@ public class GameController {
      * 새 블록 생성
      */
     private void spawnNewBlock() {
+        int oldScore = score;
+        int stateScore = currentState.getScore();
         BlockSpawner.SpawnResult result = blockSpawner.spawnNewBlock(currentState);
         currentState = result.newState;
+        
+        // score 필드와 currentState.getScore() 동기화
+        score = currentState.getScore();
+        System.out.println("[SCORE] spawnNewBlock: oldScore=" + oldScore + ", stateScore=" + stateScore + ", newScore=" + score);
+        view.setScore(score);
         
         // 속도 업데이트
         updateSpeed(result.speedLevel);
@@ -705,6 +712,7 @@ public class GameController {
         // 하드 드롭 점수 추가 및 착지 처리
         if (dropDistance > 0) {
             int hardDropScore = dropDistance * 2;  // 한 칸당 2점
+            System.out.println("[SCORE] hardDrop: distance=" + dropDistance + ", score=" + hardDropScore);
             addScore(hardDropScore);  // ✅ addScore() 사용하여 HighScore도 체크
             
             // P2P 동기화: 하드 드롭 후 최종 위치 전송
@@ -770,7 +778,9 @@ public class GameController {
      * spawnNewBlock() 호출 전에 currentState 동기화가 필요합니다.
      */
     public void addScore(int points) {
+        int oldScore = score;
         score += points;
+        System.out.println("[SCORE] addScore: " + oldScore + " + " + points + " = " + score);
         view.setScore(score);
         
         // HighScore 체크 및 업데이트
