@@ -474,13 +474,21 @@ public class RemoteGamePanel {
             if (blockPattern != null && blockPattern.length > 0) {
                 int patternH = blockPattern.length;
                 int patternW = blockPattern[0].length;
+                System.out.println("[REMOTE] applyAttackVisual: lines=" + lines + ", patternH=" + patternH + ", patternW=" + patternW);
                 for (int rOff = 0; rOff < lines; rOff++) {
                     int boardRow = INNER_BOTTOM - rOff;
                     int patternRow = rOff % patternH;
+                    System.out.print("[REMOTE]   rOff=" + rOff + ", boardRow=" + boardRow + ", patternRow=" + patternRow + ", pattern=[");
                     for (int j = 0; j < patternW; j++) {
-                        int boardCol = blockX + j;
-                        if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT && patternRow >= 0
-                                && patternRow < blockPattern.length && blockPattern[patternRow][j] == 1) {
+                        System.out.print(blockPattern[patternRow][j]);
+                    }
+                    System.out.println("]");
+                    // 패턴은 전체 보드 너비이므로 INNER_LEFT부터 시작
+                    for (int j = 0; j < patternW && j < (INNER_RIGHT - INNER_LEFT + 1); j++) {
+                        int boardCol = INNER_LEFT + j;
+                        if (patternRow >= 0 && patternRow < blockPattern.length 
+                                && j < blockPattern[patternRow].length 
+                                && blockPattern[patternRow][j] == 1) {
                             remoteBoard[boardRow][boardCol] = 0;
                             remoteColorBoard[boardRow][boardCol] = 0;
                         }

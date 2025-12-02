@@ -148,17 +148,12 @@ public class AttackPreviewPanel extends JPanel {
                 if (pattern != null && patternHeight > 0) {
                     int patternRow = line % patternHeight;
                     
-                    // blockX 위치를 고려하여 구멍 위치 계산 (보드는 1부터 시작하므로 -1)
-                    int holeStartCol = Math.max(0, item.blockX - 1);
-                    
-                    for (int j = 0; j < patternWidth; j++) {
-                        int displayCol = holeStartCol + j;
-                        if (displayCol >= PREVIEW_COLS) break;  // 범위 벗어남
-                        
+                    // 패턴은 전체 보드 너비이므로 0부터 시작
+                    for (int j = 0; j < patternWidth && j < PREVIEW_COLS; j++) {
                         if (patternRow < pattern.length && j < pattern[patternRow].length) {
                             if (pattern[patternRow][j] == 1) {
                                 // 구멍 (흰색)
-                                int x = gridX + displayCol * previewCellSize;
+                                int x = gridX + j * previewCellSize;
                                 int y = startY + currentRow * previewCellSize;
                                 g2d.setColor(Color.WHITE);
                                 g2d.fillRect(x + 1, y + 1, previewCellSize - 2, previewCellSize - 2);

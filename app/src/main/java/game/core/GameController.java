@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import blocks.Block;
 import game.GameView;
+import game.util.GameLogger;
 import game.events.EventBus;
 import game.events.TickEvent;
 import game.events.GameOverEvent;
@@ -307,6 +308,12 @@ public class GameController {
         lastBlockX = currentBlock.getX() + (minCol != Integer.MAX_VALUE ? minCol : 0);
         System.out.println("[DEBUG] lastBlockX=" + lastBlockX + " (원본X=" + currentBlock.getX() + " + offset=" + (minCol != Integer.MAX_VALUE ? minCol : 0) + ")");
         
+        // 블록을 놓기 전 보드 상태 백업 (공격줄 패턴 생성용)
+        int[][] boardBeforePlacement = new int[board.length][];
+        for (int i = 0; i < board.length; i++) {
+            boardBeforePlacement[i] = board[i].clone();
+        }
+        
         // 일반 블록을 보드에 고정
         int specialType = engine.placeBlock(currentBlock, board, colorBoard);
         
@@ -392,6 +399,10 @@ public class GameController {
         
         if (fullLines.size() > 0) {
             System.out.println("[GameController] 라인 클리어 애니메이션 시작 예정!");
+            
+            // 줄을 지우기 전에 지워질 줄의 패턴을 추출 (블록을 놓기 전 상태 사용)
+            int[][] clearedLinePattern = extractClearedLinePattern(boardBeforePlacement, fullLines);
+            
             // 애니메이션 시작
             animationManager.startLineClearAnimation(fullLines, () -> {
                 // 애니메이션 완료 후 실제 라인 클리어 수행
@@ -428,10 +439,9 @@ public class GameController {
                 // BlockSpawner에 라인 클리어 알림
                 blockSpawner.addLineClearCount(linesCleared);
                 
-                // LineClearedEvent 발행
+                // LineClearedEvent 발행 - 지워진 줄의 패턴 전달 (비어있던 칸의 위치)
                 int[] rows = fullLines.stream().mapToInt(Integer::intValue).toArray();
-                // Include last block pattern & X so opponent can reproduce hole shape
-                eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore, lastBlockPattern, lastBlockX));
+                eventBus.publish(new LineClearedEvent(rows, linesCleared, newScore, clearedLinePattern, 0));
                 
                 // 블록 고정 시점: 큐에 쌓인 공격줄 적용
                 applyQueuedAttacks();
@@ -985,6 +995,55 @@ public class GameController {
     }
     
     /**
+     * 지워질 줄의 패턴을 추출 (비어있는 칸을 1로 표시)
+     * 공격줄 생성 시 이 패턴을 사용하여 구멍을 만듦
+     */
+    private int[][] extractClearedLinePattern(int[][] board, List<Integer> fullLines) {
+        if (fullLines.isEmpty()) return null;
+        
+        int COLS = board[0].length;
+        int INNER_LEFT = 1;
+        int INNER_RIGHT = COLS - 2;
+        int INNER_WIDTH = INNER_RIGHT - INNER_LEFT + 1;
+        
+        // 지워질 줄의 비어있는 칸을 1로 표시하는 패턴 생성
+        int[][] pattern = new int[fullLines.size()][INNER_WIDTH];
+        
+        for (int i = 0; i < fullLines.size(); i++) {
+            int row = fullLines.get(i);
+            for (int j = 0; j < INNER_WIDTH; j++) {
+                int col = INNER_LEFT + j;
+                // 빈 칸(0)이면 패턴에 1로 표시 (공격줄에서 구멍이 됨)
+                // 블록이 있던 칸(!=0)은 패턴에 0으로 표시 (공격줄에서 채워짐)
+                pattern[i][j] = (board[row][col] == 0) ? 1 : 0;
+            }
+        }
+        
+        GameLogger.debug("extractClearedLinePattern: " + fullLines.size() + "줄, 패턴 크기: " + pattern.length + "x" + pattern[0].length);
+        for (int i = 0; i < fullLines.size(); i++) {
+            int row = fullLines.get(i);
+            StringBuilder sb = new StringBuilder("  row " + row + " (pattern[" + i + "]): ");
+            
+            // 실제 보드 상태 출력
+            sb.append("보드=[");
+            for (int j = 0; j < INNER_WIDTH; j++) {
+                int col = INNER_LEFT + j;
+                sb.append(board[row][col]);
+            }
+            sb.append("] → 패턴=[");
+            
+            // 패턴 출력 (1=구멍)
+            for (int j = 0; j < pattern[i].length; j++) {
+                sb.append(pattern[i][j]);
+            }
+            sb.append("]");
+            GameLogger.debug(sb.toString());
+        }
+        
+        return pattern;
+    }
+    
+    /**
      * Queue incoming attack lines for later application (on block lock).
      */
     public void queueAttackLines(int lines, int[][] blockPattern, int blockX) {
@@ -1000,7 +1059,7 @@ public class GameController {
         // 디버그: 큐에 추가된 공격 로그
         int totalQueued = 0;
         for (AttackItem it : pendingAttacks) totalQueued += it.lines;
-        System.out.println("[DEBUG GameController] queueAttackLines: +" + lines + "줄 추가, 총 큐: " + totalQueued + "줄 (" + pendingAttacks.size() + "개 아이템)");
+        GameLogger.debug("queueAttackLines: +" + lines + "줄 추가, 총 큐: " + totalQueued + "줄 (" + pendingAttacks.size() + "개 아이템)");
         
         // 공격 미리보기 업데이트
         updateAttackPreview();
@@ -1010,13 +1069,13 @@ public class GameController {
      * Apply all queued attacks immediately and clear the queue.
      * 모든 공격을 미리보기와 동일한 순서로 한 번에 적용
      */
-    private void applyQueuedAttacks() {
+    public void applyQueuedAttacks() {
         if (pendingAttacks.isEmpty()) return;
         
         // 디버그: 적용될 공격 총합 계산
         int totalToApply = 0;
         for (AttackItem it : pendingAttacks) totalToApply += it.lines;
-        System.out.println("[DEBUG GameController] applyQueuedAttacks 시작: " + totalToApply + "줄 적용 예정 (" + pendingAttacks.size() + "개 아이템)");
+        GameLogger.debug("applyQueuedAttacks 시작: " + totalToApply + "줄 적용 예정 (" + pendingAttacks.size() + "개 아이템)");
         
         // 모든 공격을 리스트로 변환 (역순으로, 나중 공격이 먼저)
         java.util.List<AttackItem> attackList = new java.util.ArrayList<>(pendingAttacks);
@@ -1043,7 +1102,7 @@ public class GameController {
         // 공격줄을 아래부터 차례로 추가 (역순 리스트 순서대로)
         int currentRow = INNER_BOTTOM;
         for (AttackItem item : attackList) {
-            System.out.println("[DEBUG GameController]   -> " + item.lines + "줄 적용 중 (row " + (currentRow - item.lines + 1) + "~" + currentRow + ")");
+            GameLogger.debug("  -> " + item.lines + "줄 적용 중 (row " + (currentRow - item.lines + 1) + "~" + currentRow + ")");
             
             for (int lineOffset = 0; lineOffset < item.lines; lineOffset++) {
                 int row = currentRow - lineOffset;
@@ -1055,23 +1114,23 @@ public class GameController {
                     colorBoard[row][col] = 8;
                 }
                 
-                // 패턴에 따라 구멍 뚫기
+                // 패턴에 따라 구멍 뚫기 (패턴[i][j] == 1이면 구멍)
                 if (item.pattern != null && item.pattern.length > 0) {
                     int patternH = item.pattern.length;
                     int patternW = item.pattern[0].length;
                     int patternRow = lineOffset % patternH;
                     
-                    System.out.println("[DEBUG]     row=" + row + ", patternH=" + patternH + ", patternW=" + patternW + ", patternRow=" + patternRow + ", blockX=" + item.blockX);
+                    GameLogger.debug("    row=" + row + ", patternH=" + patternH + ", patternW=" + patternW + ", patternRow=" + patternRow);
                     
-                    for (int j = 0; j < patternW; j++) {
-                        int boardCol = item.blockX + j;
-                        if (boardCol >= INNER_LEFT && boardCol <= INNER_RIGHT 
-                            && patternRow < item.pattern.length 
+                    // 패턴을 INNER_LEFT부터 적용 (전체 너비)
+                    for (int j = 0; j < patternW && j < (INNER_RIGHT - INNER_LEFT + 1); j++) {
+                        int boardCol = INNER_LEFT + j;
+                        if (patternRow < item.pattern.length 
                             && j < item.pattern[patternRow].length
                             && item.pattern[patternRow][j] == 1) {
                             board[row][boardCol] = 0;
                             colorBoard[row][boardCol] = 0;
-                            System.out.println("[DEBUG]       구멍: col=" + boardCol);
+                            GameLogger.debug("      구멍: col=" + boardCol);
                         }
                     }
                 }
@@ -1112,7 +1171,7 @@ public class GameController {
         }
         
         pendingAttacks.clear();
-        System.out.println("[DEBUG GameController] applyQueuedAttacks 완료: 총 " + totalToApply + "줄 적용됨");
+        GameLogger.debug("applyQueuedAttacks 완료: 총 " + totalToApply + "줄 적용됨");
         
         // 공격 미리보기 클리어
         updateAttackPreview();
@@ -1153,7 +1212,7 @@ public class GameController {
     public void clearAttackQueue() {
         pendingAttacks.clear();
         updateAttackPreview();
-        System.out.println("[DEBUG GameController] 공격 큐 초기화됨");
+        GameLogger.debug("공격 큐 초기화됨");
     }
     
     /**

@@ -192,7 +192,8 @@ public class VersusFrameBoard extends JFrame {
         gameController.getEventBus().subscribe(LineClearedEvent.class, new EventListener<LineClearedEvent>() {
             @Override
             public void onEvent(LineClearedEvent event) {
-                handleLineCleared(player, event.getClearedLines().length);
+                handleLineCleared(player, event.getClearedLines().length, 
+                    event.getLastBlockPattern(), event.getLastBlockX());
             }
         }, 0);
         
@@ -314,31 +315,25 @@ public class VersusFrameBoard extends JFrame {
     /**
      * 줄 삭제 처리 (공격 시스템)
      */
-    private void handleLineCleared(int player, int linesCleared) {
+    private void handleLineCleared(int player, int linesCleared, int[][] clearedLinePattern, int blockX) {
         // 공격 줄 수 계산
         int attackLines = VersusAttackManager.calculateAttackLines(linesCleared);
         
         if (attackLines > 0) {
-            // 상대방에게 공격
+            // 상대방에게 공격 (지워진 줄의 패턴 사용)
             if (player == 1) {
                 int received = attackManager2.receiveAttack(attackLines);
                 System.out.println("Player 1 attacks Player 2 with " + received + " lines");
                 // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
-                    Object[] blockInfo = gameController1.getLastBlockInfo();
-                    int[][] pattern = (int[][]) blockInfo[0];
-                    int blockX = (int) blockInfo[1];
-                    gameController2.queueAttackLines(received, pattern, blockX);
+                    gameController2.queueAttackLines(received, clearedLinePattern, blockX);
                 }
             } else {
                 int received = attackManager1.receiveAttack(attackLines);
                 System.out.println("Player 2 attacks Player 1 with " + received + " lines");
                 // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
-                    Object[] blockInfo = gameController2.getLastBlockInfo();
-                    int[][] pattern = (int[][]) blockInfo[0];
-                    int blockX = (int) blockInfo[1];
-                    gameController1.queueAttackLines(received, pattern, blockX);
+                    gameController1.queueAttackLines(received, clearedLinePattern, blockX);
                 }
             }
         }

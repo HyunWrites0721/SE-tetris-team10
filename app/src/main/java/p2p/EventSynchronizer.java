@@ -145,9 +145,21 @@ public class EventSynchronizer implements MessageReceiver.MessageListener {
                 int attackLines = 0;
                 if (lines >= 2) attackLines = lines; // 간단 규칙: 2줄 이상이면 같은 수만큼 공격
                 if (attackLines > 0) {
-                    // include last block pattern & x so opponent can create hole(s)
+                    // include cleared line pattern so opponent can reproduce holes
                     int[][] pattern = le.getLastBlockPattern();
                     int blockX = le.getLastBlockX();
+                    
+                    // 패턴 디버그 로그
+                    game.util.GameLogger.debug("EventSynchronizer 전송 전: pattern=" + 
+                        (pattern!=null?(pattern.length+"x"+(pattern.length>0?pattern[0].length:0)):"null"));
+                    if (pattern != null && pattern.length > 0 && pattern[0].length > 0) {
+                        StringBuilder sb = new StringBuilder("  pattern[0]=");
+                        for (int j = 0; j < Math.min(pattern[0].length, 10); j++) {
+                            sb.append(pattern[0][j]);
+                        }
+                        game.util.GameLogger.debug(sb.toString());
+                    }
+                    
                     AttackMessage am = new AttackMessage(attackLines, myPlayerId, pattern, blockX);
                     boolean asent = sender.sendMessage(am);
                     if (asent) {

@@ -614,12 +614,14 @@ public class P2PVersusFrameBoard extends JFrame {
             System.out.println("[P2P] 🛡️ AttackAppliedEvent 수신: lines=" + e.getAttackLines());
             SwingUtilities.invokeLater(() -> {
                 try {
-                    remoteGamePanel.applyAttackVisual(e.getAttackLines(), e.getBlockPattern(), e.getBlockX());
-                    // 상대방이 공격을 적용했으므로 remoteGameController의 큐 초기화
-                    remoteGameController.clearAttackQueue();
+                    // 이미 LineClearedEvent에서 remoteGameController.queueAttackLines()로 큐에 추가했으므로
+                    // 여기서는 큐에 있는 공격을 적용만 함
+                    remoteGameController.applyQueuedAttacks();
+                    // RemoteGamePanel에 업데이트된 보드 상태 동기화
+                    remoteGamePanel.syncFromController(remoteGameController);
                     remoteGameView.repaint();
                 } catch (Exception ex) {
-                    System.err.println("[P2P] applyAttackVisual 예외: " + ex.getMessage());
+                    System.err.println("[P2P] AttackAppliedEvent 처리 예외: " + ex.getMessage());
                     ex.printStackTrace();
                 }
             });
@@ -627,6 +629,17 @@ public class P2PVersusFrameBoard extends JFrame {
 
         // 공격 수신: 원격 플레이어의 공격은 내 로컬 보드에 큐에 추가 (대전 모드와 동일)
         remoteEventBus.subscribe(game.events.AttackEvent.class, e -> {
+            int[][] pattern = e.getBlockPattern();
+            game.util.GameLogger.debug("P2PVersusFrameBoard AttackEvent 수신: lines=" + e.getAttackLines() + 
+                " pattern=" + (pattern!=null?(pattern.length+"x"+(pattern.length>0?pattern[0].length:0)) : "null"));
+            if (pattern != null && pattern.length > 0 && pattern[0].length > 0) {
+                StringBuilder sb = new StringBuilder("  받은 pattern[0]=");
+                for (int j = 0; j < Math.min(pattern[0].length, 10); j++) {
+                    sb.append(pattern[0][j]);
+                }
+                game.util.GameLogger.debug(sb.toString());
+            }
+            
             System.out.println("[P2P] ⚔️ AttackEvent 수신: lines=" + e.getAttackLines() + " from=" + e.getPlayerId()
                 + " pattern=" + (e.getBlockPattern()!=null?(e.getBlockPattern().length+"x"+(e.getBlockPattern().length>0?e.getBlockPattern()[0].length:0)) : "<none>"));
             SwingUtilities.invokeLater(() -> {
