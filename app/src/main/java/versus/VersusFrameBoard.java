@@ -21,14 +21,19 @@ public class VersusFrameBoard extends JFrame {
         return r;
     }
     
-    private int FRAME_WIDTH = (int)(1200 * safeScreenRatio());  // 가로 2배
-    private int FRAME_HEIGHT = (int)(600 * safeScreenRatio());
+    private int FRAME_WIDTH = (int)(1400 * safeScreenRatio());  // 가로 2배 + 여유
+    private int FRAME_HEIGHT = (int)(700 * safeScreenRatio());  // 세로도 증가
     
     // 게임 상태
     private boolean isPaused = false;
     private boolean isGameOver = false;
     private VersusMode mode;
     private int difficulty;
+    
+    // 시간제한 모드 관련
+    private javax.swing.Timer gameTimer;  // 1분 타이머
+    private int remainingSeconds = 60;    // 남은 시간 (초)
+    private JLabel timerLabel;            // 타이머 표시 레이블
     
     // Player 1 (왼쪽) - WASD + F
     private GameView gameBoard1;
@@ -64,15 +69,45 @@ public class VersusFrameBoard extends JFrame {
         setLayout(new BorderLayout());
         
         // 메인 컨테이너
-        JPanel mainPanel = new JPanel(new GridLayout(1, 2));  // 좌우 2분할
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        
+        // 좌우 게임 패널
+        JPanel gamesPanel = new JPanel(new GridLayout(1, 2));  // 좌우 2분할
         
         // === Player 1 (왼쪽) ===
         JPanel player1Panel = createPlayerPanel(1);
-        mainPanel.add(player1Panel);
+        gamesPanel.add(player1Panel);
         
         // === Player 2 (오른쪽) ===
         JPanel player2Panel = createPlayerPanel(2);
-        mainPanel.add(player2Panel);
+        gamesPanel.add(player2Panel);
+        
+        mainPanel.add(gamesPanel, BorderLayout.CENTER);
+        
+        // 시간제한 모드일 때 타이머를 중앙 상단에 배치
+        if (mode == VersusMode.TIME_LIMIT) {
+            JPanel timerContainer = new JPanel(new BorderLayout());
+            timerContainer.setOpaque(false);
+            
+            JPanel timerPanel = new JPanel();
+            timerPanel.setBackground(new Color(200, 50, 50));
+            timerPanel.setPreferredSize(new Dimension((int)(150 * safeScreenRatio()), (int)(40 * safeScreenRatio())));
+            timerPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+            
+            timerLabel = new JLabel("1:00", SwingConstants.CENTER);
+            timerLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(20 * safeScreenRatio())));
+            timerLabel.setForeground(Color.WHITE);
+            
+            timerPanel.add(timerLabel);
+            
+            // 타이머를 상단 중앙에 배치
+            JPanel topPadding = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            topPadding.setOpaque(false);
+            topPadding.add(timerPanel);
+            
+            timerContainer.add(topPadding, BorderLayout.NORTH);
+            mainPanel.add(timerContainer, BorderLayout.NORTH);
+        }
         
         add(mainPanel, BorderLayout.CENTER);
         
@@ -185,6 +220,82 @@ public class VersusFrameBoard extends JFrame {
     private void startGame() {
         gameController1.start();
         gameController2.start();
+        
+        // 시간제한 모드일 때 타이머 시작
+        if (mode == VersusMode.TIME_LIMIT) {
+            startTimer();
+        }
+    }
+    
+    /**
+     * 타이머 시작 (시간제한 모드)
+     */
+    private void startTimer() {
+        remainingSeconds = 60;  // 1분
+        
+        gameTimer = new javax.swing.Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!isPaused && !isGameOver) {
+                    remainingSeconds--;
+                    updateTimerDisplay();
+                    
+                    if (remainingSeconds <= 0) {
+                        handleTimeUp();
+                    }
+                }
+            }
+        });
+        gameTimer.start();
+    }
+    
+    /**
+     * 타이머 표시 업데이트
+     */
+    private void updateTimerDisplay() {
+        int minutes = remainingSeconds / 60;
+        int seconds = remainingSeconds % 60;
+        String timeText = String.format("%d:%02d", minutes, seconds);
+        
+        if (timerLabel != null) {
+            timerLabel.setText(timeText);
+            
+            // 10초 이하일 때 깜빡임
+            if (remainingSeconds <= 10) {
+                timerLabel.setForeground(remainingSeconds % 2 == 0 ? Color.WHITE : Color.YELLOW);
+            }
+        }
+    }
+    
+    /**
+     * 시간 종료 처리
+     */
+    private void handleTimeUp() {
+        if (isGameOver) return;
+        
+        isGameOver = true;
+        gameTimer.stop();
+        
+        // 두 게임 모두 정지
+        gameController1.stop();
+        gameController2.stop();
+        
+        // 점수로 승자 결정
+        int winner = (score1 > score2) ? 1 : (score2 > score1) ? 2 : 0;  // 0 = 무승부
+        
+        if (winner == 0) {
+            // 무승부
+            resultBoard.showDraw(score1);
+        } else {
+            int winnerScore = (winner == 1) ? score1 : score2;
+            int loserScore = (winner == 1) ? score2 : score1;
+            resultBoard.showResult(winner, winnerScore, loserScore);
+        }
+        
+        resultBoard.setVisible(true);
+        resultBoard.setOpaque(true);
+        resultBoard.setFocusable(true);
+        resultBoard.requestFocusInWindow();
     }
     
     /**
@@ -212,22 +323,22 @@ public class VersusFrameBoard extends JFrame {
             if (player == 1) {
                 int received = attackManager2.receiveAttack(attackLines);
                 System.out.println("Player 1 attacks Player 2 with " + received + " lines");
-                // 즉시 상대방 보드에 공격 줄 추가 (Player 1의 블록 패턴 사용)
+                // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
                     Object[] blockInfo = gameController1.getLastBlockInfo();
                     int[][] pattern = (int[][]) blockInfo[0];
                     int blockX = (int) blockInfo[1];
-                    gameController2.addAttackLines(received, pattern, blockX);
+                    gameController2.queueAttackLines(received, pattern, blockX);
                 }
             } else {
                 int received = attackManager1.receiveAttack(attackLines);
                 System.out.println("Player 2 attacks Player 1 with " + received + " lines");
-                // 즉시 상대방 보드에 공격 줄 추가 (Player 2의 블록 패턴 사용)
+                // 공격줄을 큐에 넣고, 블록이 고정될 때 적용되도록 변경
                 if (received > 0) {
                     Object[] blockInfo = gameController2.getLastBlockInfo();
                     int[][] pattern = (int[][]) blockInfo[0];
                     int blockX = (int) blockInfo[1];
-                    gameController1.addAttackLines(received, pattern, blockX);
+                    gameController1.queueAttackLines(received, pattern, blockX);
                 }
             }
         }
@@ -277,6 +388,8 @@ public class VersusFrameBoard extends JFrame {
             pauseBoard.setVisible(false);
             this.requestFocusInWindow();
         }
+        
+        // 타이머는 isPaused 플래그로 자동 제어됨 (startTimer의 조건문 참조)
     }
     
     /**

@@ -108,6 +108,21 @@ public class VersusResultBoard extends JPanel {
     }
     
     /**
+     * 무승부 표시 (시간제한 모드)
+     */
+    public void showDraw(int finalScore) {
+        this.winner = 0;
+        this.winnerScore = finalScore;
+        this.loserScore = finalScore;
+        
+        resultLabel.setText("무승부!");
+        scoreLabel.setText("P1: " + finalScore + "점  vs  P2: " + finalScore + "점");
+        
+        selectedIndex = 0;
+        updateMenuHighlight();
+    }
+    
+    /**
      * 메뉴 액션 처리
      */
     private void handleMenuAction(int index) {
