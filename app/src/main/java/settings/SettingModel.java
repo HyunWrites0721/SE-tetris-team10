@@ -10,21 +10,9 @@ public class SettingModel {
 
     public SettingModel() {
         try {
-            // ConfigManager를 사용하여 설정 파일 경로 가져오기
+            // ConfigManager를 사용하여 실제 설정 파일 경로 가져오기
             String settingsPath = ConfigManager.getSettingsPath();
-            // 테스트/개발 환경에서 프로젝트 내의 설정 파일을 직접 수정하는 경우를 지원
-            java.nio.file.Path devPath = java.nio.file.Paths.get("app/src/main/java/settings/data", "SettingSave.json");
-            String json;
-            if (java.nio.file.Files.exists(devPath)) {
-                // 프로젝트 파일이 있으면 우선 읽되, 실패하면 config dir 파일을 시도
-                try {
-                    json = java.nio.file.Files.readString(devPath);
-                } catch (Exception ex) {
-                    json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
-                }
-            } else {
-                json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
-            }
+            String json = java.nio.file.Files.readString(java.nio.file.Paths.get(settingsPath));
             Gson gson = new Gson();
             SettingSaveData data = gson.fromJson(json, SettingSaveData.class);
             
