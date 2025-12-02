@@ -24,7 +24,7 @@ public class BlockSpawner {
     private int itemGenerateCount = 0;
     private int blocksSpawned = 0;
     private boolean itemPending = false;
-    private final int divisor = 3;  // 라인 3개마다 아이템 1개
+    private final int divisor = 10;  // 라인 10개마다 아이템 1개
     
     /**
      * BlockSpawner 생성자

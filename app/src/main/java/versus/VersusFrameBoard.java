@@ -32,7 +32,7 @@ public class VersusFrameBoard extends JFrame {
     
     // 시간제한 모드 관련
     private javax.swing.Timer gameTimer;  // 1분 타이머
-    private int remainingSeconds = 60;    // 남은 시간 (초)
+    private int remainingSeconds = 180;    // 남은 시간 (초)
     private JLabel timerLabel;            // 타이머 표시 레이블
     
     // Player 1 (왼쪽) - WASD + F
@@ -94,7 +94,7 @@ public class VersusFrameBoard extends JFrame {
             timerPanel.setPreferredSize(new Dimension((int)(150 * safeScreenRatio()), (int)(40 * safeScreenRatio())));
             timerPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
             
-            timerLabel = new JLabel("1:00", SwingConstants.CENTER);
+            timerLabel = new JLabel("3:00", SwingConstants.CENTER);
             timerLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(20 * safeScreenRatio())));
             timerLabel.setForeground(Color.WHITE);
             
@@ -232,7 +232,7 @@ public class VersusFrameBoard extends JFrame {
      * 타이머 시작 (시간제한 모드)
      */
     private void startTimer() {
-        remainingSeconds = 60;  // 1분
+        remainingSeconds = 180;  // 3분
         
         gameTimer = new javax.swing.Timer(1000, new ActionListener() {
             @Override
