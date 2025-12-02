@@ -93,15 +93,15 @@ public class P2PConnectionDialog extends JDialog {
             statusCheckTimer.stop();
         }
         
-        // P2P 대기실로 이동
-        dispose();
-        if (getOwner() != null) {
-            getOwner().dispose();
-        }
-
-        // 연결 후 즉시 대기실로 이동
+        // ✅ 먼저 대기실 생성 (프로세스 종료 방지)
         SwingUtilities.invokeLater(() -> {
             new P2PWaitingRoom(networkManager, isServer);
+            
+            // 대기실이 생성된 후 기존 창들 정리
+            dispose();
+            if (getOwner() != null) {
+                getOwner().dispose();
+            }
         });
     }
 }
