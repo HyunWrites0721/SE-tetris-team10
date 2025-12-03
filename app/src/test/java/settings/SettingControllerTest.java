@@ -200,4 +200,178 @@ public class SettingControllerTest {
 		assertTrue(HighScoreModel.getInstance().getTopScores(false).isEmpty(), "초기화 후 Normal Mode TopScores는 비어 있어야 합니다");
 		assertTrue(HighScoreModel.getInstance().getTopScores(true).isEmpty(), "초기화 후 Item Mode TopScores는 비어 있어야 합니다");
 	}
+
+	@Test
+	void confirmCallback_isInvoked() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("색맹 모드", model);
+		SettingController controller = new SettingController(model, view);
+
+		AtomicBoolean confirmed = new AtomicBoolean(false);
+		controller.setOnConfirmCallback(() -> confirmed.set(true));
+
+		view.Button1.setSelected(true);
+		view.checkButton.doClick();
+
+		assertTrue(confirmed.get(), "확인 콜백이 호출되어야 합니다");
+	}
+
+	@Test
+	void screenSize_saveSmall() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("화면 크기 설정", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// small 선택 후 확인
+		view.Button1.setSelected(true);
+		view.checkButton.doClick();
+		assertEquals("small", model.getScreenSize(), "화면 크기는 small로 설정되어야 합니다");
+
+		JsonObject j = readJson(settingSavePath);
+		assertEquals("small", j.get("screenSize").getAsString(), "파일에도 screenSize=small이 저장되어야 합니다");
+	}
+
+	@Test
+	void screenSize_saveMedium() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("화면 크기 설정", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// medium 선택 후 확인
+		view.Button2.setSelected(true);
+		view.checkButton.doClick();
+		assertEquals("medium", model.getScreenSize(), "화면 크기는 medium으로 설정되어야 합니다");
+
+		JsonObject j = readJson(settingSavePath);
+		assertEquals("medium", j.get("screenSize").getAsString(), "파일에도 screenSize=medium이 저장되어야 합니다");
+	}
+
+	@Test
+	void controlType_saveArrow() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("조작키 설정", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// Arrow 선택 후 확인
+		view.Button1.setSelected(true);
+		view.checkButton.doClick();
+		assertEquals("arrow", model.getControlType(), "조작키는 arrow로 설정되어야 합니다");
+
+		JsonObject j = readJson(settingSavePath);
+		assertEquals("arrow", j.get("controlType").getAsString(), "파일에도 controlType=arrow가 저장되어야 합니다");
+	}
+
+	@Test
+	void difficulty_saveEasy() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("난이도 설정", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// easy 선택 후 확인
+		view.Button1.setSelected(true);
+		view.checkButton.doClick();
+		assertEquals("easy", model.getDifficulty(), "난이도는 easy로 설정되어야 합니다");
+
+		JsonObject j = readJson(settingSavePath);
+		assertEquals("easy", j.get("difficulty").getAsString(), "파일에도 difficulty=easy가 저장되어야 합니다");
+	}
+
+	@Test
+	void difficulty_saveNormal() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("난이도 설정", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// normal 선택 후 확인
+		view.Button2.setSelected(true);
+		view.checkButton.doClick();
+		assertEquals("normal", model.getDifficulty(), "난이도는 normal로 설정되어야 합니다");
+
+		JsonObject j = readJson(settingSavePath);
+		assertEquals("normal", j.get("difficulty").getAsString(), "파일에도 difficulty=normal이 저장되어야 합니다");
+	}
+
+	@Test
+	void colorBlindMode_saveMultipleTimes() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("색맹 모드", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// 여러 번 토글
+		view.Button2.setSelected(true); // 켜기
+		view.checkButton.doClick();
+		assertTrue(model.isColorBlindMode());
+
+		view.Button1.setSelected(true); // 끄기
+		view.checkButton.doClick();
+		assertFalse(model.isColorBlindMode());
+
+		view.Button2.setSelected(true); // 다시 켜기
+		view.checkButton.doClick();
+		assertTrue(model.isColorBlindMode());
+
+		JsonObject j = readJson(settingSavePath);
+		assertTrue(j.get("colorBlindMode").getAsBoolean());
+	}
+
+	@Test
+	void cancelButton_doesNotSave() throws Exception {
+		Files.writeString(settingSavePath, Files.readString(defaultSettingPath));
+
+		SettingModel model = new SettingModel();
+		SettingView view = new SettingView("색맹 모드", model);
+		SettingController controller = new SettingController(model, view);
+		assertNotNull(controller);
+
+		// 변경하고 취소
+		view.Button2.setSelected(true);
+		view.cancelButton.doClick();
+
+		// 파일은 변경되지 않아야 함
+		JsonObject j = readJson(settingSavePath);
+		JsonObject expected = readJson(defaultSettingPath);
+		assertEquals(expected.get("colorBlindMode").getAsBoolean(), j.get("colorBlindMode").getAsBoolean(), 
+			"취소 후에는 파일이 변경되지 않아야 함");
+	}
+
+	@Test
+	void resetSettings_thenVerifyLoad() throws Exception {
+		// 설정 변경
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":true,\"controlType\":\"wasd\",\"screenSize\":\"large\",\"difficulty\":\"hard\"}");
+
+		SettingModel model1 = new SettingModel();
+		SettingView view1 = new SettingView("설정값 초기화", model1);
+		SettingController controller1 = new SettingController(model1, view1);
+		assertNotNull(controller1);
+
+		// 초기화
+		view1.checkButton.doClick();
+
+		// 새 모델로 로드
+		SettingModel model2 = new SettingModel();
+		assertFalse(model2.isColorBlindMode(), "초기화 후 colorBlindMode는 기본값");
+		assertEquals("arrow", model2.getControlType(), "초기화 후 controlType은 기본값");
+		assertEquals("medium", model2.getScreenSize(), "초기화 후 screenSize는 기본값");
+		assertEquals("normal", model2.getDifficulty(), "초기화 후 difficulty는 기본값");
+	}
 }
