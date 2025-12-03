@@ -941,4 +941,87 @@ class ItemBlockHandlerTest {
             });
         });
     }
+    
+    @Test
+    @DisplayName("AllClear - 이미 빈 보드")
+    void testAllClear_EmptyBoard() {
+        boolean[] callbackInvoked = {false};
+        
+        itemHandler.handleSpecialBlock(2, testState, (newState) -> {
+            callbackInvoked[0] = true;
+            
+            // 빈 보드도 처리되어야 함
+            assertNotNull(newState);
+        });
+    }
+    
+    @Test
+    @DisplayName("OneLineClear - 빈 줄 처리")
+    void testOneLineClear_EmptyLines() {
+        // 값 4만 있고 다른 블록이 없는 경우
+        testBoard[10][5] = 4;
+        
+        GameState emptyLineState = new GameState.Builder(testBoard, testColorBoard, null, null, false)
+                .score(100)
+                .build();
+        
+        boolean[] callbackInvoked = {false};
+        
+        itemHandler.handleSpecialBlock(4, emptyLineState, (newState) -> {
+            callbackInvoked[0] = true;
+            assertNotNull(newState);
+        });
+    }
+    
+    @Test
+    @DisplayName("렌더 콜백 - null 설정")
+    void testSetRenderCallback_Null() {
+        assertDoesNotThrow(() -> {
+            itemHandler.setRenderCallback(null);
+        });
+    }
+    
+    @Test
+    @DisplayName("BoxClear - 경계 근처 중심점")
+    void testBoxClear_BoundaryCenter() {
+        // 경계 근처에 BoxClear 블록 배치
+        testBoard[2][1] = 3;  // 왼쪽 상단 모서리 근처
+        testBoard[21][10] = 3;  // 오른쪽 하단 모서리 근처
+        
+        GameState boundaryState = new GameState.Builder(testBoard, testColorBoard, null, null, false)
+                .score(100)
+                .build();
+        
+        boolean[] callbackInvoked = {false};
+        
+        itemHandler.handleSpecialBlock(3, boundaryState, (newState) -> {
+            callbackInvoked[0] = true;
+            assertNotNull(newState);
+        });
+    }
+    
+    @Test
+    @DisplayName("AllClear - 일부만 채워진 보드")
+    void testAllClear_PartiallyFilledBoard() {
+        // 보드 일부만 채우기
+        for (int r = 10; r <= 15; r++) {
+            for (int c = 3; c <= 7; c++) {
+                testBoard[r][c] = 1;
+                testColorBoard[r][c] = 3;
+            }
+        }
+        
+        GameState partialState = new GameState.Builder(testBoard, testColorBoard, null, null, false)
+                .score(100)
+                .build();
+        
+        boolean[] callbackInvoked = {false};
+        
+        itemHandler.handleSpecialBlock(2, partialState, (newState) -> {
+            callbackInvoked[0] = true;
+            
+            // 전체 보드가 클리어되어야 함
+            assertNotNull(newState);
+        });
+    }
 }

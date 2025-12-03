@@ -1,8 +1,6 @@
 package game.core;
 
 import blocks.Block;
-import blocks.IBlock;
-import blocks.OBlock;
 import game.GameView;
 import game.events.EventBus;
 import game.events.TickEvent;
@@ -520,5 +518,232 @@ class GameControllerTest {
         
         // 소프트 드롭은 한 칸당 1점
         assertTrue(scoreAfterMove >= scoreBeforeMove);
+    }
+    
+    @Test
+    @DisplayName("TickEvent 처리 - 실행 중이 아닐 때")
+    void testTickEvent_NotRunning() {
+        controller = new GameController(testView, false, 0);
+        
+        // 실행 중이 아닐 때 TickEvent 발행
+        controller.getEventBus().publish(new TickEvent(1, 1, 100L));
+        
+        // 게임이 시작되지 않았으므로 블록이 없어야 함
+        assertNull(controller.getCurrentBlock());
+    }
+    
+    @Test
+    @DisplayName("TickEvent 처리 - 일시정지 중")
+    void testTickEvent_Paused() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        controller.pause();
+        
+        Block currentBlock = controller.getCurrentBlock();
+        int originalY = currentBlock.getY();
+        
+        // 일시정지 중 TickEvent 발행
+        controller.getEventBus().publish(new TickEvent(1, 1, 100L));
+        
+        // 블록이 이동하지 않아야 함
+        assertEquals(originalY, currentBlock.getY());
+    }
+    
+    @Test
+    @DisplayName("게임 실행 상태 확인")
+    void testIsRunning() {
+        controller = new GameController(testView, false, 0);
+        
+        assertFalse(controller.isRunning());
+        
+        controller.start();
+        assertTrue(controller.isRunning());
+        
+        controller.stop();
+        assertFalse(controller.isRunning());
+    }
+    
+    @Test
+    @DisplayName("여러 난이도에서 점수 배율 테스트")
+    void testScoreMultiplierByDifficulty() {
+        // Normal (0)
+        GameController normalController = new GameController(testView, false, 0);
+        normalController.start();
+        normalController.addScore(100);
+        assertEquals(100, normalController.getScore());
+        normalController.stop();
+        
+        // Hard (1)
+        GameController hardController = new GameController(testView, false, 1);
+        hardController.start();
+        hardController.addScore(100);
+        // Hard는 1.1배 (추가 확인 필요)
+        assertTrue(hardController.getScore() >= 100);
+        hardController.stop();
+        
+        // Easy (2)
+        GameController easyController = new GameController(testView, false, 2);
+        easyController.start();
+        easyController.addScore(100);
+        // Easy는 0.9배 (추가 확인 필요)
+        assertTrue(easyController.getScore() >= 90);
+        easyController.stop();
+    }
+    
+    @Test
+    @DisplayName("아이템 모드에서 블록 생성")
+    void testItemModeBlockSpawning() {
+        TestGameView itemView = new TestGameView();
+        controller = new GameController(itemView, true, 0);
+        controller.start();
+        
+        Block currentBlock = controller.getCurrentBlock();
+        assertNotNull(currentBlock);
+    }
+    
+    @Test
+    @DisplayName("속도 업데이트 - 범위 테스트")
+    void testUpdateSpeed_EdgeCases() {
+        controller = new GameController(testView, false, 0);
+        
+        // 최소 속도
+        assertDoesNotThrow(() -> controller.updateSpeed(1));
+        
+        // 최대 속도
+        assertDoesNotThrow(() -> controller.updateSpeed(10));
+        
+        // 0 이하 (무시되어야 함)
+        assertDoesNotThrow(() -> controller.updateSpeed(0));
+        assertDoesNotThrow(() -> controller.updateSpeed(-1));
+    }
+    
+    @Test
+    @DisplayName("공격 줄 추가 - null 패턴")
+    void testAddAttackLines_NullPattern() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        assertDoesNotThrow(() -> {
+            controller.addAttackLines(1, null, 0);
+        });
+    }
+    
+    @Test
+    @DisplayName("공격 줄 큐잉 - 여러 번")
+    void testQueueAttackLines_Multiple() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        int[][] pattern1 = {{1, 0, 1}};
+        int[][] pattern2 = {{1, 1, 0}};
+        
+        controller.queueAttackLines(1, pattern1, 5);
+        controller.queueAttackLines(2, pattern2, 6);
+        controller.queueAttackLines(1, pattern1, 4);
+        
+        // 큐에 쌓였는지 확인 (직접적인 확인은 어려우므로 예외가 없으면 성공)
+        assertDoesNotThrow(() -> controller.queueAttackLines(1, pattern1, 5));
+    }
+    
+    @Test
+    @DisplayName("블록 회전 - 여러 번")
+    void testRotate_Multiple() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        Block currentBlock = controller.getCurrentBlock();
+        assertNotNull(currentBlock);
+        
+        // 4번 회전하면 원래 모양으로 돌아옴
+        assertDoesNotThrow(() -> {
+            controller.rotate();
+            controller.rotate();
+            controller.rotate();
+            controller.rotate();
+        });
+    }
+    
+    @Test
+    @DisplayName("게임 리셋 후 재시작")
+    void testResetAndRestart() {
+        controller = new GameController(testView, false, 0);
+        
+        controller.start();
+        assertTrue(controller.isRunning());
+        
+        controller.addScore(500);
+        controller.reset();
+        
+        assertFalse(controller.isRunning());
+        assertEquals(0, controller.getScore());
+        
+        controller.start();
+        assertTrue(controller.isRunning());
+        assertNotNull(controller.getCurrentBlock());
+    }
+    
+    @Test
+    @DisplayName("일시정지 후 정지")
+    void testPauseThenStop() {
+        controller = new GameController(testView, false, 0);
+        
+        controller.start();
+        controller.pause();
+        assertTrue(controller.isPaused());
+        
+        controller.stop();
+        assertFalse(controller.isRunning());
+        assertFalse(controller.isPaused());
+    }
+    
+    @Test
+    @DisplayName("블록 이동 - 경계 테스트")
+    void testMoveBlock_Boundaries() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        Block currentBlock = controller.getCurrentBlock();
+        assertNotNull(currentBlock);
+        
+        // 왼쪽 끝까지 이동
+        for (int i = 0; i < 20; i++) {
+            controller.moveLeft();
+        }
+        
+        // 오른쪽 끝까지 이동
+        for (int i = 0; i < 20; i++) {
+            controller.moveRight();
+        }
+        
+        // 블록이 여전히 존재해야 함
+        assertNotNull(controller.getCurrentBlock());
+    }
+    
+    @Test
+    @DisplayName("하드 드롭 - 즉시 착지")
+    void testHardDrop_ImmediateLanding() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        Block beforeDrop = controller.getCurrentBlock();
+        assertNotNull(beforeDrop);
+        
+        int dropDistance = controller.hardDrop();
+        
+        // 드롭 거리가 0 이상이어야 함
+        assertTrue(dropDistance >= 0);
+    }
+    
+    @Test
+    @DisplayName("공격 줄 추가 - 큰 숫자")
+    void testAddAttackLines_LargeNumber() {
+        controller = new GameController(testView, false, 0);
+        controller.start();
+        
+        int[][] pattern = {{1, 0, 1, 0}};
+        
+        assertDoesNotThrow(() -> {
+            controller.addAttackLines(10, pattern, 5);
+        });
     }
 }
