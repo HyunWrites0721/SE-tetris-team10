@@ -154,4 +154,231 @@ public class SettingModelTest {
 		assertEquals("medium", model.getScreenSize(), "기본값 screenSize=medium");
 		assertEquals("normal", model.getDifficulty(), "기본값 difficulty=normal");
 	}
+
+	// JSON의 특정 필드가 null일 때 기본값 사용 확인
+	@Test
+	void constructor_nullFields_usesDefaults() throws Exception {
+		String json = "{\"colorBlindMode\":null,\"controlType\":null,\"screenSize\":null,\"difficulty\":null}";
+		Files.writeString(settingSavePath, json);
+
+		SettingModel model = new SettingModel();
+		assertFalse(model.isColorBlindMode(), "null colorBlindMode는 false로 초기화");
+		assertEquals("arrow", model.getControlType(), "null controlType은 arrow로 초기화");
+		assertEquals("medium", model.getScreenSize(), "null screenSize는 medium으로 초기화");
+		assertEquals("normal", model.getDifficulty(), "null difficulty는 normal로 초기화");
+	}
+
+	// JSON에 일부 필드가 누락된 경우
+	@Test
+	void constructor_missingFields_usesDefaults() throws Exception {
+		String json = "{\"colorBlindMode\":true}";
+		Files.writeString(settingSavePath, json);
+
+		SettingModel model = new SettingModel();
+		assertTrue(model.isColorBlindMode(), "colorBlindMode는 로드됨");
+		assertEquals("arrow", model.getControlType(), "누락된 controlType은 기본값");
+		assertEquals("medium", model.getScreenSize(), "누락된 screenSize는 기본값");
+		assertEquals("normal", model.getDifficulty(), "누락된 difficulty는 기본값");
+	}
+
+	// 빈 JSON 파일
+	@Test
+	void constructor_emptyJson_usesDefaults() throws Exception {
+		Files.writeString(settingSavePath, "{}");
+
+		SettingModel model = new SettingModel();
+		assertFalse(model.isColorBlindMode());
+		assertEquals("arrow", model.getControlType());
+		assertEquals("medium", model.getScreenSize());
+		assertEquals("normal", model.getDifficulty());
+	}
+
+	// screenSize 모든 유효값 테스트
+	@Test
+	void saveScreenSize_allValidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		// small
+		model.setScreenSize("small");
+		model.SaveScreenSize();
+		JsonObject j1 = readJson(settingSavePath);
+		assertEquals("small", j1.get("screenSize").getAsString());
+		
+		// medium
+		model.setScreenSize("medium");
+		model.SaveScreenSize();
+		JsonObject j2 = readJson(settingSavePath);
+		assertEquals("medium", j2.get("screenSize").getAsString());
+		
+		// large
+		model.setScreenSize("large");
+		model.SaveScreenSize();
+		JsonObject j3 = readJson(settingSavePath);
+		assertEquals("large", j3.get("screenSize").getAsString());
+	}
+
+	// controlType 모든 유효값 테스트
+	@Test
+	void saveControlType_allValidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		// arrow
+		model.setControlType("arrow");
+		model.SaveControlType();
+		JsonObject j1 = readJson(settingSavePath);
+		assertEquals("arrow", j1.get("controlType").getAsString());
+		
+		// wasd
+		model.setControlType("wasd");
+		model.SaveControlType();
+		JsonObject j2 = readJson(settingSavePath);
+		assertEquals("wasd", j2.get("controlType").getAsString());
+	}
+
+	// difficulty 모든 유효값 테스트
+	@Test
+	void saveDifficulty_allValidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		// easy
+		model.setDifficulty("easy");
+		model.SaveDifficulty();
+		JsonObject j1 = readJson(settingSavePath);
+		assertEquals("easy", j1.get("difficulty").getAsString());
+		
+		// normal
+		model.setDifficulty("normal");
+		model.SaveDifficulty();
+		JsonObject j2 = readJson(settingSavePath);
+		assertEquals("normal", j2.get("difficulty").getAsString());
+		
+		// hard
+		model.setDifficulty("hard");
+		model.SaveDifficulty();
+		JsonObject j3 = readJson(settingSavePath);
+		assertEquals("hard", j3.get("difficulty").getAsString());
+	}
+
+	// setter/getter 일관성 테스트
+	@Test
+	void setterGetter_consistency() {
+		SettingModel model = new SettingModel();
+		
+		// colorBlindMode
+		model.setColorBlindMode(true);
+		assertTrue(model.isColorBlindMode());
+		model.setColorBlindMode(false);
+		assertFalse(model.isColorBlindMode());
+		
+		// screenSize
+		model.setScreenSize("small");
+		assertEquals("small", model.getScreenSize());
+		model.setScreenSize("large");
+		assertEquals("large", model.getScreenSize());
+		
+		// controlType
+		model.setControlType("wasd");
+		assertEquals("wasd", model.getControlType());
+		model.setControlType("arrow");
+		assertEquals("arrow", model.getControlType());
+		
+		// difficulty
+		model.setDifficulty("easy");
+		assertEquals("easy", model.getDifficulty());
+		model.setDifficulty("hard");
+		assertEquals("hard", model.getDifficulty());
+	}
+
+	// Save 후 다시 로드했을 때 값 유지 확인
+	@Test
+	void save_thenLoad_valuesPersist() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model1 = new SettingModel();
+		model1.setColorBlindMode(true);
+		model1.setScreenSize("large");
+		model1.setControlType("wasd");
+		model1.setDifficulty("hard");
+		
+		model1.SaveColorBlindMode();
+		model1.SaveScreenSize();
+		model1.SaveControlType();
+		model1.SaveDifficulty();
+		
+		// 새로운 모델 생성하여 로드
+		SettingModel model2 = new SettingModel();
+		assertTrue(model2.isColorBlindMode(), "저장된 colorBlindMode 로드");
+		assertEquals("large", model2.getScreenSize(), "저장된 screenSize 로드");
+		assertEquals("wasd", model2.getControlType(), "저장된 controlType 로드");
+		assertEquals("hard", model2.getDifficulty(), "저장된 difficulty 로드");
+	}
+
+	// resetSettings가 Default 파일과 동일한지 확인
+	@Test
+	void resetSettings_matchesDefault() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":true,\"controlType\":\"wasd\",\"screenSize\":\"large\",\"difficulty\":\"hard\"}");
+
+		SettingModel model = new SettingModel();
+		model.resetSettings();
+		
+		String settingsContent = Files.readString(settingSavePath);
+		String defaultContent = Files.readString(defaultSettingPath);
+		
+		assertEquals(defaultContent, settingsContent, "resetSettings 후 파일 내용이 기본값과 동일해야 함");
+	}
+
+	// 유효하지 않은 값들에 대한 추가 테스트
+	@Test
+	void saveScreenSize_variousInvalidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		String[] invalidValues = {"", "tiny", "huge", "MEDIUM", "Small", "null"};
+		for (String invalid : invalidValues) {
+			model.setScreenSize(invalid);
+			model.SaveScreenSize();
+			JsonObject j = readJson(settingSavePath);
+			assertEquals("medium", j.get("screenSize").getAsString(), 
+				"유효하지 않은 값(" + invalid + ")은 무시되고 이전 값 유지");
+		}
+	}
+
+	@Test
+	void saveControlType_variousInvalidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		String[] invalidValues = {"", "mouse", "gamepad", "WASD", "Arrow", "null"};
+		for (String invalid : invalidValues) {
+			model.setControlType(invalid);
+			model.SaveControlType();
+			JsonObject j = readJson(settingSavePath);
+			assertEquals("arrow", j.get("controlType").getAsString(), 
+				"유효하지 않은 값(" + invalid + ")은 무시되고 이전 값 유지");
+		}
+	}
+
+	@Test
+	void saveDifficulty_variousInvalidValues() throws Exception {
+		Files.writeString(settingSavePath, "{\"colorBlindMode\":false,\"controlType\":\"arrow\",\"screenSize\":\"medium\",\"difficulty\":\"normal\"}");
+
+		SettingModel model = new SettingModel();
+		
+		String[] invalidValues = {"", "medium", "insane", "EASY", "Normal", "null"};
+		for (String invalid : invalidValues) {
+			model.setDifficulty(invalid);
+			model.SaveDifficulty();
+			JsonObject j = readJson(settingSavePath);
+			assertEquals("normal", j.get("difficulty").getAsString(), 
+				"유효하지 않은 값(" + invalid + ")은 무시되고 이전 값 유지");
+		}
+	}
 }
