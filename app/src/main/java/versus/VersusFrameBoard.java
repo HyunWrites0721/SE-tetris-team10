@@ -66,10 +66,22 @@ public class VersusFrameBoard extends JFrame {
         setTitle("Tetris - 대전 모드");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        setLayout(new BorderLayout());
+        
+        // JLayeredPane 생성 및 ContentPane으로 설정
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(FRAME_WIDTH, FRAME_HEIGHT));
+        setContentPane(layeredPane);
+        
+        // 배경 레이어: 밤하늘 배경 (애니메이션 없음)
+        start.BackgroundAnimationPanel backgroundPanel = new start.BackgroundAnimationPanel(FRAME_WIDTH, FRAME_HEIGHT, false);
+        backgroundPanel.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        layeredPane.add(backgroundPanel, JLayeredPane.FRAME_CONTENT_LAYER);
         
         // 메인 컨테이너
         JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false); // 투명하게 설정
+        mainPanel.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        layeredPane.add(mainPanel, JLayeredPane.DEFAULT_LAYER);
         
         // 좌우 게임 패널
         JPanel gamesPanel = new JPanel(new GridLayout(1, 2));  // 좌우 2분할
@@ -108,11 +120,6 @@ public class VersusFrameBoard extends JFrame {
             timerContainer.add(topPadding, BorderLayout.NORTH);
             mainPanel.add(timerContainer, BorderLayout.NORTH);
         }
-        
-        add(mainPanel, BorderLayout.CENTER);
-        
-        // Layered Pane for overlays
-        JLayeredPane layeredPane = getLayeredPane();
         
         // Pause Board
         pauseBoard = new VersusPauseBoard(this);

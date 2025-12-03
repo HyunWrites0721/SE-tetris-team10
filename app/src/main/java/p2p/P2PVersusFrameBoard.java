@@ -102,12 +102,21 @@ public class P2PVersusFrameBoard extends JFrame {
         });
         
         setResizable(false);
-        setLayout(new BorderLayout());
+        
+        // JLayeredPane 생성 및 ContentPane으로 설정
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(FRAME_WIDTH, FRAME_HEIGHT));
+        setContentPane(layeredPane);
+        
+        // 배경 레이어: 밤하늘 배경 (애니메이션 없음)
+        start.BackgroundAnimationPanel backgroundPanel = new start.BackgroundAnimationPanel(FRAME_WIDTH, FRAME_HEIGHT, false);
+        backgroundPanel.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+        layeredPane.add(backgroundPanel, JLayeredPane.FRAME_CONTENT_LAYER);
         
         // Register game control listener FIRST to catch early START_GAME messages
         registerGameControlListener();
         
-        setupUI();
+        setupUI(layeredPane);
         setupNetworkSync();
 
         setSize(FRAME_WIDTH, FRAME_HEIGHT);
@@ -128,8 +137,9 @@ public class P2PVersusFrameBoard extends JFrame {
         startGame();
     }
     
-    private void setupUI() {
+    private void setupUI(JLayeredPane layeredPane) {
         JPanel mainPanel = new JPanel(new GridLayout(1, 2));
+        mainPanel.setOpaque(false); // 투명하게 설정
         
         boolean itemMode = (mode == VersusMode.ITEM);
         
@@ -168,6 +178,8 @@ public class P2PVersusFrameBoard extends JFrame {
         
         // 시간제한 모드일 때 타이머 UI 추가
         JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false); // 투명하게 설정
+        centerContainer.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
         
         if (mode == VersusMode.TIME_LIMIT) {
             JPanel timerContainer = new JPanel(new BorderLayout());
@@ -193,16 +205,17 @@ public class P2PVersusFrameBoard extends JFrame {
         }
         
         centerContainer.add(mainPanel, BorderLayout.CENTER);
-        add(centerContainer, BorderLayout.CENTER);
+        layeredPane.add(centerContainer, JLayeredPane.DEFAULT_LAYER);
         
         // 하단에 네트워크 상태 표시
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         statusPanel.setBackground(Color.BLACK);
+        statusPanel.setBounds(0, FRAME_HEIGHT - 30, FRAME_WIDTH, 30);
         networkStatusLabel = new JLabel("⚫ 연결 확인 중...");
         networkStatusLabel.setFont(settings.FontManager.getKoreanFont(Font.PLAIN, (int)(12 * safeScreenRatio())));
         networkStatusLabel.setForeground(Color.GRAY);
         statusPanel.add(networkStatusLabel);
-        add(statusPanel, BorderLayout.SOUTH);
+        layeredPane.add(statusPanel, JLayeredPane.PALETTE_LAYER);
         
         // 키 입력
         P2PKeyListener keyListener = new P2PKeyListener(myGameController);

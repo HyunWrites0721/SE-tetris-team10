@@ -94,15 +94,29 @@ public class VersusPauseBoard extends JPanel implements KeyListener {
         button.setMaximumSize(new Dimension((int)(200 * screenRatio), (int)(50 * screenRatio)));
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setFocusable(false);
+        
+        // 버튼 색상 설정 (검은 배경 + 흰색 텍스트)
+        button.setBackground(Color.BLACK);
+        button.setForeground(Color.WHITE);
+        button.setOpaque(true);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
+        
         return button;
     }
     
     private void updateButtonSelection() {
         for (int i = 0; i < buttons.length; i++) {
             if (i == selectedButtonIndex) {
+                // 선택된 버튼: 빨간 테두리 + 검은 배경 + 흰색 텍스트
                 buttons[i].setBorder(BorderFactory.createLineBorder(Color.RED, 3));
+                buttons[i].setBackground(Color.BLACK);
+                buttons[i].setForeground(Color.WHITE);
             } else {
-                buttons[i].setBorder(UIManager.getBorder("Button.border"));
+                // 선택되지 않은 버튼: 기본 테두리 + 검은 배경 + 흰색 텍스트
+                buttons[i].setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                buttons[i].setBackground(Color.BLACK);
+                buttons[i].setForeground(Color.WHITE);
             }
         }
     }

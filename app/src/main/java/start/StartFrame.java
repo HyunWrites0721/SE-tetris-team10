@@ -60,16 +60,34 @@ public class StartFrame extends JFrame {
         // 모든 창이 닫히면 프로세스 종료
         util.WindowManager.addAutoExitListener(this);
 
-        // 전체 레이아웃: BorderLayout
-        setLayout(new BorderLayout());
+        // JLayeredPane을 사용하여 배경과 전경 분리
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension((int)(600*screenRatio), (int)(600*screenRatio)));
+        setContentPane(layeredPane);
+
+        // 배경 레이어: 애니메이션 패널 (전체 화면)
+        BackgroundAnimationPanel animationPanel = new BackgroundAnimationPanel(
+            (int)(600 * screenRatio), 
+            (int)(600 * screenRatio)
+        );
+        animationPanel.setBounds(0, 0, (int)(600*screenRatio), (int)(600*screenRatio));
+        layeredPane.add(animationPanel, JLayeredPane.DEFAULT_LAYER);
+
+        // 전경 레이어: 메인 컨텐츠 패널
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false); // 투명하게 설정
+        mainPanel.setBounds(0, 0, (int)(600*screenRatio), (int)(600*screenRatio));
+        layeredPane.add(mainPanel, JLayeredPane.PALETTE_LAYER);
 
         // 1. 중앙 상단: 게임 제목
         JLabel titleLabel = new JLabel("테트리스", SwingConstants.CENTER);
         titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(36*screenRatio)));
-        add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setForeground(Color.WHITE); // 흰색 텍스트
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // 2. 우측 메뉴 버튼들
         JPanel menuPanel = new JPanel(null);
+        menuPanel.setOpaque(false); // 투명하게 설정
         menuPanel.setLayout(new BoxLayout(menuPanel, BoxLayout.Y_AXIS));
         menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));             //메뉴 위아래 여백
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));// 메뉴 패널 가로 사이즈 200으로 맞춤, 세로 자동
@@ -82,6 +100,15 @@ public class StartFrame extends JFrame {
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
             btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
             
+            // 버튼 색상 설정 (우주 배경색과 동일)
+            Color bgColor = new Color(10, 15, 35); // 우주 배경색
+            btn.setBackground(bgColor);
+            btn.setForeground(Color.WHITE);
+            btn.setOpaque(true);
+            btn.setBorderPainted(true);
+            btn.setContentAreaFilled(true);
+            btn.setUI(new javax.swing.plaf.basic.BasicButtonUI()); // 기본 UI로 강제 설정
+            
             // 마우스 클릭 이벤트 처리
             final int index = i;
             btn.addActionListener(e -> handleMenuAction(index));
@@ -91,7 +118,7 @@ public class StartFrame extends JFrame {
             menuButtons[i] = btn;
         }
         menuPanel.add(Box.createVerticalStrut((int)(50*screenRatio)));            //메뉴 위아래 여백
-        add(menuPanel, BorderLayout.EAST);      //오른쪽에 메뉴 패널 얹기
+        mainPanel.add(menuPanel, BorderLayout.EAST);      //오른쪽에 메뉴 패널 얹기
 
 
         //초기 버튼 하이라이트

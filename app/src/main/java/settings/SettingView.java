@@ -22,6 +22,7 @@ public class SettingView extends JPanel{
     public SettingView(String menuName, SettingModel model){
         this.menuName = menuName;  
         setLayout(new GridBagLayout());
+        setOpaque(false); // 투명하게 설정
         
         // 외부 여백 설정 (왼쪽, 오른쪽에 마진 추가)
         setBorder(BorderFactory.createEmptyBorder(
@@ -36,7 +37,7 @@ public class SettingView extends JPanel{
         panel.setPreferredSize(new Dimension((int)(400*screenRatio), (int)(320*screenRatio)));
         panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2));
         
-        panelColor = new Color(245, 245, 245);
+        panelColor = new Color(245, 245, 245, 200); // 약간 투명하게
         panel.setBackground(panelColor);
         
         GridBagConstraints gbc = new GridBagConstraints();
@@ -417,7 +418,7 @@ public class SettingView extends JPanel{
         for (int i = 0; i < radioButtons.length; i++) {
             if (i == selectedRadioIndex) {
                 // 선택된 라디오 버튼: 회색 배경 + 빨간색 테두리
-                radioButtons[i].setBackground(Color.LIGHT_GRAY);
+                radioButtons[i].setBackground(new Color(211, 211, 211, 200)); // LIGHT_GRAY with alpha
                 radioButtons[i].setBorder(BorderFactory.createLineBorder(Color.RED, 3));
             } else {
                 // 선택되지 않은 라디오 버튼: 기본 배경 + 기본 테두리

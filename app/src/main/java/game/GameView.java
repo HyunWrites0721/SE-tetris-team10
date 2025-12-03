@@ -53,8 +53,7 @@ public class GameView extends JPanel {
         this.showHighScore = showHighScore;
         this.showAttackPreview = showAttackPreview;
         setLayout(null); // 절대 위치 지정
-        setOpaque(true);
-        setBackground(new java.awt.Color(240, 240, 240));
+        setOpaque(false); // 투명하게 설정하여 배경이 보이도록
         
         // 패널들 생성
         gameBoardPanel = new GameBoardPanel();

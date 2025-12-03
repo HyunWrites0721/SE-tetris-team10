@@ -25,15 +25,35 @@ public class SettingFrame extends JFrame {
         setSize((int)(600*screenRatio), (int)(600*screenRatio));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+
+        // JLayeredPane을 사용하여 배경과 전경 분리
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension((int)(600*screenRatio), (int)(600*screenRatio)));
+        setContentPane(layeredPane);
+
+        // 배경 레이어: 애니메이션 패널
+        start.BackgroundAnimationPanel animationPanel = new start.BackgroundAnimationPanel(
+            (int)(600 * screenRatio), 
+            (int)(600 * screenRatio)
+        );
+        animationPanel.setBounds(0, 0, (int)(600*screenRatio), (int)(600*screenRatio));
+        layeredPane.add(animationPanel, JLayeredPane.DEFAULT_LAYER);
+
+        // 전경 레이어: 메인 컨텐츠
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false);
+        mainPanel.setBounds(0, 0, (int)(600*screenRatio), (int)(600*screenRatio));
+        layeredPane.add(mainPanel, JLayeredPane.PALETTE_LAYER);
 
         // 상단 제목
         JLabel titleLabel = new JLabel("게임 설정", SwingConstants.CENTER);
         titleLabel.setFont(settings.FontManager.getKoreanFont(Font.BOLD, (int)(36*screenRatio)));
-        add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setForeground(Color.WHITE); // 흰색 텍스트
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // 우측 메뉴 패널 (GridBagLayout으로 중앙 정렬)
         menuPanel = new JPanel(new GridBagLayout());
+        menuPanel.setOpaque(false);
         menuPanel.setPreferredSize(new Dimension((int)(200*screenRatio), 0));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -44,6 +64,7 @@ public class SettingFrame extends JFrame {
         menuButtons = new JButton[menuNames.length];
         JPanel buttonBox = new JPanel();
         buttonBox.setLayout(new BoxLayout(buttonBox, BoxLayout.Y_AXIS));
+        buttonBox.setOpaque(false); // 버튼 박스 투명하게
         buttonBox.setMaximumSize(new Dimension((int)(200*screenRatio), (int)((menuNames.length * 60)*screenRatio)));
         Dimension btnSize = new Dimension((int)(200*screenRatio), (int)(50*screenRatio));
         for (int i = 0; i < menuNames.length; i++) {
@@ -55,6 +76,15 @@ public class SettingFrame extends JFrame {
             btn.setAlignmentX(Component.CENTER_ALIGNMENT);
             btn.setFocusable(false); // 버튼이 포커스를 받지 않도록
             
+            // 버튼 색상 설정 (우주 배경색과 동일)
+            Color bgColor = new Color(10, 15, 35); // 우주 배경색
+            btn.setBackground(bgColor);
+            btn.setForeground(Color.WHITE);
+            btn.setOpaque(true);
+            btn.setBorderPainted(true);
+            btn.setContentAreaFilled(true);
+            btn.setUI(new javax.swing.plaf.basic.BasicButtonUI()); // 기본 UI로 강제 설정
+            
             // 마우스 클릭 이벤트 처리
             final int index = i;
             btn.addActionListener(e -> handleMenuAction(index));
@@ -65,7 +95,7 @@ public class SettingFrame extends JFrame {
             menuButtons[i] = btn;
         }
         menuPanel.add(buttonBox, gbc);
-        add(menuPanel, BorderLayout.EAST);
+        mainPanel.add(menuPanel, BorderLayout.EAST);
 
         // 초기 하이라이트
         StartFrame.updateMenuHighlight(menuButtons, selectedIndex);
@@ -73,7 +103,8 @@ public class SettingFrame extends JFrame {
         // 카드 레이아웃 패널 생성
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
-        add(cardPanel, BorderLayout.CENTER);
+        cardPanel.setOpaque(false);
+        mainPanel.add(cardPanel, BorderLayout.CENTER);
 
         // 방향키 이벤트 + 엔터키 처리
         menuPanel.setFocusable(true);

@@ -1,4 +1,5 @@
 package game;
+import java.awt.Dimension;
 import java.awt.Font;
 
 import javax.swing.JFrame;
@@ -160,7 +161,15 @@ public class FrameBoard extends JFrame {
     // 게임 시작 시 블록 생성 설정 로드
     blocks.Block.reloadSettings();
 
-    JLayeredPane layeredPane = getLayeredPane();
+    // JLayeredPane 생성 및 ContentPane으로 설정
+    JLayeredPane layeredPane = new JLayeredPane();
+    layeredPane.setPreferredSize(new Dimension(FRAME_WIDTH, FRAME_HEIGHT));
+    setContentPane(layeredPane);
+    
+    // 배경 레이어: 밤하늘 배경 (애니메이션 없음)
+    start.BackgroundAnimationPanel backgroundPanel = new start.BackgroundAnimationPanel(FRAME_WIDTH, FRAME_HEIGHT, false);
+    backgroundPanel.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+    layeredPane.add(backgroundPanel, JLayeredPane.FRAME_CONTENT_LAYER);
 
     // 게임 뷰 생성
     gameBoard = new GameView(itemMode);
