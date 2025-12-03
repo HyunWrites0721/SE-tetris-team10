@@ -81,7 +81,40 @@ jacocoTestReport {
     reports {
         xml.required = true
         html.required = true
-        csv.required = false
+        csv.required = true
+    }
+    
+    // UI 관련 클래스 제외
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                // game UI
+                '**/game/panels/**',
+                '**/game/GameView**',
+                '**/game/GameKeyListener**',
+                
+                // start UI
+                '**/start/**',
+                
+                // util UI
+                '**/util/FontManager**',
+                '**/util/WindowManager**',
+                
+                // settings UI
+                '**/settings/SettingFrame**',
+                '**/settings/SettingView**',
+                
+                // versus UI
+                '**/versus/VersusFrameBoard**',
+                '**/versus/VersusResultBoard**',
+                '**/versus/VersusMenuFrame**',
+                '**/versus/VersusPauseBoard**',
+                '**/versus/VersusGameStart**',
+                
+                // App
+                '**/App**'
+            ])
+        }))
     }
 }
 

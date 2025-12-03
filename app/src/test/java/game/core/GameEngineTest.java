@@ -441,4 +441,63 @@ class GameEngineTest {
         assertNotNull(rightEdgeState);
         assertTrue(testBlock.getX() <= 10);
     }
+    
+    @Test
+    @DisplayName("performLineClear - 단일 라인")
+    void testPerformLineClear_SingleLine() {
+        // 한 줄을 완전히 채움 (row 20)
+        for (int col = 1; col <= 10; col++) {
+            testBoard[20][col] = 1;
+            testColorBoard[20][col] = 100;
+        }
+        
+        int linesCleared = engine.performLineClear(testBoard, testColorBoard);
+        
+        assertEquals(1, linesCleared);
+        // 클리어된 줄은 비어있어야 함
+        for (int col = 1; col <= 10; col++) {
+            assertEquals(0, testBoard[20][col]);
+        }
+    }
+    
+    @Test
+    @DisplayName("performLineClear - 다중 라인")
+    void testPerformLineClear_MultipleLines() {
+        // 여러 줄을 채움 (rows 19, 20, 21)
+        for (int row = 19; row <= 21; row++) {
+            for (int col = 1; col <= 10; col++) {
+                testBoard[row][col] = 1;
+                testColorBoard[row][col] = 100;
+            }
+        }
+        
+        int linesCleared = engine.performLineClear(testBoard, testColorBoard);
+        
+        assertEquals(3, linesCleared);
+    }
+    
+    @Test
+    @DisplayName("performLineClear - 라인 없음")
+    void testPerformLineClear_NoLines() {
+        // 빈 보드
+        int linesCleared = engine.performLineClear(testBoard, testColorBoard);
+        
+        assertEquals(0, linesCleared);
+    }
+    
+    @Test
+    @DisplayName("performLineClear - 연속된 라인")
+    void testPerformLineClear_ConsecutiveLines() {
+        // 연속된 4줄 채우기
+        for (int row = 18; row <= 21; row++) {
+            for (int col = 1; col <= 10; col++) {
+                testBoard[row][col] = 1;
+                testColorBoard[row][col] = 100;
+            }
+        }
+        
+        int linesCleared = engine.performLineClear(testBoard, testColorBoard);
+        
+        assertEquals(4, linesCleared);
+    }
 }
