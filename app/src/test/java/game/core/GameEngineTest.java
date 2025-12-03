@@ -129,28 +129,19 @@ class GameEngineTest {
     @Test
     @DisplayName("레벨 계산")
     void testCalculateLevel() {
-<<<<<<< HEAD
         // 실제 구현: (totalLinesCleared / 2) + 1
         assertEquals(1, engine.calculateLevel(0));  // (0/2)+1 = 1
         assertEquals(1, engine.calculateLevel(1));  // (1/2)+1 = 1
         assertEquals(2, engine.calculateLevel(2));  // (2/2)+1 = 2
+        assertEquals(2, engine.calculateLevel(3));  // (3/2)+1 = 1+1 = 2
         assertEquals(3, engine.calculateLevel(4));  // (4/2)+1 = 3
         assertEquals(6, engine.calculateLevel(10)); // (10/2)+1 = 6
         assertEquals(10, engine.calculateLevel(20)); // (20/2)+1 = 11 → max 10
-=======
-        assertEquals(1, engine.calculateLevel(0));
-        assertEquals(1, engine.calculateLevel(1));
-        assertEquals(2, engine.calculateLevel(2));
-        assertEquals(2, engine.calculateLevel(3));
-        assertEquals(3, engine.calculateLevel(4));
-        assertEquals(3, engine.calculateLevel(5));
->>>>>>> d6ff6837cdffdd3091b24cb4b8ddb50422f294a3
     }
     
     @Test
     @DisplayName("라인 클리어 점수 계산")
     void testCalculateLineClearScore() {
-<<<<<<< HEAD
         // 실제 공식: baseScore × (currentLevel + 1) × difficultyMultiplier
         // difficultyMultiplier = 1.0 (일반 모드)
         
@@ -165,23 +156,6 @@ class GameEngineTest {
         
         // 4줄 클리어 (레벨 3, 테트리스): 800 × (3+1) = 3200
         assertEquals(3200, engine.calculateLineClearScore(4, 3));
-=======
-        // 1줄 클리어
-        int score1 = engine.calculateLineClearScore(1, 1);
-        assertTrue(score1 > 0);
-        
-        // 2줄 클리어 (레벨 1)
-        int score2 = engine.calculateLineClearScore(2, 1);
-        assertTrue(score2 > score1);
-        
-        // 3줄 클리어 (레벨 2)
-        int score3 = engine.calculateLineClearScore(3, 2);
-        assertTrue(score3 > 0);
-        
-        // 4줄 클리어 (레벨 3, 테트리스)
-        int score4 = engine.calculateLineClearScore(4, 3);
-        assertTrue(score4 > 0);
->>>>>>> d6ff6837cdffdd3091b24cb4b8ddb50422f294a3
     }
     
     @Test
