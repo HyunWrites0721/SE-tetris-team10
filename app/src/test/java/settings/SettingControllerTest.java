@@ -28,12 +28,12 @@ public class SettingControllerTest {
 
 	@BeforeEach
 	public void setUp() throws Exception {
-		// Use module-relative path so tests work when Gradle sets working dir to the app module
-		settingsDir = Paths.get("src/main/java/settings/data");
-		settingSavePath = settingsDir.resolve("SettingSave.json");
-		defaultSettingPath = settingsDir.resolve("DefaultSetting.json");
-		highScorePath = settingsDir.resolve("HighScore.json");
-		highScoreDefaultPath = settingsDir.resolve("HighScoreDefault.json");
+		// ConfigManager가 사용하는 실제 경로 사용
+		settingsDir = Paths.get(ConfigManager.getConfigDir());
+		settingSavePath = Paths.get(ConfigManager.getSettingsPath());
+		defaultSettingPath = Paths.get(ConfigManager.getDefaultSettingsPath());
+		highScorePath = Paths.get(ConfigManager.getHighScorePath());
+		highScoreDefaultPath = Paths.get(ConfigManager.getDefaultHighScorePath());
 
 		if (!Files.exists(settingsDir)) {
 			Files.createDirectories(settingsDir);

@@ -1,0 +1,270 @@
+======================================================================
+               Tetris 프로젝트 버튼 이미지 추가 가이드
+======================================================================
+
+■ 버튼 정의 위치 및 setIcon() 추가 위치
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. StartFrame.java (시작 화면 메인 메뉴)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/start/StartFrame.java
+
+버튼 생성 위치: 79번째 줄
+    JButton btn = new JButton(menuNames[i]);
+
+setIcon() 추가 위치: 79번째 줄 바로 다음
+    btn.setIcon(new ImageIcon("경로/이미지.png"));
+
+메뉴 버튼들: Single, Versus, Settings, ScoreBoard, Quit
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. VersusMenuFrame.java (대전 모드 메뉴)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/versus/VersusMenuFrame.java
+
+버튼 생성 위치: 43번째 줄
+    JButton btn = new JButton(menuNames[i]);
+
+setIcon() 추가 위치: 43번째 줄 바로 다음
+    btn.setIcon(new ImageIcon("경로/이미지.png"));
+
+메뉴 버튼들: 일반 모드, 아이템 모드, 뒤로가기
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. VersusPauseBoard.java (대전 일시정지)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/versus/VersusPauseBoard.java
+
+버튼 생성 위치: 91번째 줄 (createButton 메서드 내부)
+    JButton button = new JButton(text);
+
+setIcon() 추가 위치: 91번째 줄 바로 다음
+    button.setIcon(new ImageIcon("경로/이미지.png"));
+
+버튼들: Resume, Main, Quit
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. VersusResultBoard.java (대전 결과 화면)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/versus/VersusResultBoard.java
+
+버튼 생성 위치: 59번째 줄
+    JButton btn = new JButton(menuNames[i]);
+
+setIcon() 추가 위치: 59번째 줄 바로 다음
+    btn.setIcon(new ImageIcon("경로/이미지.png"));
+
+버튼들: Restart, Main
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. PauseBoard.java (싱글 플레이 일시정지)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/game/PauseBoard.java
+
+버튼 생성 위치:
+  - resumeButton: 174번째 줄
+      resumeButton = new javax.swing.JButton("resume");
+  
+  - restartButton: 191번째 줄
+      restartButton = new javax.swing.JButton("restart");
+  
+  - mainButton: 210번째 줄
+      mainButton = new javax.swing.JButton("Main Menu");
+  
+  - quitButton: 228번째 줄
+      quitButton = new javax.swing.JButton("Quit");
+
+setIcon() 추가 위치: 각 버튼 생성 직후 줄
+예시:
+    resumeButton = new javax.swing.JButton("resume");
+    resumeButton.setIcon(new ImageIcon("경로/resume.png"));
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. GameOverBoard.java (게임 오버 화면)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/game/GameOverBoard.java
+
+버튼 생성 위치:
+  - restartButton: 175번째 줄
+      restartButton = new javax.swing.JButton("restart");
+  
+  - mainButton: 194번째 줄
+      mainButton = new javax.swing.JButton("Main Menu");
+  
+  - quitButton: 214번째 줄
+      quitButton = new javax.swing.JButton("Quit");
+
+setIcon() 추가 위치: 각 버튼 생성 직후 줄
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. P2PMenuFrame.java (P2P 메뉴)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/p2p/P2PMenuFrame.java
+
+버튼 생성 위치: 55번째 줄
+    JButton btn = new JButton(menuNames[i]);
+
+setIcon() 추가 위치: 55번째 줄 바로 다음
+
+버튼들: 서버 생성, 클라이언트 접속, 뒤로가기
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. P2PServerSetupFrame.java (서버 생성 화면)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/p2p/P2PServerSetupFrame.java
+
+버튼 생성 위치:
+  - startButton: 105번째 줄
+      startButton = new JButton("시작");
+  
+  - cancelButton: 111번째 줄
+      cancelButton = new JButton("취소");
+
+setIcon() 추가 위치: 각 버튼 생성 직후
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. P2PClientSetupFrame.java (클라이언트 접속 화면)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/p2p/P2PClientSetupFrame.java
+
+버튼 생성 위치:
+  - connectButton: 109번째 줄
+      connectButton = new JButton("연결");
+  
+  - cancelButton: 115번째 줄
+      cancelButton = new JButton("취소");
+
+setIcon() 추가 위치: 각 버튼 생성 직후
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. P2PWaitingRoom.java (P2P 대기실)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/p2p/P2PWaitingRoom.java
+
+버튼 생성 위치:
+  - changeModeButton: 124번째 줄 (서버용)
+      changeModeButton = new JButton("모드 전송 및 대기");
+  
+  - startGameButton: 138번째 줄 (서버용)
+      startGameButton = new JButton("게임 시작");
+  
+  - readyButton: 168번째 줄 (클라이언트용)
+      readyButton = new JButton("준비 완료");
+  
+  - cancel: 179번째 줄
+      JButton cancel = new JButton("취소");
+
+setIcon() 추가 위치: 각 버튼 생성 직후
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. SettingFrame.java (설정 메뉴)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/settings/SettingFrame.java
+
+버튼 생성 위치: 50번째 줄
+    JButton btn = new JButton(menuNames[i]);
+
+setIcon() 추가 위치: 50번째 줄 바로 다음
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. SettingView.java (설정 다이얼로그)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/settings/SettingView.java
+
+여러 위치에 버튼 생성 (다이얼로그마다):
+  - 74, 76번째 줄 (예/취소)
+  - 92, 94번째 줄 (예/취소)
+  - 144, 146번째 줄 (확인/취소)
+  - 185, 187번째 줄 (확인/취소)
+  - 228, 230번째 줄 (확인/취소)
+  - 278, 280번째 줄 (확인/취소)
+
+setIcon() 추가 위치: 각 버튼 생성 직후
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. ScoreBoardFrame.java (점수판)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+파일: app/src/main/java/start/ScoreBoardFrame.java
+
+버튼 생성 위치: 43번째 줄
+    JButton backButton = new JButton("돌아가기 (ENTER)");
+
+setIcon() 추가 위치: 43번째 줄 바로 다음
+
+
+======================================================================
+                    이미지 추가 예시 코드
+======================================================================
+
+■ 방법 1: 텍스트와 함께 이미지 표시 (추천)
+----------------------------------------------------------------------
+JButton btn = new JButton("버튼 텍스트");
+ImageIcon icon = new ImageIcon("app/src/main/resources/icons/button_icon.png");
+btn.setIcon(icon);
+btn.setHorizontalTextPosition(JButton.CENTER);  // 텍스트 위치
+btn.setVerticalTextPosition(JButton.BOTTOM);    // 아이콘 위에 텍스트
+
+
+■ 방법 2: 이미지만 표시
+----------------------------------------------------------------------
+ImageIcon icon = new ImageIcon("app/src/main/resources/icons/button_icon.png");
+JButton btn = new JButton(icon);
+
+
+■ 방법 3: 이미지 크기 조정
+----------------------------------------------------------------------
+ImageIcon originalIcon = new ImageIcon("경로/이미지.png");
+Image scaledImage = originalIcon.getImage().getScaledInstance(
+    50, 50, Image.SCALE_SMOOTH);  // 원하는 크기로 조정
+ImageIcon scaledIcon = new ImageIcon(scaledImage);
+btn.setIcon(scaledIcon);
+
+
+■ 방법 4: 호버/클릭 시 다른 이미지 표시
+----------------------------------------------------------------------
+ImageIcon normalIcon = new ImageIcon("경로/normal.png");
+ImageIcon hoverIcon = new ImageIcon("경로/hover.png");
+ImageIcon pressedIcon = new ImageIcon("경로/pressed.png");
+
+btn.setIcon(normalIcon);
+btn.setRolloverIcon(hoverIcon);      // 마우스 올렸을 때
+btn.setPressedIcon(pressedIcon);     // 클릭했을 때
+
+
+======================================================================
+                    이미지 파일 위치
+======================================================================
+
+현재 프로젝트에 icons 폴더가 있습니다:
+  app/src/main/resources/icons/
+
+이미지 파일을 이 폴더에 저장하고 다음과 같이 로드:
+  new ImageIcon(getClass().getResource("/icons/button.png"))
+
+또는 절대 경로:
+  new ImageIcon("app/src/main/resources/icons/button.png")
+
+
+======================================================================
+                    주의사항
+======================================================================
+
+1. 이미지 형식: PNG, JPG, GIF 지원
+2. 권장 크기: 버튼 크기에 맞춰 미리 조정 (예: 32x32, 48x48)
+3. 투명 배경: PNG 파일 사용 권장
+4. 파일 경로: 상대 경로 또는 getResource() 사용
+5. 버튼 기능 유지: setIcon()은 기존 ActionListener에 영향 없음
+
+======================================================================

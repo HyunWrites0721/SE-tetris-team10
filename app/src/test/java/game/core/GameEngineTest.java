@@ -129,27 +129,32 @@ class GameEngineTest {
     @Test
     @DisplayName("레벨 계산")
     void testCalculateLevel() {
-        assertEquals(1, engine.calculateLevel(0));
-        assertEquals(1, engine.calculateLevel(9));
-        assertEquals(2, engine.calculateLevel(10));
-        assertEquals(3, engine.calculateLevel(20));
-        assertEquals(5, engine.calculateLevel(45));
+        // 실제 구현: (totalLinesCleared / 2) + 1
+        assertEquals(1, engine.calculateLevel(0));  // (0/2)+1 = 1
+        assertEquals(1, engine.calculateLevel(1));  // (1/2)+1 = 1
+        assertEquals(2, engine.calculateLevel(2));  // (2/2)+1 = 2
+        assertEquals(3, engine.calculateLevel(4));  // (4/2)+1 = 3
+        assertEquals(6, engine.calculateLevel(10)); // (10/2)+1 = 6
+        assertEquals(10, engine.calculateLevel(20)); // (20/2)+1 = 11 → max 10
     }
     
     @Test
     @DisplayName("라인 클리어 점수 계산")
     void testCalculateLineClearScore() {
-        // 1줄 클리어
-        assertEquals(100, engine.calculateLineClearScore(1, 1));
+        // 실제 공식: baseScore × (currentLevel + 1) × difficultyMultiplier
+        // difficultyMultiplier = 1.0 (일반 모드)
         
-        // 2줄 클리어 (레벨 1)
-        assertEquals(300, engine.calculateLineClearScore(2, 1));
+        // 1줄 클리어 (레벨 1): 100 × (1+1) = 200
+        assertEquals(200, engine.calculateLineClearScore(1, 1));
         
-        // 3줄 클리어 (레벨 2)
-        assertEquals(1000, engine.calculateLineClearScore(3, 2));
+        // 2줄 클리어 (레벨 1): 300 × (1+1) = 600
+        assertEquals(600, engine.calculateLineClearScore(2, 1));
         
-        // 4줄 클리어 (레벨 3, 테트리스)
-        assertEquals(2400, engine.calculateLineClearScore(4, 3));
+        // 3줄 클리어 (레벨 2): 500 × (2+1) = 1500
+        assertEquals(1500, engine.calculateLineClearScore(3, 2));
+        
+        // 4줄 클리어 (레벨 3, 테트리스): 800 × (3+1) = 3200
+        assertEquals(3200, engine.calculateLineClearScore(4, 3));
     }
     
     @Test

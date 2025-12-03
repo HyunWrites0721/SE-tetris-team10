@@ -26,9 +26,9 @@ public class SettingAllViewTest {
 
 	@BeforeEach
 	public void setUp() throws Exception {
-		// 모듈 기준 상대 경로 사용 (Gradle 테스트 실행 시에도 동일하게 동작)
-		settingsDir = Paths.get("src/main/java/settings/data");
-		settingSavePath = settingsDir.resolve("SettingSave.json");
+		// ConfigManager가 사용하는 실제 경로 사용
+		settingsDir = Paths.get(ConfigManager.getConfigDir());
+		settingSavePath = Paths.get(ConfigManager.getSettingsPath());
 
 		if (!Files.exists(settingsDir)) {
 			Files.createDirectories(settingsDir);
