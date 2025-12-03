@@ -41,9 +41,9 @@ public class StartFrame extends JFrame {
                 System.out.println("[DEBUG] screenSize fallback: data=" + data + ", data.screenSize=" + (data != null ? data.screenSize : "null"));
             }
             switch (size) {
-                case "small": screenRatio = 0.8; break;
+                case "small": screenRatio = 1.1; break;
                 case "large": screenRatio = 1.5; break;  // 2.0에서 1.5로 수정
-                case "medium": default: screenRatio = 1.2; break;
+                case "medium": default: screenRatio = 1.3; break;
             }
         } catch (Exception e) {
             screenRatio = 1.2;

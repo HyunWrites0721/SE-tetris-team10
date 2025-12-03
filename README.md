@@ -2,4 +2,5 @@
 Making tetris using Java
 
 Line Coverage by JaCoCo
-<img width="1178" height="308" alt="스크린샷 2025-10-29 오후 9 52 50" src="https://github.com/user-attachments/assets/9b8da716-f46b-4ce0-8540-fca63b5c247f" />
+<img width="1710" height="520" alt="스크린샷 2025-12-03 오후 9 18 26" src="https://github.com/user-attachments/assets/673004ec-a9dd-48ed-ab59-6f2bb656066c" />
+
