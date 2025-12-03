@@ -23,10 +23,10 @@ public class SettingModelTest {
 
 	@BeforeEach
 	public void setUp() throws Exception {
-		// Gradle 테스트 실행 시 working dir이 app 모듈이므로, 모듈 상대 경로 사용
-		settingsDir = Paths.get("src/main/java/settings/data");
-		settingSavePath = settingsDir.resolve("SettingSave.json");
-		defaultSettingPath = settingsDir.resolve("DefaultSetting.json");
+		// ConfigManager가 사용하는 실제 경로 사용
+		settingsDir = Paths.get(ConfigManager.getConfigDir());
+		settingSavePath = Paths.get(ConfigManager.getSettingsPath());
+		defaultSettingPath = Paths.get(ConfigManager.getDefaultSettingsPath());
 
 		if (!Files.exists(settingsDir)) {
 			Files.createDirectories(settingsDir);

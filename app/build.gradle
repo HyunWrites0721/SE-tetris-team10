@@ -45,7 +45,24 @@ application {
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
-    finalizedBy jacocoTestReport // test 실행 후 자동으로 coverage 리포트 생성
+    
+    // Swing GUI 테스트를 위한 설정
+    jvmArgs '-Djava.awt.headless=false', '-Xmx3g', '-Xms512m'
+    
+    // 테스트 프로세스 메모리 설정
+    maxHeapSize = '3g'
+    minHeapSize = '512m'
+    
+    // 테스트 fork 설정 - 각 테스트 클래스마다 새 프로세스
+    forkEvery = 1
+    maxParallelForks = 1
+    
+    // 테스트 타임아웃 설정
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "short"
+        showStandardStreams = false
+    }
 }
 
 jacoco {
