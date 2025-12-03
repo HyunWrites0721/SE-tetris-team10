@@ -1,6 +1,8 @@
 package p2p;
 
 import game.core.GameController;
+import network.NetworkManager;
+import network.messages.GameControlMessage;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -12,14 +14,20 @@ import java.awt.event.KeyEvent;
 public class P2PKeyListener extends KeyAdapter {
     
     private final GameController myController;
+    private final NetworkManager networkManager;
+    private final P2PVersusFrameBoard frameBoard;
     
     /**
      * P2PKeyListener 생성자
      * 
      * @param myController 내 게임 컨트롤러
+     * @param networkManager 네트워크 관리자
+     * @param frameBoard P2P 프레임보드
      */
-    public P2PKeyListener(GameController myController) {
+    public P2PKeyListener(GameController myController, NetworkManager networkManager, P2PVersusFrameBoard frameBoard) {
         this.myController = myController;
+        this.networkManager = networkManager;
+        this.frameBoard = frameBoard;
     }
     
     @Override
@@ -46,7 +54,8 @@ public class P2PKeyListener extends KeyAdapter {
         // 일시정지 상태면 ESC/P만 처리
         if (myController.isPaused()) {
             if (e.getKeyCode() == KeyEvent.VK_ESCAPE || e.getKeyCode() == KeyEvent.VK_P) {
-                myController.resume();
+                // 일시정지 해제 및 상대방에게 알림
+                frameBoard.handleResumeRequest();
             }
             return;
         }
@@ -86,7 +95,8 @@ public class P2PKeyListener extends KeyAdapter {
             // 일시정지
             case KeyEvent.VK_ESCAPE:
             case KeyEvent.VK_P:
-                myController.pause();
+                // 일시정지 및 상대방에게 알림
+                frameBoard.handlePauseRequest();
                 break;
         }
     }

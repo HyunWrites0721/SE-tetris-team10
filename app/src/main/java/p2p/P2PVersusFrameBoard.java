@@ -205,7 +205,7 @@ public class P2PVersusFrameBoard extends JFrame {
         add(statusPanel, BorderLayout.SOUTH);
         
         // 키 입력
-        P2PKeyListener keyListener = new P2PKeyListener(myGameController);
+        P2PKeyListener keyListener = new P2PKeyListener(myGameController, networkManager, this);
         addKeyListener(keyListener);
         setFocusable(true);
         requestFocusInWindow();
@@ -309,11 +309,19 @@ public class P2PVersusFrameBoard extends JFrame {
      * This must be called EARLY before UI setup to catch messages that arrive quickly.
      */
     private void registerGameControlListener() {
-        // 게임 제어 메시지(START_GAME) 수신 처리: START_GAME을 받으면 게임 시작
+        // 게임 제어 메시지(START_GAME, PAUSE_GAME, RESUME_GAME) 수신 처리
         gameControlListener = message -> {
-            if (message.getControlType() == network.messages.GameControlMessage.ControlType.START_GAME) {
+            ControlType type = message.getControlType();
+            
+            if (type == ControlType.START_GAME) {
                 System.out.println("[P2PVersusFrameBoard] START_GAME 수신, 게임 시작 요청");
                 requestStart();
+            } else if (type == ControlType.PAUSE_GAME) {
+                System.out.println("[P2PVersusFrameBoard] PAUSE_GAME 수신, 상대방이 일시정지함");
+                handleRemotePause();
+            } else if (type == ControlType.RESUME_GAME) {
+                System.out.println("[P2PVersusFrameBoard] RESUME_GAME 수신, 상대방이 재개함");
+                handleRemoteResume();
             }
         };
         networkManager.addGameControlListener(gameControlListener);
@@ -912,5 +920,129 @@ public class P2PVersusFrameBoard extends JFrame {
             dispose();
             new p2p.P2PMenuFrame();
         });
+    }
+    
+    /**
+     * 일시정지 요청 (내가 ESC를 눌렀을 때)
+     */
+    public void handlePauseRequest() {
+        System.out.println("[P2P Player" + myPlayerId + "] 일시정지 요청 - 모든 보드 일시정지");
+        
+        // 내 게임 일시정지
+        if (myGameController != null && !myGameController.isPaused()) {
+            myGameController.pause();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 내 보드 일시정지됨");
+        }
+        
+        // 상대방 보드 일시정지 (내 화면에 표시되는 상대방 보드)
+        if (remoteGameController != null && !remoteGameController.isPaused()) {
+            remoteGameController.pause();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 상대방 보드(내 화면) 일시정지됨");
+        }
+        
+        // 시간제한 모드인 경우 타이머 일시정지
+        if (mode == VersusMode.TIME_LIMIT && gameTimer != null && gameTimer.isRunning()) {
+            gameTimer.stop();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 타이머 일시정지");
+        }
+        
+        // 상대방에게 일시정지 메시지 전송
+        GameControlMessage pauseMsg = new GameControlMessage(ControlType.PAUSE_GAME);
+        networkManager.sendMessage(pauseMsg);
+        System.out.println("[P2P Player" + myPlayerId + "] ✓ PAUSE_GAME 메시지 전송 → Player" + (3 - myPlayerId));
+    }
+    
+    /**
+     * 재개 요청 (내가 ESC를 다시 눌렀을 때)
+     */
+    public void handleResumeRequest() {
+        System.out.println("[P2P Player" + myPlayerId + "] 재개 요청 - 모든 보드 재개");
+        
+        // 내 게임 재개
+        if (myGameController != null && myGameController.isPaused()) {
+            myGameController.resume();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 내 보드 재개됨");
+        }
+        
+        // 상대방 보드 재개 (내 화면에 표시되는 상대방 보드)
+        if (remoteGameController != null && remoteGameController.isPaused()) {
+            remoteGameController.resume();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 상대방 보드(내 화면) 재개됨");
+        }
+        
+        // 시간제한 모드인 경우 타이머 재개
+        if (mode == VersusMode.TIME_LIMIT && gameTimer != null && !gameTimer.isRunning() && !isGameOver) {
+            gameTimer.start();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 타이머 재개");
+        }
+        
+        // 상대방에게 재개 메시지 전송
+        GameControlMessage resumeMsg = new GameControlMessage(ControlType.RESUME_GAME);
+        networkManager.sendMessage(resumeMsg);
+        System.out.println("[P2P Player" + myPlayerId + "] ✓ RESUME_GAME 메시지 전송 → Player" + (3 - myPlayerId));
+    }
+    
+    /**
+     * 상대방이 일시정지했을 때 처리
+     */
+    private void handleRemotePause() {
+        System.out.println("[P2P Player" + myPlayerId + "] PAUSE_GAME 수신 - 상대방이 일시정지 요청");
+        
+        // 내 게임 일시정지
+        if (myGameController != null && !myGameController.isPaused()) {
+            myGameController.pause();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 내 보드 일시정지됨");
+        }
+        
+        // 상대방 보드 일시정지 (내 화면에 표시되는 상대방 보드)
+        if (remoteGameController != null && !remoteGameController.isPaused()) {
+            remoteGameController.pause();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 상대방 보드(내 화면) 일시정지됨");
+        }
+        
+        // 시간제한 모드인 경우 타이머 일시정지
+        if (mode == VersusMode.TIME_LIMIT && gameTimer != null && gameTimer.isRunning()) {
+            gameTimer.stop();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 타이머 일시정지");
+        }
+        
+        System.out.println("[P2P Player" + myPlayerId + "] ✓ 모든 보드 일시정지 완료");
+        
+        // 사용자에게 알림
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(
+                this,
+                "상대방이 일시정지 하였습니다.",
+                "일시정지",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+        });
+    }
+    
+    /**
+     * 상대방이 재개했을 때 처리
+     */
+    private void handleRemoteResume() {
+        System.out.println("[P2P Player" + myPlayerId + "] RESUME_GAME 수신 - 상대방이 재개 요청");
+        
+        // 내 게임 재개
+        if (myGameController != null && myGameController.isPaused()) {
+            myGameController.resume();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 내 보드 재개됨");
+        }
+        
+        // 상대방 보드 재개 (내 화면에 표시되는 상대방 보드)
+        if (remoteGameController != null && remoteGameController.isPaused()) {
+            remoteGameController.resume();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 상대방 보드(내 화면) 재개됨");
+        }
+        
+        // 시간제한 모드인 경우 타이머 재개
+        if (mode == VersusMode.TIME_LIMIT && gameTimer != null && !gameTimer.isRunning() && !isGameOver) {
+            gameTimer.start();
+            System.out.println("[P2P Player" + myPlayerId + "] ✓ 타이머 재개");
+        }
+        
+        System.out.println("[P2P Player" + myPlayerId + "] ✓ 모든 보드 재개 완료");
     }
 }
