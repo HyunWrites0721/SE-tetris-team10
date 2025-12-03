@@ -15,6 +15,8 @@ public class VersusResultBoard extends JPanel {
     private int winnerScore;
     private int loserScore;
     private double screenRatio;
+    private VersusMode currentMode;
+    private int currentDifficulty;
     
     private JLabel resultLabel;
     private JLabel scoreLabel;
@@ -108,6 +110,14 @@ public class VersusResultBoard extends JPanel {
     }
     
     /**
+     * 모드 정보 설정 (재시작 시 필요)
+     */
+    public void setModeInfo(VersusMode mode, int difficulty) {
+        this.currentMode = mode;
+        this.currentDifficulty = difficulty;
+    }
+    
+    /**
      * 무승부 표시 (시간제한 모드)
      */
     public void showDraw(int finalScore) {
@@ -128,9 +138,8 @@ public class VersusResultBoard extends JPanel {
     private void handleMenuAction(int index) {
         if (index == 0) {
             // 다시 하기 - 같은 모드로 재시작
-            VersusMode currentMode = VersusMode.NORMAL;  // TODO: frameBoard에서 현재 모드 가져오기
-            int currentDifficulty = 0;  // TODO: frameBoard에서 난이도 가져오기
-            new VersusGameStart(currentMode);
+            VersusMode mode = (currentMode != null) ? currentMode : VersusMode.NORMAL;
+            new VersusGameStart(mode);
             frameBoard.dispose();
         } else if (index == 1) {
             // 대전 모드 메뉴로

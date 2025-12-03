@@ -291,6 +291,9 @@ public class VersusFrameBoard extends JFrame {
         // 점수로 승자 결정
         int winner = (score1 > score2) ? 1 : (score2 > score1) ? 2 : 0;  // 0 = 무승부
         
+        // 모드 정보 설정
+        resultBoard.setModeInfo(mode, difficulty);
+        
         if (winner == 0) {
             // 무승부
             resultBoard.showDraw(score1);
@@ -363,7 +366,8 @@ public class VersusFrameBoard extends JFrame {
         int winnerScore = (winner == 1) ? score1 : score2;
         int loserScore = (winner == 1) ? score2 : score1;
         
-        // 결과 화면 표시
+        // 결과 화면 표시 (모드 정보 포함)
+        resultBoard.setModeInfo(mode, difficulty);
         resultBoard.showResult(winner, winnerScore, loserScore);
         resultBoard.setVisible(true);
         resultBoard.setOpaque(true);
