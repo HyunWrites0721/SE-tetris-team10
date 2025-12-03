@@ -173,4 +173,99 @@ class GameStateTest {
         assertSame(testCurrentBlock, state.getCurrentBlock());
         assertSame(testNextBlock, state.getNextBlock());
     }
+    
+    @Test
+    @DisplayName("null Block 허용 테스트")
+    void testNullBlocks() {
+        GameState state = new GameState.Builder(testBoard, testColorBoard, null, null, false)
+                .build();
+        
+        assertNull(state.getCurrentBlock());
+        assertNull(state.getNextBlock());
+    }
+    
+    @Test
+    @DisplayName("애니메이션 상태 - 라인 클리어")
+    void testLineClearAnimationState() {
+        java.util.List<Integer> flashingRows = java.util.Arrays.asList(5, 10, 15);
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .lineClearAnimating(true)
+                .flashBlack(true)
+                .flashingRows(flashingRows)
+                .build();
+        
+        assertTrue(state.isLineClearAnimating());
+        assertTrue(state.isFlashBlack());
+        assertEquals(3, state.getFlashingRows().size());
+        assertTrue(state.isRowFlashing(5));
+        assertTrue(state.isRowFlashing(10));
+        assertFalse(state.isRowFlashing(20));
+    }
+    
+    @Test
+    @DisplayName("애니메이션 상태 - AllClear")
+    void testAllClearAnimationState() {
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .allClearAnimating(true)
+                .allClearFlashBlack(true)
+                .build();
+        
+        assertTrue(state.isAllClearAnimating());
+        assertTrue(state.isAllClearFlashBlack());
+    }
+    
+    @Test
+    @DisplayName("애니메이션 상태 - BoxClear")
+    void testBoxClearAnimationState() {
+        java.util.List<int[]> centers = java.util.Arrays.asList(new int[]{5, 5}, new int[]{10, 10});
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .boxClearAnimating(true)
+                .boxFlashBlack(true)
+                .boxFlashCenters(centers)
+                .build();
+        
+        assertTrue(state.isBoxClearAnimating());
+        assertTrue(state.isBoxFlashBlack());
+        assertEquals(2, state.getBoxFlashCenters().size());
+    }
+    
+    @Test
+    @DisplayName("애니메이션 상태 - Weight")
+    void testWeightAnimationState() {
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .weightAnimating(true)
+                .build();
+        
+        assertTrue(state.isWeightAnimating());
+    }
+    
+    @Test
+    @DisplayName("flashingRows 불변성 테스트")
+    void testFlashingRowsImmutability() {
+        java.util.List<Integer> flashingRows = new java.util.ArrayList<>();
+        flashingRows.add(5);
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .flashingRows(flashingRows)
+                .build();
+        
+        java.util.List<Integer> retrieved = state.getFlashingRows();
+        retrieved.add(10);
+        
+        assertEquals(1, state.getFlashingRows().size());
+    }
+    
+    @Test
+    @DisplayName("boxFlashCenters 불변성 테스트")
+    void testBoxFlashCentersImmutability() {
+        java.util.List<int[]> centers = new java.util.ArrayList<>();
+        centers.add(new int[]{5, 5});
+        GameState state = new GameState.Builder(testBoard, testColorBoard, testCurrentBlock, testNextBlock, false)
+                .boxFlashCenters(centers)
+                .build();
+        
+        java.util.List<int[]> retrieved = state.getBoxFlashCenters();
+        retrieved.add(new int[]{10, 10});
+        
+        assertEquals(1, state.getBoxFlashCenters().size());
+    }
 }
