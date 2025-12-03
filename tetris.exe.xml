@@ -3,7 +3,7 @@
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
   <jar>C:\Software Engineering\SE-tetris-team10\app\build\libs\app.jar</jar>
-  <outfile>testris.exe</outfile>
+  <outfile>tetris.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>

@@ -633,14 +633,17 @@ public class P2PVersusFrameBoard extends JFrame {
         // 상대방이 공격을 실제로 적용했을 때 내 화면의 상대방 패널에 시각적으로 표시
         remoteEventBus.subscribe(game.events.AttackAppliedEvent.class, e -> {
             System.out.println("[P2P] 🛡️ AttackAppliedEvent 수신: lines=" + e.getAttackLines());
+            // 내가 보낸 공격이 상대방에게 적용된 것 - remoteGamePanel에 시각적으로만 표시
             SwingUtilities.invokeLater(() -> {
                 try {
-                    // 이미 LineClearedEvent에서 remoteGameController.queueAttackLines()로 큐에 추가했으므로
-                    // 여기서는 큐에 있는 공격을 적용만 함
-                    remoteGameController.applyQueuedAttacks();
-                    // RemoteGamePanel에 업데이트된 보드 상태 동기화
-                    remoteGamePanel.syncFromController(remoteGameController);
+                    // 상대방 패널에 공격 줄 시각적 표시 (syncFromController를 호출하지 않음)
+                    remoteGamePanel.applyAttackVisual(e.getAttackLines(), e.getBlockPattern(), e.getBlockX());
+                    
+                    // 상대방이 공격을 적용했으므로 remoteGameController의 공격 큐 초기화
+                    remoteGameController.clearAttackQueue();
+                    
                     remoteGameView.repaint();
+                    System.out.println("[P2P] ✅ remoteGamePanel에 공격 시각 적용 완료 + 큐 초기화: " + e.getAttackLines() + "줄");
                 } catch (Exception ex) {
                     System.err.println("[P2P] AttackAppliedEvent 처리 예외: " + ex.getMessage());
                     ex.printStackTrace();
