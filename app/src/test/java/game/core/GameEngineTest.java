@@ -133,6 +133,7 @@ class GameEngineTest {
         assertEquals(1, engine.calculateLevel(0));  // (0/2)+1 = 1
         assertEquals(1, engine.calculateLevel(1));  // (1/2)+1 = 1
         assertEquals(2, engine.calculateLevel(2));  // (2/2)+1 = 2
+        assertEquals(2, engine.calculateLevel(3));  // (3/2)+1 = 1+1 = 2
         assertEquals(3, engine.calculateLevel(4));  // (4/2)+1 = 3
         assertEquals(6, engine.calculateLevel(10)); // (10/2)+1 = 6
         assertEquals(10, engine.calculateLevel(20)); // (20/2)+1 = 11 → max 10
