@@ -40,7 +40,7 @@ public class GameKeyListener extends KeyAdapter  {
         if (controlType.equals("wasd")) {
             switch (action) {
                 case "ROTATE":
-                    return keyCode == KeyEvent.VK_W || keyCode == KeyEvent.VK_UP;
+                    return keyCode == KeyEvent.VK_W;
                 case "LEFT":
                     return keyCode == KeyEvent.VK_A;
                 case "RIGHT":
@@ -76,22 +76,6 @@ public class GameKeyListener extends KeyAdapter  {
                 frameBoard.isPaused = !frameBoard.isPaused;
                 frameBoard.paused();
                 
-                break;
-                
-            case KeyEvent.VK_1:
-                gameBoard.scale = 0.5;
-                gameBoard.convertScale(gameBoard.scale);
-
-                break;
-                
-            case KeyEvent.VK_2:
-                gameBoard.scale = 1.0;
-                gameBoard.convertScale(gameBoard.scale);
-                break;
-                
-            case KeyEvent.VK_3:
-                gameBoard.scale = 1.5;
-                gameBoard.convertScale(gameBoard.scale);
                 break;
             
             // 회전 (Arrow: UP, WASD: W)
