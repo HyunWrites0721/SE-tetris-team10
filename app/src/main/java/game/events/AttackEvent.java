@@ -41,7 +41,13 @@ public class AttackEvent extends GameEvent {
             patternH = blockPattern.length;
             patternW = blockPattern.length > 0 ? blockPattern[0].length : 0;
         }
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(8 + 4 + 4 + 4 + 4 + (patternH * patternW * 4));
+        // timestamp(8) + playerId(4) + attackLines(4) + patternFlag(4)
+        // if pattern: + patternH(4) + patternW(4) + blockX(4) + cells(patternH*patternW*4)
+        int bufferSize = 8 + 4 + 4 + 4;
+        if (patternFlag == 1) {
+            bufferSize += 4 + 4 + 4 + (patternH * patternW * 4);
+        }
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(bufferSize);
         buf.putLong(getTimestamp());
         buf.putInt(playerId);
         buf.putInt(attackLines);
